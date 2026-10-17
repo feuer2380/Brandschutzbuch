@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Brandschutzbuch">
+<meta name="theme-color" content="#b91c1c">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<title>Brandschutzbuch</title>
+<style>
+:root{--red:#b91c1c;--red2:#dc2626;--bg:#f4f4f5;--card:#ffffff;--tx:#18181b;--mut:#71717a;--bd:#e4e4e7;--ok:#15803d;--warn:#b45309;--okbg:#dcfce7;--warnbg:#fef3c7;--errbg:#fee2e2}
+@media (prefers-color-scheme: dark){:root{--bg:#09090b;--card:#18181b;--tx:#fafafa;--mut:#a1a1aa;--bd:#2e2e33;--okbg:#14532d;--warnbg:#451a03;--errbg:#450a0a;--ok:#4ade80;--warn:#fbbf24;--red2:#f87171}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:16px}
+header{position:fixed;top:0;left:0;right:0;z-index:10;background:var(--red);color:#fff;padding:calc(env(safe-area-inset-top) + 8px) 12px 8px;display:flex;align-items:center}
+header>*{margin-right:8px}header>*:last-child{margin-right:0}
+.brand{font-weight:700;font-size:17px;white-space:nowrap}
+#gebSel{flex:1;min-width:0;width:auto;background:rgba(255,255,255,.16);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:8px;padding:7px 8px;font-size:15px}
+#gebSel option{color:#000}
+.icon{background:none;border:none;color:#fff;padding:6px;display:flex}
+.icon svg{width:24px;height:24px}
+main{padding:calc(env(safe-area-inset-top) + 66px) 12px calc(env(safe-area-inset-bottom) + 90px);max-width:760px;margin:0 auto}
+nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--bd);display:flex;padding-bottom:env(safe-area-inset-bottom);z-index:10}
+nav button{flex:1;background:none;border:none;padding:8px 2px 6px;color:var(--mut);font-size:11px;display:flex;flex-direction:column;align-items:center;position:relative;font-family:inherit}
+nav button.on{color:var(--red)}
+nav svg{width:24px;height:24px;margin-bottom:2px}
+.badge{position:absolute;top:3px;left:56%;background:var(--red2);color:#fff;border-radius:9px;font-size:10px;padding:1px 5px;min-width:16px;font-weight:700}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:12px}
+h2{font-size:21px;margin:4px 0 12px}
+h3{font-size:13px;margin:0 0 6px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;font-weight:700}
+.stats{display:grid;grid-template-columns:1fr 1fr;grid-gap:10px;margin-bottom:12px}
+.stat{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px}
+.stat b{display:block;font-size:26px}.stat span{font-size:13px;color:var(--mut)}
+.stat.alert b{color:var(--red2)}
+.row{display:flex;align-items:center;padding:10px 0;border-bottom:1px solid var(--bd)}
+.row>*{margin-right:10px}.row>*:last-child{margin-right:0}
+.row:last-child{border-bottom:none}
+.row .m{flex:1;min-width:0}.row .t{font-weight:600;overflow-wrap:anywhere}.row .s{font-size:13px;color:var(--mut);margin-top:2px}
+.pill{display:inline-block;font-size:12px;padding:3px 8px;border-radius:20px;white-space:nowrap;font-weight:700}
+.p-ok{background:var(--okbg);color:var(--ok)}.p-warn{background:var(--warnbg);color:var(--warn)}.p-err{background:var(--errbg);color:var(--red2)}.p-mut{background:var(--bd);color:var(--mut)}
+.btn{background:var(--bd);color:var(--tx);border:none;border-radius:10px;padding:11px 14px;font-size:15px;font-weight:600;font-family:inherit}
+.btn.pri{background:var(--red);color:#fff}.btn.danger{background:var(--red2);color:#fff}
+.btn.full{width:100%;display:block;margin-top:8px}.btn.sm{padding:7px 11px;font-size:13px}
+.btns{display:flex;flex-wrap:wrap;margin-top:6px}.btns .btn{margin:4px 6px 0 0}
+label{display:block;font-size:13px;color:var(--mut);margin:12px 0 4px;font-weight:600}
+input,select,textarea{width:100%;font-size:16px;padding:10px;border:1px solid var(--bd);border-radius:10px;background:var(--card);color:var(--tx);font-family:inherit;-webkit-appearance:none;appearance:none}
+input[type=checkbox]{-webkit-appearance:checkbox;appearance:checkbox}
+input[type=date],input[type=time]{min-height:44px}
+textarea{min-height:80px;resize:vertical}
+.two{display:flex}.two>div{flex:1}.two>div:first-child{margin-right:10px}
+.seg{display:flex;border:1px solid var(--bd);border-radius:10px;overflow:hidden}
+.seg button{flex:1;border:none;background:var(--card);color:var(--tx);padding:10px 4px;font-size:14px;font-weight:600;border-right:1px solid var(--bd);font-family:inherit}
+.seg button:last-child{border-right:none}
+.seg button.on-ok{background:var(--ok);color:#fff}.seg button.on-err{background:var(--red2);color:#fff}.seg button.on-na{background:var(--mut);color:#fff}.seg button.on{background:var(--red);color:#fff}
+.pt{padding:12px 0;border-bottom:1px solid var(--bd)}.pt .q{margin-bottom:8px;font-size:15px}
+#modalWrap{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);z-index:50;display:flex;align-items:flex-end;justify-content:center}
+#modalWrap.hidden{display:none}
+.modal{background:var(--bg);width:100%;max-width:760px;max-height:94%;border-radius:16px 16px 0 0;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom)}
+.mhead{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--bd);font-weight:700;font-size:17px}
+.mhead span{flex:1;margin-right:10px}
+.mhead button{background:var(--bd);border:none;border-radius:50%;width:32px;height:32px;font-size:15px;color:var(--tx);flex-shrink:0}
+#mBody{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:4px 16px 18px;flex:1}
+#mFoot{display:flex;padding:10px 16px;border-top:1px solid var(--bd)}
+#mFoot .btn{flex:1;margin-right:8px}#mFoot .btn:last-child{margin-right:0}
+#mFoot.empty{display:none}
+.sig{width:100%;height:150px;background:#fff;border:1px dashed var(--mut);border-radius:10px;touch-action:none;display:block}
+.thumb{width:52px;height:52px;object-fit:cover;border-radius:8px;flex-shrink:0}
+.foto{width:100%;border-radius:10px;margin-top:8px;display:block}
+.fab{position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom) + 78px);background:var(--red);color:#fff;border:none;border-radius:28px;padding:14px 20px;font-size:16px;font-weight:700;box-shadow:0 4px 14px rgba(0,0,0,.25);z-index:9;font-family:inherit}
+#toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 96px);transform:translateX(-50%);background:#18181b;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .25s;z-index:80;pointer-events:none;max-width:88%;text-align:center}
+#toast.on{opacity:1}
+.dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.empty{text-align:center;color:var(--mut);padding:30px 10px}
+.kv{width:100%;border-collapse:collapse;font-size:14px}.kv td{padding:7px 0;border-bottom:1px solid var(--bd);vertical-align:top}.kv td:first-child{color:var(--mut);width:42%;padding-right:8px}
+.chk{display:flex;align-items:center;padding:9px 0;font-size:15px;margin:0;color:var(--tx);font-weight:400}
+.chk input{width:22px;height:22px;margin:0 12px 0 0;flex-shrink:0}
+.small{font-size:13px;color:var(--mut)}
+.grp{font-size:12px;font-weight:700;color:var(--red);margin:16px 0 0;text-transform:uppercase;letter-spacing:.04em}
+.hint{background:var(--warnbg);color:var(--warn);border-radius:10px;padding:10px 12px;font-size:14px;margin-bottom:12px}
+.lnk{color:var(--red);font-weight:600}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">Brandschutzbuch</div>
+  <select id="gebSel" onchange="gebSelChange(this)"></select>
+  <button class="icon" onclick="openSettings()" aria-label="Einstellungen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+</header>
+<main id="view"></main>
+<nav id="tabs"></nav>
+<div id="modalWrap" class="hidden"><div class="modal"><div class="mhead"><span id="mTitle"></span><button onclick="closeModalAsk()" aria-label="Schliessen">&#10005;</button></div><div id="mBody"></div><div id="mFoot"></div></div></div>
+<div id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script>
+/* Brandschutzbuch - lokale Web-App (Janiba Brandschutztechnik GmbH) */
+var APP_VERSION = '1.0';
+var LIZ_SALT = 'JaNiBa-2380-BSB';
+var FIRMA_FOOTER = 'Brandschutzbuch-App | Janiba Brandschutztechnik GmbH | Tel. 0676/305 83 98 | www.brandschutztechnik-janiba.at';
+var FIRMA_KONTAKT = 'Janiba Brandschutztechnik GmbH, Ketzergasse 299, 2380 Perchtoldsdorf, Tel. 0676/305 83 98, info@loeschtechnik.at';
+
+var COLLS = ['gebaeude', 'anlagen', 'pruefungen', 'begehungen', 'maengel', 'vorlagen', 'settings'];
+var DB = { gebaeude: [], anlagen: [], pruefungen: [], begehungen: [], maengel: [], vorlagen: [], settings: {} };
+var idb = null;
+var STATE = { tab: 'home', gid: null, anlQ: '', mFilter: 'offen' };
+var BEG = null, SIG = null, MFORM = null;
+
+var ARTEN = [
+  { k: 'taeglich', l: 'Täglich', d: 1 },
+  { k: 'woechentlich', l: 'Wöchentlich', d: 7 },
+  { k: 'monatlich', l: 'Monatlich', d: 31 },
+  { k: 'vierteljaehrlich', l: 'Vierteljährlich', d: 92 },
+  { k: 'halbjaehrlich', l: 'Halbjährlich', d: 183 },
+  { k: 'jaehrlich', l: 'Jährlich', d: 366 },
+  { k: 'sonstige', l: 'Bei Bedarf', d: 0 }
+];
+var KATS = [
+  { k: 'Feuerlöscher', i: 24 },
+  { k: 'Brandschutzklappe', i: 12 },
+  { k: 'Brandschutztür / -tor', i: 12 },
+  { k: 'Brandmeldeanlage / Melder', i: 12 },
+  { k: 'Rauchwarnmelder', i: 12 },
+  { k: 'Sicherheitsbeleuchtung', i: 12 },
+  { k: 'Wandhydrant / Steigleitung', i: 12 },
+  { k: 'Rauch- und Wärmeabzug (RWA)', i: 12 },
+  { k: 'Sprinkleranlage', i: 12 },
+  { k: 'Löschdecke', i: 24 },
+  { k: 'Fluchtweg / Notausgang', i: 12 },
+  { k: 'Flucht- und Rettungsplan', i: 12 },
+  { k: 'Sonstiges', i: 12 }
+];
+var PRIOS = [{ k: 'hoch', l: 'Hoch', c: '#dc2626' }, { k: 'mittel', l: 'Mittel', c: '#f59e0b' }, { k: 'gering', l: 'Gering', c: '#16a34a' }];
+
+function defVorlagen() {
+  return [
+    { id: uid(), name: 'Tägliche Kontrolle', art: 'taeglich', punkte: [
+      'Fluchtwege und Stiegenhäuser frei von Gegenständen und Brandlasten',
+      'Notausgänge von innen ohne Hilfsmittel zu öffnen',
+      'Brandschutztüren geschlossen bzw. nicht verkeilt oder blockiert',
+      'Feuerlöscher an ihrem Platz und frei zugänglich',
+      'Rettungszeichen und Sicherheitsbeleuchtung sichtbar, keine Störung angezeigt',
+      'Keine offensichtlichen Gefahren (defekte Elektrogeräte, offene Zündquellen)'
+    ] },
+    { id: uid(), name: 'Monatliche Begehung', art: 'monatlich', punkte: [
+      'Feuerlöscher: Plombe vorhanden, Prüfplakette gültig, keine Beschädigung',
+      'Feuerlöscher: Manometer im grünen Bereich (falls vorhanden)',
+      'Brandschutztüren: Selbstschließung und Schließfolge funktionieren',
+      'Feststellanlagen von Brandschutztüren funktionieren',
+      'Sicherheitsbeleuchtung: Funktionstest durchgeführt',
+      'Wandhydranten zugänglich, Schrank unbeschädigt, Schlauch in Ordnung',
+      'Brandmelder und Druckknopfmelder frei, nicht abgedeckt oder beschädigt',
+      'RWA-Bedienstellen zugänglich und gekennzeichnet',
+      'Flucht- und Rettungspläne vorhanden, lesbar und aktuell',
+      'Brandschutzordnung und Alarmplan ausgehängt',
+      'Feuerwehrzufahrt, Aufstellflächen und Hydranten frei',
+      'Lagerung brennbarer Stoffe ordnungsgemäß'
+    ] },
+    { id: uid(), name: 'Jährliche Überprüfung', art: 'jaehrlich', punkte: [
+      'Brandschutzordnung aktuell und überprüft',
+      'Unterweisung der Mitarbeiter/Bewohner durchgeführt',
+      'Räumungsübung durchgeführt und dokumentiert',
+      'Prüfbefund Feuerlöscher durch Fachfirma vorhanden',
+      'Prüfbefund Brandmeldeanlage vorhanden',
+      'Prüfbefund Sicherheitsbeleuchtung vorhanden',
+      'Prüfbefund Brandschutzklappen vorhanden',
+      'Prüfbefund RWA / Sprinkler vorhanden (falls vorhanden)',
+      'Elektrische Anlagen geprüft (Prüfbefund vorhanden)',
+      'Flucht- und Rettungspläne auf Aktualität geprüft'
+    ] }
+  ];
+}
+
+/* ---------- Hilfsfunktionen ---------- */
+function $(id) { return document.getElementById(id); }
+function uid() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 6); }
+function esc(s) { if (s === undefined || s === null) return ''; return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function val(id) { var e = $(id); return e ? String(e.value).replace(/^\s+|\s+$/g, '') : ''; }
+function pad(n) { return n < 10 ? '0' + n : '' + n; }
+function ymd(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+function todayStr() { return ymd(new Date()); }
+function nowTime() { var d = new Date(); return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+function parseD(s) { var p = String(s).split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
+function fmtD(s) { if (!s) return ''; var p = String(s).split('-'); if (p.length < 3) return s; return p[2] + '.' + p[1] + '.' + p[0]; }
+function daysUntil(s) { if (!s) return null; return Math.round((parseD(s) - parseD(todayStr())) / 86400000); }
+function addDays(s, n) { var d = parseD(s); d.setDate(d.getDate() + n); return ymd(d); }
+function addMonths(s, m) { var d = parseD(s); var day = d.getDate(); d.setDate(1); d.setMonth(d.getMonth() + m); var last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(); d.setDate(day > last ? last : day); return ymd(d); }
+function findById(arr, id) { for (var i = 0; i < arr.length; i++) { if (arr[i].id === id) return arr[i]; } return null; }
+function removeById(arr, id) { for (var i = arr.length - 1; i >= 0; i--) { if (arr[i].id === id) arr.splice(i, 1); } }
+function byG(arr) { var r = []; for (var i = 0; i < arr.length; i++) { if (arr[i].gid === STATE.gid) r.push(arr[i]); } return r; }
+function curGeb() { return STATE.gid ? findById(DB.gebaeude, STATE.gid) : null; }
+function artObj(k) { for (var i = 0; i < ARTEN.length; i++) { if (ARTEN[i].k === k) return ARTEN[i]; } return ARTEN[ARTEN.length - 1]; }
+function artLabel(k) { return artObj(k).l; }
+function katIdx(k) { for (var i = 0; i < KATS.length; i++) { if (KATS[i].k === k) return i; } return 99; }
+function katInt(k) { var i = katIdx(k); return i < 99 ? KATS[i].i : 12; }
+function prioObj(k) { for (var i = 0; i < PRIOS.length; i++) { if (PRIOS[i].k === k) return PRIOS[i]; } return PRIOS[1]; }
+function pill(cls, t) { return '<span class="pill ' + cls + '">' + t + '</span>'; }
+function safeName(s) { return String(s || 'Objekt').replace(/[^A-Za-z0-9\-_]+/g, '_').substr(0, 40); }
+var toastT = null;
+function toast(t) { var e = $('toast'); e.textContent = t; e.className = 'on'; clearTimeout(toastT); toastT = setTimeout(function () { e.className = ''; }, 2800); }
+
+/* ---------- Speicher (IndexedDB, Fallback localStorage) ---------- */
+function loadLS() {
+  for (var i = 0; i < COLLS.length; i++) {
+    try { var v = localStorage.getItem('bsb_' + COLLS[i]); if (v) DB[COLLS[i]] = JSON.parse(v); } catch (e) {}
+  }
+}
+function dbOpen(cb) {
+  var done = false;
+  function fin() { if (done) return; done = true; cb(); }
+  if (!window.indexedDB) { loadLS(); fin(); return; }
+  var req;
+  try { req = indexedDB.open('brandschutzbuch', 1); } catch (e) { loadLS(); fin(); return; }
+  req.onupgradeneeded = function (e) { var db = e.target.result; if (!db.objectStoreNames.contains('kv')) db.createObjectStore('kv', { keyPath: 'k' }); };
+  req.onsuccess = function (e) {
+    idb = e.target.result;
+    try {
+      var tx = idb.transaction('kv', 'readonly');
+      var r = tx.objectStore('kv').openCursor();
+      r.onsuccess = function (ev) { var c = ev.target.result; if (c) { DB[c.value.k] = c.value.v; c['continue'](); } else { fin(); } };
+      r.onerror = function () { fin(); };
+    } catch (er) { fin(); }
+  };
+  req.onerror = function () { idb = null; loadLS(); fin(); };
+}
+function save(coll) {
+  if (idb) {
+    try {
+      var tx = idb.transaction('kv', 'readwrite');
+      tx.objectStore('kv').put({ k: coll, v: DB[coll] });
+      tx.onerror = function () { toast('Speichern fehlgeschlagen - Speicher voll?'); };
+      return;
+    } catch (e) {}
+  }
+  try { localStorage.setItem('bsb_' + coll, JSON.stringify(DB[coll])); } catch (e2) { toast('Speicher voll - bitte Fotos reduzieren'); }
+}
+
+/* ---------- Lizenz ---------- */
+function normName(s) { return String(s || '').toUpperCase().replace(/\s+/g, ' ').replace(/^\s+|\s+$/g, ''); }
+function fnv(s) { var h = 0x811c9dc5; for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0; } return h >>> 0; }
+function lizCode(name) { var h = fnv(normName(name) + '|' + LIZ_SALT); var x = ('00000000' + h.toString(16).toUpperCase()).slice(-8); return 'BSB-' + x.substr(0, 4) + '-' + x.substr(4, 4); }
+function isLicensed() { var s = DB.settings || {}; if (!s.lizenzName || !s.lizenzCode) return false; return lizCode(s.lizenzName) === String(s.lizenzCode).toUpperCase().replace(/\s/g, ''); }
+
+/* ---------- Modal ---------- */
+var MODAL_GUARD = null;
+function modal(title, body, buttons, guard) {
+  $('mTitle').textContent = title;
+  $('mBody').innerHTML = body;
+  var f = $('mFoot'); f.innerHTML = '';
+  buttons = buttons || [];
+  for (var i = 0; i < buttons.length; i++) {
+    (function (b) { var el = document.createElement('button'); el.className = 'btn ' + (b.cls || ''); el.textContent = b.label; el.onclick = function () { b.fn(); }; f.appendChild(el); })(buttons[i]);
+  }
+  f.className = buttons.length ? '' : 'empty';
+  MODAL_GUARD = guard || null;
+  $('modalWrap').className = '';
+  $('mBody').scrollTop = 0;
+}
+function closeModal() { $('modalWrap').className = 'hidden'; MODAL_GUARD = null; BEG = null; SIG = null; }
+function closeModalAsk() { if (MODAL_GUARD) { var g = MODAL_GUARD; MODAL_GUARD = null; ask(g, function () { closeModal(); }); return; } closeModal(); }
+function ask(text, fn, okLabel) {
+  modal('Bitte bestätigen', '<p style="margin:14px 0">' + esc(text) + '</p>', [
+    { label: 'Abbrechen', fn: closeModal },
+    { label: okLabel || 'OK', cls: 'danger', fn: function () { closeModal(); fn(); } }
+  ]);
+}
+function info(title, html) { modal(title, html, [{ label: 'OK', cls: 'pri', fn: closeModal }]); }
+
+/* ---------- Navigation ---------- */
+var ICONS = {
+  home: '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>',
+  anl: '<path d="M9 3h6v3H9z"/><path d="M8 6h8l1 3v11a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V9z"/><path d="M15 4h3v3"/>',
+  beg: '<path d="M9 4h6v3H9z"/><path d="M7 5H5v16h14V5h-2"/><path d="M9 13l2 2 4-4"/>',
+  mae: '<path d="M12 3l9.5 17H2.5z"/><path d="M12 10v4"/><path d="M12 17.5v.5"/>',
+  ber: '<path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4"/><path d="M9 13h6M9 17h6"/>'
+};
+var TABS = [['home', 'Übersicht'], ['anl', 'Anlagen'], ['beg', 'Begehung'], ['mae', 'Mängel'], ['ber', 'Bericht']];
+function renderTabs() {
+  var h = '', mo = STATE.gid ? offeneMaengel().length : 0;
+  for (var i = 0; i < TABS.length; i++) {
+    var t = TABS[i];
+    h += '<button class="' + (STATE.tab === t[0] ? 'on' : '') + '" onclick="goTab(\'' + t[0] + '\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + ICONS[t[0]] + '</svg>' + t[1];
+    if (t[0] === 'mae' && mo > 0) h += '<span class="badge">' + mo + '</span>';
+    h += '</button>';
+  }
+  $('tabs').innerHTML = h;
+}
+function renderGebSel() {
+  var s = $('gebSel'), h = '';
+  if (!DB.gebaeude.length) h += '<option value="">Kein Gebäude</option>';
+  var list = DB.gebaeude.slice().sort(function (a, b) { return a.name.localeCompare(b.name); });
+  for (var i = 0; i < list.length; i++) h += '<option value="' + list[i].id + '"' + (list[i].id === STATE.gid ? ' selected' : '') + '>' + esc(list[i].name) + '</option>';
+  h += '<option value="__new">+ Neues Gebäude ...</option>';
+  s.innerHTML = h;
+}
+function gebSelChange(s) {
+  if (s.value === '__new') { renderGebSel(); editGebaeude(); return; }
+  if (!s.value) return;
+  STATE.gid = s.value; try { localStorage.setItem('bsb_gid', s.value); } catch (e) {}
+  render();
+}
+function goTab(t) { STATE.tab = t; render(); window.scrollTo(0, 0); }
+function render() {
+  if (!curGeb()) STATE.tab = 'home';
+  renderGebSel(); renderTabs();
+  var v = $('view');
+  if (STATE.tab === 'home') v.innerHTML = viewHome();
+  else if (STATE.tab === 'anl') v.innerHTML = viewAnlagen();
+  else if (STATE.tab === 'beg') v.innerHTML = viewBegehungen();
+  else if (STATE.tab === 'mae') v.innerHTML = viewMaengel();
+  else if (STATE.tab === 'ber') v.innerHTML = viewBericht();
+}
+
+/* ---------- Auswertungen ---------- */
+function offeneMaengel() { var r = [], l = byG(DB.maengel); for (var i = 0; i < l.length; i++) if (l[i].status !== 'behoben') r.push(l[i]); return r; }
+function faelligeAnlagen(tage) {
+  var r = [], l = byG(DB.anlagen);
+  for (var i = 0; i < l.length; i++) { var d = daysUntil(l[i].naechstePruefung); if (d !== null && d <= tage) r.push(l[i]); }
+  r.sort(function (a, b) { return a.naechstePruefung < b.naechstePruefung ? -1 : 1; });
+  return r;
+}
+function anlName(a) { if (!a) return ''; return (a.bezeichnung || a.kategorie) + (a.nr ? ' Nr. ' + a.nr : ''); }
+function anlStatus(a) {
+  var d = daysUntil(a.naechstePruefung);
+  if (d === null) return pill('p-mut', 'kein Termin');
+  if (d < 0) return pill('p-err', 'überfällig');
+  if (d <= 30) return pill('p-warn', 'fällig ' + fmtD(a.naechstePruefung));
+  return pill('p-ok', fmtD(a.naechstePruefung));
+}
+function anlStatusText(a) {
+  var d = daysUntil(a.naechstePruefung);
+  if (d === null) return '-';
+  if (d < 0) return 'überfällig';
+  if (d <= 30) return 'bald fällig';
+  return 'in Ordnung';
+}
+function lastBeg(vid) {
+  var l = byG(DB.begehungen), last = null;
+  for (var i = 0; i < l.length; i++) { if (l[i].vorlageId === vid && (!last || l[i].datum > last.datum)) last = l[i]; }
+  return last;
+}
+function begStatus(v) {
+  var last = lastBeg(v.id), a = artObj(v.art);
+  if (!last) return { last: null, cls: a.d ? 'p-warn' : 'p-mut', txt: 'noch keine' };
+  var since = -daysUntil(last.datum);
+  if (a.d && since >= a.d) return { last: last, cls: 'p-err', txt: 'fällig' };
+  return { last: last, cls: 'p-ok', txt: since === 0 ? 'heute erledigt' : 'erledigt' };
+}
+function maengelVonBeg(bid) { var r = [], l = DB.maengel; for (var i = 0; i < l.length; i++) if (l[i].begehungId === bid) r.push(l[i]); return r; }
+function nextMangelNr() { var l = byG(DB.maengel), m = 0; for (var i = 0; i < l.length; i++) if ((l[i].nr || 0) > m) m = l[i].nr; return m + 1; }
+
+/* ---------- Übersicht ---------- */
+function stat(n, l, tab, al) { return '<div class="stat' + (al ? ' alert' : '') + '" onclick="goTab(\'' + tab + '\')"><b>' + n + '</b><span>' + l + '</span></div>'; }
+function viewHome() {
+  var g = curGeb();
+  if (!g) {
+    return '<div class="card" style="text-align:center;padding:28px 18px"><h2>Willkommen im Brandschutzbuch</h2>' +
+      '<p class="small" style="line-height:1.5">Hier dokumentieren Sie Ihre Brandschutzeinrichtungen, die regelmäßigen Begehungen und festgestellte Mängel - und erstellen jederzeit einen Bericht als PDF.</p>' +
+      '<button class="btn pri full" onclick="editGebaeude()">Erstes Gebäude anlegen</button></div>' +
+      (isLicensed() ? '' : '<p class="small" style="text-align:center">Demoversion - Freischaltung unter Einstellungen.</p>');
+  }
+  var anl = byG(DB.anlagen), mo = offeneMaengel(), fa = faelligeAnlagen(30), begs = byG(DB.begehungen);
+  var h = '';
+  if (!isLicensed()) h += '<div class="hint">Demoversion: 1 Gebäude, PDF mit Wasserzeichen. <span class="lnk" onclick="openSettings()">Lizenz eingeben</span></div>';
+  var bk = DB.settings.letztesBackup;
+  if ((anl.length || begs.length) && (!bk || -daysUntil(bk) > 30)) h += '<div class="hint">Die Daten liegen nur auf diesem Gerät. ' + (bk ? 'Letzte Sicherung: ' + fmtD(bk) + '. ' : 'Noch keine Sicherung. ') + '<span class="lnk" onclick="exportBackup()">Jetzt sichern</span></div>';
+  h += '<div class="card"><div style="font-size:19px;font-weight:700">' + esc(g.name) + '</div>' + (g.adresse ? '<div class="small">' + esc(g.adresse) + '</div>' : '') + (g.bsb ? '<div class="small">Brandschutzbeauftragte/r: ' + esc(g.bsb) + '</div>' : '') + '<div class="btns"><button class="btn sm" onclick="editGebaeude(\'' + g.id + '\')">Gebäudedaten</button></div></div>';
+  h += '<div class="stats">' + stat(anl.length, 'Brandschutzeinrichtungen', 'anl', false) + stat(mo.length, 'Offene Mängel', 'mae', mo.length > 0) + stat(fa.length, 'Prüfungen fällig (30 Tage)', 'anl', fa.length > 0) + stat(begs.length, 'Begehungen gesamt', 'beg', false) + '</div>';
+  h += '<div class="card"><h3>Begehungen</h3>';
+  for (var i = 0; i < DB.vorlagen.length; i++) {
+    var v = DB.vorlagen[i], s = begStatus(v);
+    h += '<div class="row" onclick="startBegehung(\'' + v.id + '\')"><div class="m"><div class="t">' + esc(v.name) + '</div><div class="s">' + artLabel(v.art) + ' - zuletzt: ' + (s.last ? fmtD(s.last.datum) + ' (' + esc(s.last.pruefer) + ')' : 'noch nie') + '</div></div>' + pill(s.cls, s.txt) + '</div>';
+  }
+  h += '</div>';
+  if (fa.length) {
+    h += '<div class="card"><h3>Fällige Prüfungen</h3>';
+    for (var j = 0; j < fa.length && j < 6; j++) h += '<div class="row" onclick="showAnlage(\'' + fa[j].id + '\')"><div class="m"><div class="t">' + esc(anlName(fa[j])) + '</div><div class="s">' + esc(fa[j].kategorie) + (fa[j].standort ? ' - ' + esc(fa[j].standort) : '') + '</div></div>' + anlStatus(fa[j]) + '</div>';
+    if (fa.length > 6) h += '<div class="small" style="padding-top:8px">... und ' + (fa.length - 6) + ' weitere</div>';
+    h += '</div>';
+  }
+  if (mo.length) {
+    sortMaengel(mo);
+    h += '<div class="card"><h3>Offene Mängel</h3>';
+    for (var k = 0; k < mo.length && k < 5; k++) h += mangelRow(mo[k]);
+    if (mo.length > 5) h += '<div class="small" style="padding-top:8px"><span class="lnk" onclick="goTab(\'mae\')">Alle ' + mo.length + ' anzeigen</span></div>';
+    h += '</div>';
+  }
+  h += '<div class="btns"><button class="btn pri" onclick="newBegehung()">Neue Begehung</button><button class="btn" onclick="editMangel()">Mangel erfassen</button><button class="btn" onclick="goTab(\'ber\')">Bericht</button></div>';
+  return h;
+}
+
+/* ---------- Gebäude ---------- */
+function editGebaeude(id) {
+  var g = id ? findById(DB.gebaeude, id) : null;
+  if (!g && !isLicensed() && DB.gebaeude.length >= 1) {
+    modal('Demoversion', '<p style="line-height:1.5">In der Demoversion kann ein Gebäude angelegt werden. Für weitere Gebäude und PDF-Berichte ohne Wasserzeichen erhalten Sie eine Lizenz bei:</p><p class="small">' + esc(FIRMA_KONTAKT) + '</p>', [
+      { label: 'Schließen', fn: closeModal }, { label: 'Lizenz eingeben', cls: 'pri', fn: openSettings }]);
+    return;
+  }
+  var p = g || {};
+  var h = '<label>Bezeichnung des Objekts *</label><input id="g_name" value="' + esc(p.name) + '" placeholder="z. B. Kindergarten Sonnenschein">' +
+    '<label>Adresse</label><input id="g_adr" value="' + esc(p.adresse) + '">' +
+    '<label>Betreiber / Verantwortliche/r</label><input id="g_ver" value="' + esc(p.verantwortlich) + '">' +
+    '<label>Brandschutzbeauftragte/r</label><input id="g_bsb" value="' + esc(p.bsb) + '">' +
+    '<label>Telefon</label><input id="g_tel" type="text" autocomplete="off" value="' + esc(p.telefon) + '">' +
+    '<label>Wartungsfirma</label><input id="g_fa" value="' + esc(p.firma) + '" placeholder="z. B. Janiba Brandschutztechnik GmbH">' +
+    '<label>Notizen</label><textarea id="g_not">' + esc(p.notiz) + '</textarea>';
+  if (g) h += '<button class="btn full" style="margin-top:18px;color:var(--red2)" onclick="delGebaeude(\'' + g.id + '\')">Gebäude löschen</button>';
+  modal(g ? 'Gebäude bearbeiten' : 'Neues Gebäude', h, [{ label: 'Abbrechen', fn: closeModal }, { label: 'Speichern', cls: 'pri', fn: function () { saveGebaeude(id); } }]);
+}
+function saveGebaeude(id) {
+  var name = val('g_name'); if (!name) { toast('Bitte eine Bezeichnung angeben'); return; }
+  var g = id ? findById(DB.gebaeude, id) : null;
+  if (!g) { g = { id: uid(), erstellt: todayStr() }; DB.gebaeude.push(g); }
+  g.name = name; g.adresse = val('g_adr'); g.verantwortlich = val('g_ver'); g.bsb = val('g_bsb'); g.telefon = val('g_tel'); g.firma = val('g_fa'); g.notiz = val('g_not');
+  save('gebaeude');
+  STATE.gid = g.id; try { localStorage.setItem('bsb_gid', g.id); } catch (e) {}
+  closeModal(); render(); toast('Gebäude gespeichert');
+}
+function delGebaeude(id) {
+  var g = findById(DB.gebaeude, id); if (!g) return;
+  ask('Gebäude "' + g.name + '" mit allen Einrichtungen, Begehungen und Mängeln endgültig löschen?', function () {
+    var cs = ['anlagen', 'pruefungen', 'begehungen', 'maengel'];
+    for (var c = 0; c < cs.length; c++) { var a = DB[cs[c]]; for (var i = a.length - 1; i >= 0; i--) if (a[i].gid === id) a.splice(i, 1); save(cs[c]); }
+    removeById(DB.gebaeude, id); save('gebaeude');
+    STATE.gid = DB.gebaeude.length ? DB.gebaeude[0].id : null;
+    render(); toast('Gebäude gelöscht');
+  }, 'Löschen');
+}
+
+/* ---------- Anlagen ---------- */
+function viewAnlagen() {
+  var h = '<h2>Brandschutzeinrichtungen</h2><input id="anlQ" type="search" placeholder="Suchen (Bezeichnung, Nr., Standort)" value="' + esc(STATE.anlQ) + '" oninput="STATE.anlQ=this.value;$(\'anlList\').innerHTML=anlListHtml();">';
+  h += '<div id="anlList">' + anlListHtml() + '</div><button class="fab" onclick="editAnlage()">+ Einrichtung</button>';
+  return h;
+}
+function anlListHtml() {
+  var q = STATE.anlQ.toLowerCase(), all = byG(DB.anlagen), l = [];
+  for (var i = 0; i < all.length; i++) {
+    var a = all[i], s = [a.kategorie, a.bezeichnung, a.nr, a.standort].join(' ').toLowerCase();
+    if (!q || s.indexOf(q) >= 0) l.push(a);
+  }
+  if (!all.length) return '<div class="empty">Noch keine Einrichtungen erfasst.<br>Tippen Sie auf "+ Einrichtung", um Feuerlöscher, Brandschutzklappen, Türen usw. anzulegen.</div>';
+  if (!l.length) return '<div class="empty">Keine Treffer.</div>';
+  sortAnlagen(l);
+  var h = '<div class="card" style="padding-top:2px">', kat = null;
+  for (var j = 0; j < l.length; j++) {
+    var b = l[j];
+    if (b.kategorie !== kat) { kat = b.kategorie; h += '<div class="grp">' + esc(kat) + '</div>'; }
+    h += '<div class="row" onclick="showAnlage(\'' + b.id + '\')"><div class="m"><div class="t">' + esc(anlName(b)) + '</div><div class="s">' + esc(b.standort || '-') + '</div></div>' + anlStatus(b) + '</div>';
+  }
+  return h + '</div>';
+}
+function sortAnlagen(l) {
+  l.sort(function (a, b) {
+    var d = katIdx(a.kategorie) - katIdx(b.kategorie); if (d) return d;
+    var s = (a.standort || '').localeCompare(b.standort || ''); if (s) return s;
+    return String(a.nr || '').localeCompare(String(b.nr || ''), undefined, { numeric: true });
+  });
+}
+function editAnlage(id, preset) {
+  var a = id ? findById(DB.anlagen, id) : null, p = a || preset || {};
+  var kat = p.kategorie || KATS[0].k, opts = '';
+  for (var i = 0; i < KATS.length; i++) opts += '<option' + (KATS[i].k === kat ? ' selected' : '') + '>' + esc(KATS[i].k) + '</option>';
+  var intv = (p.intervall !== undefined && p.intervall !== null) ? p.intervall : katInt(kat);
+  var h = '<label>Kategorie</label><select id="f_kat" onchange="$(\'f_int\').value=katInt(this.value)">' + opts + '</select>' +
+    '<label>Bezeichnung / Typ</label><input id="f_bez" value="' + esc(p.bezeichnung) + '" placeholder="z. B. PG 6 ABC-Pulver, BSK DN200">' +
+    '<div class="two"><div><label>Nr. / Kennzeichnung</label><input id="f_nr" value="' + esc(id ? p.nr : '') + '"></div><div><label>Baujahr</label><input id="f_bj" type="text" inputmode="numeric" value="' + esc(p.baujahr) + '"></div></div>' +
+    '<label>Standort</label><input id="f_sto" value="' + esc(p.standort) + '" placeholder="z. B. EG Gang links">' +
+    '<label>Hersteller</label><input id="f_her" value="' + esc(p.hersteller) + '">' +
+    '<label>Prüfintervall (Monate)</label><input id="f_int" type="text" inputmode="numeric" value="' + esc(intv) + '">' +
+    '<div class="two"><div><label>Letzte Prüfung</label><input id="f_lp" type="date" value="' + esc(p.letztePruefung) + '"></div><div><label>Nächste Prüfung</label><input id="f_np" type="date" value="' + esc(p.naechstePruefung) + '"></div></div>' +
+    '<div class="small" style="margin-top:4px">Leer lassen = wird aus letzter Prüfung + Intervall berechnet.</div>' +
+    '<label>Notiz</label><textarea id="f_not">' + esc(id ? p.notiz : '') + '</textarea>';
+  if (a) h += '<button class="btn full" style="margin-top:18px;color:var(--red2)" onclick="delAnlage(\'' + a.id + '\')">Einrichtung löschen</button>';
+  var btns = [{ label: 'Abbrechen', fn: closeModal }];
+  if (!a) btns.push({ label: 'Speichern + weitere', fn: function () { saveAnlage(null, true); } });
+  btns.push({ label: 'Speichern', cls: 'pri', fn: function () { saveAnlage(id, false); } });
+  modal(a ? 'Einrichtung bearbeiten' : 'Neue Einrichtung', h, btns);
+}
+function saveAnlage(id, weiter) {
+  var a = id ? findById(DB.anlagen, id) : null, neu = !a;
+  var bez = val('f_bez'), sto = val('f_sto'), nr = val('f_nr');
+  if (!bez && !sto && !nr) { toast('Bitte Bezeichnung, Nr. oder Standort angeben'); return; }
+  if (neu) a = { id: uid(), gid: STATE.gid, erstellt: todayStr() };
+  a.kategorie = val('f_kat'); a.bezeichnung = bez; a.nr = nr; a.standort = sto; a.baujahr = val('f_bj'); a.hersteller = val('f_her');
+  a.intervall = parseInt(val('f_int'), 10) || 0; a.letztePruefung = val('f_lp'); a.naechstePruefung = val('f_np'); a.notiz = val('f_not');
+  if (!a.naechstePruefung && a.letztePruefung && a.intervall) a.naechstePruefung = addMonths(a.letztePruefung, a.intervall);
+  if (neu) DB.anlagen.push(a);
+  save('anlagen');
+  if (weiter) {
+    editAnlage(null, { kategorie: a.kategorie, bezeichnung: a.bezeichnung, standort: a.standort, baujahr: a.baujahr, hersteller: a.hersteller, intervall: a.intervall, letztePruefung: a.letztePruefung, naechstePruefung: a.naechstePruefung });
+    toast('Gespeichert - nächste Einrichtung');
+    render();
+    return;
+  }
+  closeModal(); render(); toast('Gespeichert');
+}
+function delAnlage(id) {
+  ask('Diese Einrichtung samt Prüfhistorie löschen? (Mängel bleiben erhalten)', function () {
+    removeById(DB.anlagen, id);
+    for (var i = DB.pruefungen.length - 1; i >= 0; i--) if (DB.pruefungen[i].aid === id) DB.pruefungen.splice(i, 1);
+    save('anlagen'); save('pruefungen'); render(); toast('Gelöscht');
+  }, 'Löschen');
+}
+function showAnlage(id) {
+  var a = findById(DB.anlagen, id); if (!a) return;
+  var h = '<table class="kv">' +
+    '<tr><td>Kategorie</td><td>' + esc(a.kategorie) + '</td></tr>' +
+    (a.bezeichnung ? '<tr><td>Bezeichnung</td><td>' + esc(a.bezeichnung) + '</td></tr>' : '') +
+    (a.nr ? '<tr><td>Nr.</td><td>' + esc(a.nr) + '</td></tr>' : '') +
+    '<tr><td>Standort</td><td>' + esc(a.standort || '-') + '</td></tr>' +
+    (a.hersteller ? '<tr><td>Hersteller</td><td>' + esc(a.hersteller) + '</td></tr>' : '') +
+    (a.baujahr ? '<tr><td>Baujahr</td><td>' + esc(a.baujahr) + '</td></tr>' : '') +
+    '<tr><td>Prüfintervall</td><td>' + (a.intervall ? a.intervall + ' Monate' : '-') + '</td></tr>' +
+    '<tr><td>Letzte Prüfung</td><td>' + (fmtD(a.letztePruefung) || '-') + '</td></tr>' +
+    '<tr><td>Nächste Prüfung</td><td>' + anlStatus(a) + '</td></tr>' +
+    (a.notiz ? '<tr><td>Notiz</td><td>' + esc(a.notiz) + '</td></tr>' : '') + '</table>';
+  var pr = [];
+  for (var i = 0; i < DB.pruefungen.length; i++) if (DB.pruefungen[i].aid === id) pr.push(DB.pruefungen[i]);
+  pr.sort(function (x, y) { return x.datum < y.datum ? 1 : -1; });
+  h += '<div class="grp">Prüfungen / Wartungen</div>';
+  if (!pr.length) h += '<div class="small" style="padding:8px 0">Noch keine Einträge.</div>';
+  for (var j = 0; j < pr.length; j++) {
+    var p = pr[j];
+    h += '<div class="row" onclick="editPruefung(\'' + id + '\',\'' + p.id + '\')"><div class="m"><div class="t">' + fmtD(p.datum) + ' - ' + esc(p.art) + '</div><div class="s">' + esc([p.firma, p.pruefer].join(' ').replace(/^\s+|\s+$/g, '') || '-') + (p.bemerkung ? ' - ' + esc(p.bemerkung) : '') + '</div></div>' + (p.ergebnis === 'mangel' ? pill('p-err', 'Mängel') : pill('p-ok', 'i.O.')) + '</div>';
+  }
+  var ms = [];
+  for (var k = 0; k < DB.maengel.length; k++) if (DB.maengel[k].aid === id) ms.push(DB.maengel[k]);
+  if (ms.length) { sortMaengel(ms); h += '<div class="grp">Mängel</div>'; for (var m = 0; m < ms.length; m++) h += mangelRow(ms[m]); }
+  h += '<div class="btns" style="margin-top:14px"><button class="btn" onclick="editMangel(null,{aid:\'' + id + '\'})">Mangel erfassen</button><button class="btn" onclick="editAnlage(\'' + id + '\')">Bearbeiten</button></div>';
+  modal(anlName(a), h, [{ label: 'Schließen', fn: closeModal }, { label: 'Prüfung eintragen', cls: 'pri', fn: function () { editPruefung(id); } }]);
+}
+function editPruefung(aid, pid) {
+  var a = findById(DB.anlagen, aid), p = pid ? findById(DB.pruefungen, pid) : null, q = p || {};
+  var arten = ['Wartung / Prüfung durch Fachfirma', 'Interne Sichtkontrolle', 'Reparatur / Austausch', 'Sonstiges'], o = '';
+  for (var i = 0; i < arten.length; i++) o += '<option' + (q.art === arten[i] ? ' selected' : '') + '>' + arten[i] + '</option>';
+  var g = curGeb();
+  var h = '<div class="small" style="margin-top:8px">' + esc(anlName(a)) + (a.standort ? ' - ' + esc(a.standort) : '') + '</div>' +
+    '<label>Datum</label><input id="p_d" type="date" value="' + esc(q.datum || todayStr()) + '">' +
+    '<label>Art</label><select id="p_a">' + o + '</select>' +
+    '<div class="two"><div><label>Firma</label><input id="p_f" value="' + esc(q.firma !== undefined ? q.firma : (g && g.firma) || '') + '"></div><div><label>Prüfer/in</label><input id="p_p" value="' + esc(q.pruefer) + '"></div></div>' +
+    '<label>Ergebnis</label><select id="p_e"><option value="ok"' + (q.ergebnis !== 'mangel' ? ' selected' : '') + '>In Ordnung</option><option value="mangel"' + (q.ergebnis === 'mangel' ? ' selected' : '') + '>Mängel festgestellt</option></select>' +
+    '<label>Bemerkung</label><textarea id="p_b">' + esc(q.bemerkung) + '</textarea>';
+  if (!p) h += '<label class="chk"><input type="checkbox" id="p_upd" checked>Termine der Einrichtung aktualisieren (nächste Prüfung in ' + (a.intervall || 0) + ' Monaten)</label>';
+  if (p) h += '<button class="btn full" style="margin-top:18px;color:var(--red2)" onclick="delPruefung(\'' + aid + '\',\'' + p.id + '\')">Eintrag löschen</button>';
+  modal(p ? 'Prüfung bearbeiten' : 'Prüfung eintragen', h, [{ label: 'Zurück', fn: function () { showAnlage(aid); } }, { label: 'Speichern', cls: 'pri', fn: function () { savePruefung(aid, pid); } }]);
+}
+function savePruefung(aid, pid) {
+  var a = findById(DB.anlagen, aid), p = pid ? findById(DB.pruefungen, pid) : null, neu = !p;
+  var d = val('p_d'); if (!d) { toast('Bitte Datum angeben'); return; }
+  if (neu) p = { id: uid(), gid: STATE.gid, aid: aid };
+  p.datum = d; p.art = val('p_a'); p.firma = val('p_f'); p.pruefer = val('p_p'); p.ergebnis = val('p_e'); p.bemerkung = val('p_b');
+  if (neu) {
+    DB.pruefungen.push(p);
+    if ($('p_upd') && $('p_upd').checked && (!a.letztePruefung || d >= a.letztePruefung)) {
+      a.letztePruefung = d;
+      if (a.intervall) a.naechstePruefung = addMonths(d, a.intervall);
+      save('anlagen');
+    }
+  }
+  save('pruefungen'); render();
+  if (neu && p.ergebnis === 'mangel') { editMangel(null, { aid: aid, beschreibung: p.bemerkung, standort: a.standort }); toast('Prüfung gespeichert - bitte Mangel erfassen'); return; }
+  showAnlage(aid); toast('Prüfung gespeichert');
+}
+function delPruefung(aid, pid) { ask('Diesen Prüfeintrag löschen?', function () { removeById(DB.pruefungen, pid); save('pruefungen'); showAnlage(aid); render(); }, 'Löschen'); }
+
+/* ---------- Begehungen ---------- */
+function viewBegehungen() {
+  var h = '<h2>Begehungen</h2><button class="btn pri full" onclick="newBegehung()" style="margin-bottom:14px">Neue Begehung starten</button>';
+  var l = byG(DB.begehungen);
+  l.sort(function (a, b) { var x = a.datum + (a.zeit || ''), y = b.datum + (b.zeit || ''); return x < y ? 1 : -1; });
+  if (!l.length) return h + '<div class="empty">Noch keine Begehungen protokolliert.</div>';
+  h += '<div class="card"><h3>Protokolle</h3>';
+  for (var i = 0; i < l.length; i++) {
+    var b = l[i], n = 0;
+    for (var j = 0; j < b.punkte.length; j++) if (b.punkte[j].status === 'mangel') n++;
+    n += (b.zusatz || 0);
+    h += '<div class="row" onclick="showBegehung(\'' + b.id + '\')"><div class="m"><div class="t">' + fmtD(b.datum) + ' - ' + esc(b.vorlageName) + '</div><div class="s">' + artLabel(b.art) + ' - ' + esc(b.pruefer) + '</div></div>' + (n ? pill('p-err', n + (n === 1 ? ' Mangel' : ' Mängel')) : pill('p-ok', 'i.O.')) + '</div>';
+  }
+  return h + '</div>';
+}
+function newBegehung() {
+  if (!curGeb()) { editGebaeude(); return; }
+  var h = '<p class="small">Welche Begehung möchten Sie durchführen?</p>';
+  for (var i = 0; i < DB.vorlagen.length; i++) {
+    var v = DB.vorlagen[i], s = begStatus(v);
+    h += '<div class="row" onclick="startBegehung(\'' + v.id + '\')"><div class="m"><div class="t">' + esc(v.name) + '</div><div class="s">' + artLabel(v.art) + ' - ' + v.punkte.length + ' Prüfpunkte</div></div>' + pill(s.cls, s.txt) + '</div>';
+  }
+  h += '<div class="small" style="margin-top:12px">Checklisten können unter Einstellungen angepasst werden.</div>';
+  modal('Neue Begehung', h, [{ label: 'Abbrechen', fn: closeModal }]);
+}
+function startBegehung(vid) {
+  var v = findById(DB.vorlagen, vid); if (!v) return;
+  BEG = { vid: vid, st: [] };
+  for (var k = 0; k < v.punkte.length; k++) BEG.st.push('');
+  var h = '<div class="small" style="margin-top:8px">' + esc(curGeb().name) + ' - ' + artLabel(v.art) + ' - ' + v.punkte.length + ' Prüfpunkte</div>' +
+    '<div class="two"><div><label>Datum</label><input id="b_d" type="date" value="' + todayStr() + '"></div><div><label>Uhrzeit</label><input id="b_z" type="time" value="' + nowTime() + '"></div></div>' +
+    '<label>Durchgeführt von *</label><input id="b_pr" value="' + esc(DB.settings.letzterPruefer || '') + '">' +
+    '<div class="btns" style="margin-top:12px"><button class="btn sm" onclick="begAllOk()">Alle Punkte in Ordnung</button></div>';
+  for (var i = 0; i < v.punkte.length; i++) {
+    h += '<div class="pt"><div class="q">' + (i + 1) + '. ' + esc(v.punkte[i]) + '</div><div class="seg" id="seg' + i + '">' +
+      '<button onclick="begSet(' + i + ',\'ok\')">In Ordnung</button><button onclick="begSet(' + i + ',\'mangel\')">Mangel</button><button onclick="begSet(' + i + ',\'na\')">Entfällt</button></div>' +
+      '<input id="bb' + i + '" placeholder="Mangel beschreiben (Ort, Art) ..." style="display:none;margin-top:8px"></div>';
+  }
+  h += '<label>Weitere Mängel (je Zeile ein Mangel)</label><textarea id="b_zus" placeholder="z. B. Feuerlöscher 2. OG fehlt"></textarea>' +
+    '<label>Bemerkung zur Begehung</label><textarea id="b_bem"></textarea>' +
+    '<label>Unterschrift</label><canvas id="sigc" class="sig"></canvas><div class="btns"><button class="btn sm" onclick="if(SIG)SIG.clear()">Unterschrift löschen</button></div>';
+  modal(v.name, h, [{ label: 'Abbrechen', fn: closeModalAsk }, { label: 'Speichern', cls: 'pri', fn: saveBegehung }], 'Begehung verwerfen? Die Eingaben gehen verloren.');
+  SIG = initSig($('sigc'));
+}
+function begSet(i, s) {
+  if (!BEG) return;
+  BEG.st[i] = s;
+  var b = $('seg' + i).getElementsByTagName('button');
+  b[0].className = s === 'ok' ? 'on-ok' : ''; b[1].className = s === 'mangel' ? 'on-err' : ''; b[2].className = s === 'na' ? 'on-na' : '';
+  $('bb' + i).style.display = s === 'mangel' ? 'block' : 'none';
+}
+function begAllOk() { if (!BEG) return; for (var i = 0; i < BEG.st.length; i++) if (BEG.st[i] !== 'mangel' && BEG.st[i] !== 'na') begSet(i, 'ok'); }
+function saveBegehung() {
+  if (!BEG) return;
+  var v = findById(DB.vorlagen, BEG.vid), offen = 0, first = -1;
+  for (var i = 0; i < BEG.st.length; i++) if (!BEG.st[i]) { offen++; if (first < 0) first = i; }
+  if (offen) { toast(offen + ' Prüfpunkt(e) noch nicht bewertet'); var el = $('seg' + first); if (el && el.scrollIntoView) el.scrollIntoView({ block: 'center' }); return; }
+  var pr = val('b_pr'); if (!pr) { toast('Bitte angeben, wer die Begehung durchgeführt hat'); return; }
+  var d = val('b_d') || todayStr();
+  var b = { id: uid(), gid: STATE.gid, vorlageId: v.id, vorlageName: v.name, art: v.art, datum: d, zeit: val('b_z'), pruefer: pr, punkte: [], bemerkung: val('b_bem'), unterschrift: SIG && !SIG.isEmpty() ? SIG.data() : '', zusatz: 0 };
+  var neu = [], nr = nextMangelNr();
+  for (var j = 0; j < v.punkte.length; j++) {
+    var bem = val('bb' + j);
+    b.punkte.push({ text: v.punkte[j], status: BEG.st[j], bemerkung: BEG.st[j] === 'mangel' ? bem : '' });
+    if (BEG.st[j] === 'mangel') neu.push(bem ? bem + ' (' + v.punkte[j] + ')' : v.punkte[j]);
+  }
+  var zus = val('b_zus').split(/\n/);
+  for (var z = 0; z < zus.length; z++) { var t = zus[z].replace(/^\s+|\s+$/g, ''); if (t) { neu.push(t); b.zusatz++; } }
+  for (var k = 0; k < neu.length; k++) {
+    DB.maengel.push({ id: uid(), gid: STATE.gid, nr: nr++, begehungId: b.id, aid: '', datum: d, beschreibung: neu[k], standort: '', prioritaet: 'mittel', frist: '', status: 'offen', quelle: v.name, foto: '' });
+  }
+  DB.begehungen.push(b);
+  DB.settings.letzterPruefer = pr;
+  save('begehungen'); save('maengel'); save('settings');
+  closeModal(); STATE.tab = 'beg'; render();
+  if (neu.length) {
+    info('Begehung gespeichert', '<p style="line-height:1.5">' + neu.length + (neu.length === 1 ? ' Mangel wurde' : ' Mängel wurden') + ' automatisch in die Mängelliste übernommen. Dort können Sie Fotos, Priorität und Frist ergänzen.</p>');
+  } else toast('Begehung gespeichert - alles in Ordnung');
+}
+function showBegehung(id) {
+  var b = findById(DB.begehungen, id); if (!b) return;
+  var h = '<table class="kv"><tr><td>Datum</td><td>' + fmtD(b.datum) + (b.zeit ? ', ' + esc(b.zeit) : '') + '</td></tr><tr><td>Checkliste</td><td>' + esc(b.vorlageName) + ' (' + artLabel(b.art) + ')</td></tr><tr><td>Durchgeführt von</td><td>' + esc(b.pruefer) + '</td></tr></table>';
+  h += '<div class="grp">Prüfpunkte</div>';
+  for (var i = 0; i < b.punkte.length; i++) {
+    var p = b.punkte[i];
+    h += '<div class="row"><div class="m"><div>' + (i + 1) + '. ' + esc(p.text) + '</div>' + (p.bemerkung ? '<div class="s">' + esc(p.bemerkung) + '</div>' : '') + '</div>' + (p.status === 'ok' ? pill('p-ok', 'i.O.') : p.status === 'mangel' ? pill('p-err', 'Mangel') : pill('p-mut', 'entfällt')) + '</div>';
+  }
+  if (b.bemerkung) h += '<div class="grp">Bemerkung</div><p style="margin:6px 0">' + esc(b.bemerkung) + '</p>';
+  var ms = maengelVonBeg(id);
+  if (ms.length) { h += '<div class="grp">Daraus erfasste Mängel</div>'; for (var j = 0; j < ms.length; j++) h += mangelRow(ms[j]); }
+  if (b.unterschrift) h += '<div class="grp">Unterschrift</div><img src="' + b.unterschrift + '" style="max-width:260px;width:100%;background:#fff;border-radius:8px;margin-top:6px">';
+  h += '<button class="btn full" style="margin-top:18px;color:var(--red2)" onclick="delBegehung(\'' + id + '\')">Protokoll löschen</button>';
+  modal('Begehung ' + fmtD(b.datum), h, [{ label: 'Schließen', fn: closeModal }, { label: 'Als PDF', cls: 'pri', fn: function () { var doc = makeReport({ titel: 'Begehungsprotokoll', single: b, begd: true }); if (doc) pdfReady(doc, 'Begehung_' + safeName(curGeb().name) + '_' + b.datum + '.pdf'); } }]);
+}
+function delBegehung(id) { ask('Dieses Begehungsprotokoll löschen? Bereits erfasste Mängel bleiben erhalten.', function () { removeById(DB.begehungen, id); save('begehungen'); render(); toast('Protokoll gelöscht'); }, 'Löschen'); }
+
+function initSig(c) {
+  var ctx, drawing = false, empty = true, last = null;
+  var r0 = c.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  c.width = Math.round(r0.width * dpr); c.height = Math.round(r0.height * dpr);
+  ctx = c.getContext('2d'); ctx.scale(dpr, dpr);
+  ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#111111'; ctx.fillStyle = '#111111';
+  function pos(e) { var r = c.getBoundingClientRect(); var t = e.touches && e.touches.length ? e.touches[0] : e; return { x: t.clientX - r.left, y: t.clientY - r.top }; }
+  function start(e) { e.preventDefault(); drawing = true; last = pos(e); ctx.beginPath(); ctx.arc(last.x, last.y, 1.1, 0, Math.PI * 2); ctx.fill(); empty = false; }
+  function move(e) { if (!drawing) return; e.preventDefault(); var p = pos(e); ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke(); last = p; }
+  function end() { drawing = false; }
+  c.addEventListener('touchstart', start, { passive: false });
+  c.addEventListener('touchmove', move, { passive: false });
+  c.addEventListener('touchend', end, false);
+  c.addEventListener('mousedown', start, false);
+  c.addEventListener('mousemove', move, false);
+  window.addEventListener('mouseup', end, false);
+  return {
+    isEmpty: function () { return empty; },
+    clear: function () { ctx.clearRect(0, 0, c.width, c.height); empty = true; },
+    data: function () { return c.toDataURL('image/png'); }
+  };
+}
+
+/* ---------- Mängel ---------- */
+function sortMaengel(l) {
+  var po = { hoch: 0, mittel: 1, gering: 2 };
+  l.sort(function (a, b) {
+    var sa = a.status === 'behoben' ? 1 : 0, sb = b.status === 'behoben' ? 1 : 0; if (sa !== sb) return sa - sb;
+    if (sa === 1) return (a.behobenAm || '') < (b.behobenAm || '') ? 1 : -1;
+    var p = (po[a.prioritaet] || 1) - (po[b.prioritaet] || 1); if (p) return p;
+    return (a.nr || 0) - (b.nr || 0);
+  });
+}
+function mangelPill(m) {
+  if (m.status === 'behoben') return pill('p-ok', 'behoben');
+  var d = daysUntil(m.frist);
+  if (d !== null && d < 0) return pill('p-err', 'Frist vorbei');
+  if (d !== null && d <= 7) return pill('p-warn', 'bis ' + fmtD(m.frist));
+  return pill('p-warn', 'offen');
+}
+function mangelOrt(m) { var a = m.aid ? findById(DB.anlagen, m.aid) : null; var t = []; if (a) t.push(anlName(a)); if (m.standort) t.push(m.standort); else if (a && a.standort) t.push(a.standort); return t.join(' - '); }
+function mangelRow(m) {
+  var o = mangelOrt(m);
+  return '<div class="row" onclick="showMangel(\'' + m.id + '\')">' + (m.foto ? '<img class="thumb" src="' + m.foto + '">' : '<span class="dot" style="background:' + prioObj(m.prioritaet).c + '"></span>') +
+    '<div class="m"><div class="t">M' + (m.nr || '') + ' ' + esc(m.beschreibung) + '</div><div class="s">' + fmtD(m.datum) + (o ? ' - ' + esc(o) : '') + '</div></div>' + mangelPill(m) + '</div>';
+}
+function viewMaengel() {
+  var all = byG(DB.maengel), no = 0, nb = 0, l = [];
+  for (var i = 0; i < all.length; i++) { if (all[i].status === 'behoben') nb++; else no++; }
+  for (var j = 0; j < all.length; j++) {
+    var m = all[j];
+    if (STATE.mFilter === 'alle' || (STATE.mFilter === 'offen' && m.status !== 'behoben') || (STATE.mFilter === 'behoben' && m.status === 'behoben')) l.push(m);
+  }
+  sortMaengel(l);
+  var f = STATE.mFilter;
+  var h = '<h2>Mängel</h2><div class="seg" style="margin-bottom:12px"><button class="' + (f === 'offen' ? 'on' : '') + '" onclick="STATE.mFilter=\'offen\';render()">Offen (' + no + ')</button><button class="' + (f === 'behoben' ? 'on' : '') + '" onclick="STATE.mFilter=\'behoben\';render()">Behoben (' + nb + ')</button><button class="' + (f === 'alle' ? 'on' : '') + '" onclick="STATE.mFilter=\'alle\';render()">Alle</button></div>';
+  if (!l.length) h += '<div class="empty">' + (f === 'offen' ? 'Keine offenen Mängel.' : 'Keine Einträge.') + '</div>';
+  else { h += '<div class="card" style="padding-top:4px;padding-bottom:4px">'; for (var k = 0; k < l.length; k++) h += mangelRow(l[k]); h += '</div>'; }
+  return h + '<button class="fab" onclick="editMangel()">+ Mangel</button>';
+}
+function editMangel(id, preset) {
+  if (!curGeb()) { editGebaeude(); return; }
+  var m = id ? findById(DB.maengel, id) : null, p = m || preset || {};
+  MFORM = { foto: p.foto || '', prio: p.prioritaet || 'mittel' };
+  var anl = byG(DB.anlagen); sortAnlagen(anl);
+  var o = '<option value="">- keine bestimmte Einrichtung -</option>';
+  for (var i = 0; i < anl.length; i++) o += '<option value="' + anl[i].id + '"' + (anl[i].id === p.aid ? ' selected' : '') + '>' + esc(anl[i].kategorie + ': ' + anlName(anl[i]) + (anl[i].standort ? ' (' + anl[i].standort + ')' : '')) + '</option>';
+  var pb = '';
+  for (var j = 0; j < PRIOS.length; j++) pb += '<button id="mp_' + PRIOS[j].k + '" class="' + (MFORM.prio === PRIOS[j].k ? 'on' : '') + '" onclick="mPrio(\'' + PRIOS[j].k + '\')">' + PRIOS[j].l + '</button>';
+  var h = '<label>Beschreibung des Mangels *</label><textarea id="m_b">' + esc(p.beschreibung) + '</textarea>' +
+    '<label>Standort</label><input id="m_s" value="' + esc(p.standort) + '" placeholder="z. B. 1. OG Stiegenhaus">' +
+    '<label>Betroffene Einrichtung</label><select id="m_a">' + o + '</select>' +
+    '<label>Priorität</label><div class="seg">' + pb + '</div>' +
+    '<div class="two"><div><label>Festgestellt am</label><input id="m_d" type="date" value="' + esc(p.datum || todayStr()) + '"></div><div><label>Behebung bis</label><input id="m_f" type="date" value="' + esc(p.frist) + '"></div></div>' +
+    '<div class="btns"><button class="btn sm" onclick="mFrist(7)">+7 Tage</button><button class="btn sm" onclick="mFrist(14)">+14 Tage</button><button class="btn sm" onclick="mFrist(30)">+30 Tage</button></div>' +
+    '<label>Foto</label><input type="file" accept="image/*" onchange="pickFoto(this,function(d){MFORM.foto=d;mFotoPrev();})"><div id="m_prev"></div>';
+  if (m) h += '<button class="btn full" style="margin-top:18px;color:var(--red2)" onclick="delMangel(\'' + m.id + '\')">Mangel löschen</button>';
+  modal(m ? 'Mangel M' + m.nr + ' bearbeiten' : 'Mangel erfassen', h, [{ label: 'Abbrechen', fn: closeModal }, { label: 'Speichern', cls: 'pri', fn: function () { saveMangel(id); } }]);
+  mFotoPrev();
+}
+function mPrio(k) { MFORM.prio = k; for (var j = 0; j < PRIOS.length; j++) $('mp_' + PRIOS[j].k).className = PRIOS[j].k === k ? 'on' : ''; }
+function mFrist(n) { $('m_f').value = addDays(val('m_d') || todayStr(), n); }
+function mFotoPrev() { var e = $('m_prev'); if (!e) return; e.innerHTML = MFORM.foto ? '<img class="foto" src="' + MFORM.foto + '"><div class="btns"><button class="btn sm" onclick="MFORM.foto=\'\';mFotoPrev()">Foto entfernen</button></div>' : ''; }
+function saveMangel(id) {
+  var b = val('m_b'); if (!b) { toast('Bitte den Mangel beschreiben'); return; }
+  var m = id ? findById(DB.maengel, id) : null, neu = !m;
+  if (neu) m = { id: uid(), gid: STATE.gid, nr: nextMangelNr(), status: 'offen', begehungId: '' };
+  m.beschreibung = b; m.standort = val('m_s'); m.aid = val('m_a'); m.prioritaet = MFORM.prio; m.datum = val('m_d') || todayStr(); m.frist = val('m_f'); m.foto = MFORM.foto;
+  if (neu) DB.maengel.push(m);
+  save('maengel'); closeModal(); render(); toast(neu ? 'Mangel M' + m.nr + ' erfasst' : 'Gespeichert');
+}
+function delMangel(id) { ask('Diesen Mangel endgültig löschen?', function () { removeById(DB.maengel, id); save('maengel'); render(); toast('Gelöscht'); }, 'Löschen'); }
+function showMangel(id) {
+  var m = findById(DB.maengel, id); if (!m) return;
+  var o = mangelOrt(m), pr = prioObj(m.prioritaet);
+  var h = '<p style="font-size:17px;margin:12px 0;line-height:1.4">' + esc(m.beschreibung) + '</p><table class="kv">' +
+    '<tr><td>Status</td><td>' + mangelPill(m) + '</td></tr>' +
+    (o ? '<tr><td>Ort / Einrichtung</td><td>' + esc(o) + '</td></tr>' : '') +
+    '<tr><td>Priorität</td><td><span class="dot" style="display:inline-block;background:' + pr.c + ';margin-right:6px"></span>' + pr.l + '</td></tr>' +
+    '<tr><td>Festgestellt am</td><td>' + fmtD(m.datum) + (m.quelle ? ' (' + esc(m.quelle) + ')' : '') + '</td></tr>' +
+    (m.frist ? '<tr><td>Behebung bis</td><td>' + fmtD(m.frist) + '</td></tr>' : '') +
+    (m.status === 'behoben' ? '<tr><td>Behoben am</td><td>' + fmtD(m.behobenAm) + (m.behobenVon ? ' von ' + esc(m.behobenVon) : '') + '</td></tr>' + (m.massnahme ? '<tr><td>Maßnahme</td><td>' + esc(m.massnahme) + '</td></tr>' : '') : '') +
+    '</table>';
+  if (m.foto) h += '<div class="grp">Foto (Mangel)</div><img class="foto" src="' + m.foto + '">';
+  if (m.fotoBehoben) h += '<div class="grp">Foto (behoben)</div><img class="foto" src="' + m.fotoBehoben + '">';
+  h += '<div class="btns" style="margin-top:14px"><button class="btn" onclick="editMangel(\'' + id + '\')">Bearbeiten</button>' + (m.status === 'behoben' ? '<button class="btn" onclick="reopenMangel(\'' + id + '\')">Wieder öffnen</button>' : '') + '</div>';
+  var btns = [{ label: 'Schließen', fn: closeModal }];
+  if (m.status !== 'behoben') btns.push({ label: 'Als behoben melden', cls: 'pri', fn: function () { behebenMangel(id); } });
+  modal('Mangel M' + (m.nr || ''), h, btns);
+}
+function behebenMangel(id) {
+  var m = findById(DB.maengel, id);
+  MFORM = { foto: '' };
+  var h = '<div class="small" style="margin-top:8px">M' + m.nr + ' ' + esc(m.beschreibung) + '</div>' +
+    '<label>Behoben am</label><input id="bh_d" type="date" value="' + todayStr() + '">' +
+    '<label>Behoben von</label><input id="bh_v" value="' + esc(DB.settings.letzterPruefer || '') + '">' +
+    '<label>Durchgeführte Maßnahme</label><textarea id="bh_m" placeholder="z. B. Feuerlöscher ersetzt, Tür nachgestellt"></textarea>' +
+    '<label>Foto nachher (optional)</label><input type="file" accept="image/*" onchange="pickFoto(this,function(d){MFORM.foto=d;$(\'bh_prev\').innerHTML=d?\'<img class=foto src=\'+d+\'>\':\'\';})"><div id="bh_prev"></div>';
+  modal('Mangel behoben', h, [{ label: 'Zurück', fn: function () { showMangel(id); } }, { label: 'Speichern', cls: 'pri', fn: function () {
+    m.status = 'behoben'; m.behobenAm = val('bh_d') || todayStr(); m.behobenVon = val('bh_v'); m.massnahme = val('bh_m'); m.fotoBehoben = MFORM.foto;
+    save('maengel'); closeModal(); render(); toast('Mangel M' + m.nr + ' als behoben markiert');
+  } }]);
+}
+function reopenMangel(id) { var m = findById(DB.maengel, id); m.status = 'offen'; m.behobenAm = ''; m.behobenVon = ''; m.massnahme = ''; m.fotoBehoben = ''; save('maengel'); render(); showMangel(id); }
+function pickFoto(input, cb) {
+  var f = input.files && input.files[0]; if (!f) return;
+  var rd = new FileReader();
+  rd.onload = function () {
+    var img = new Image();
+    img.onload = function () {
+      var max = 1280, w = img.width, h = img.height;
+      if (w > h && w > max) { h = Math.round(h * max / w); w = max; } else if (h >= w && h > max) { w = Math.round(w * max / h); h = max; }
+      var c = document.createElement('canvas'); c.width = w; c.height = h;
+      var x = c.getContext('2d'); x.fillStyle = '#ffffff'; x.fillRect(0, 0, w, h); x.drawImage(img, 0, 0, w, h);
+      cb(c.toDataURL('image/jpeg', 0.7));
+    };
+    img.onerror = function () { toast('Foto konnte nicht gelesen werden'); };
+    img.src = rd.result;
+  };
+  rd.readAsDataURL(f);
+}
+
+/* ---------- Bericht ---------- */
+function viewBericht() {
+  var y = new Date().getFullYear();
+  var h = '<h2>Bericht erstellen</h2><div class="card"><h3>Zeitraum</h3>' +
+    '<div class="two"><div><label>Von</label><input id="r_von" type="date" value="' + y + '-01-01"></div><div><label>Bis</label><input id="r_bis" type="date" value="' + todayStr() + '"></div></div>' +
+    '<div class="btns"><button class="btn sm" onclick="rZeit(0)">Dieses Jahr</button><button class="btn sm" onclick="rZeit(1)">Letztes Jahr</button><button class="btn sm" onclick="rZeit(2)">Letzte 12 Monate</button><button class="btn sm" onclick="rZeit(3)">Alles</button></div></div>' +
+    '<div class="card"><h3>Inhalt</h3>' +
+    '<label class="chk"><input type="checkbox" id="r_geb" checked>Objektdaten und Zusammenfassung</label>' +
+    '<label class="chk"><input type="checkbox" id="r_anl" checked>Verzeichnis der Brandschutzeinrichtungen</label>' +
+    '<label class="chk"><input type="checkbox" id="r_pru" checked>Prüfungen und Wartungen</label>' +
+    '<label class="chk"><input type="checkbox" id="r_beg" checked>Begehungen (Übersicht)</label>' +
+    '<label class="chk"><input type="checkbox" id="r_begd">Begehungsprotokolle im Detail</label>' +
+    '<label class="chk"><input type="checkbox" id="r_mo" checked>Offene Mängel</label>' +
+    '<label class="chk"><input type="checkbox" id="r_mb" checked>Behobene Mängel</label>' +
+    '<label class="chk"><input type="checkbox" id="r_foto" checked>Fotos zu den Mängeln</label></div>' +
+    '<button class="btn pri full" onclick="berichtPdf()">PDF-Bericht erstellen</button>' +
+    '<button class="btn full" onclick="maengelPdf()">Nur Liste der offenen Mängel</button>';
+  return h;
+}
+function rZeit(t) {
+  var d = new Date(), y = d.getFullYear();
+  if (t === 0) { $('r_von').value = y + '-01-01'; $('r_bis').value = todayStr(); }
+  if (t === 1) { $('r_von').value = (y - 1) + '-01-01'; $('r_bis').value = (y - 1) + '-12-31'; }
+  if (t === 2) { var a = new Date(); a.setFullYear(y - 1); a.setDate(a.getDate() + 1); $('r_von').value = ymd(a); $('r_bis').value = todayStr(); }
+  if (t === 3) { $('r_von').value = '2000-01-01'; $('r_bis').value = todayStr(); }
+}
+function chk(id) { return $(id) && $(id).checked; }
+function berichtPdf() {
+  var o = { titel: 'Brandschutzbuch - Bericht', von: val('r_von'), bis: val('r_bis'), geb: chk('r_geb'), anl: chk('r_anl'), pru: chk('r_pru'), beg: chk('r_beg'), begd: chk('r_begd'), mo: chk('r_mo'), mb: chk('r_mb'), foto: chk('r_foto') };
+  if (o.von && o.bis && o.von > o.bis) { toast('Von-Datum liegt nach dem Bis-Datum'); return; }
+  var doc = makeReport(o); if (doc) pdfReady(doc, 'Brandschutzbuch_' + safeName(curGeb().name) + '_' + todayStr() + '.pdf');
+}
+function maengelPdf() {
+  var doc = makeReport({ titel: 'Offene Mängel', mo: true, foto: chk('r_foto'), nurStand: true });
+  if (doc) pdfReady(doc, 'Maengelliste_' + safeName(curGeb().name) + '_' + todayStr() + '.pdf');
+}
+function makeReport(o) {
+  var g = curGeb(); if (!g) return null;
+  if (!window.jspdf || !window.jspdf.jsPDF) { info('PDF nicht verfügbar', '<p>Das PDF-Modul wurde noch nicht geladen. Bitte die App einmal mit Internetverbindung öffnen - danach funktioniert es auch offline.</p>'); return null; }
+  var doc = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' });
+  if (typeof doc.autoTable !== 'function') { info('PDF nicht verfügbar', '<p>Das Tabellen-Modul fehlt. Bitte mit Internetverbindung neu laden.</p>'); return null; }
+  var M = 14, W = 210, H = 297, y = 0, RED = [185, 28, 28];
+  var von = o.von || '0000-01-01', bis = o.bis || '9999-12-31';
+  function inR(d) { return !!d && d >= von && d <= bis; }
+  function need(hh) { if (y + hh > H - 20) { doc.addPage(); y = 20; } }
+  function sec(t) { need(32); doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(185, 28, 28); doc.text(t, M, y); doc.setTextColor(0, 0, 0); y += 3; }
+  function sub(t) { need(26); doc.setFont('helvetica', 'bold'); doc.setFontSize(10.5); doc.setTextColor(0, 0, 0); doc.text(doc.splitTextToSize(t, W - 2 * M)[0], M, y); y += 2.5; }
+  function note(t) { doc.setFont('helvetica', 'italic'); doc.setFontSize(9); var ls = doc.splitTextToSize(t, W - 2 * M); need(ls.length * 4.2 + 4); doc.setTextColor(100, 100, 100); doc.text(ls, M, y + 3); doc.setTextColor(0, 0, 0); y += 5 + ls.length * 4.2; }
+  function tbl(head, body, ex) {
+    var opt = { startY: y, head: [head], body: body, theme: 'grid', margin: { left: M, right: M, top: 18, bottom: 18 },
+      styles: { fontSize: 8.5, cellPadding: 1.6, overflow: 'linebreak', valign: 'top', lineColor: [210, 210, 210], lineWidth: 0.1 },
+      headStyles: { fillColor: RED, textColor: 255, fontStyle: 'bold' }, alternateRowStyles: { fillColor: [247, 247, 247] } };
+    if (ex) for (var k in ex) if (ex.hasOwnProperty(k)) opt[k] = ex[k];
+    doc.autoTable(opt); y = doc.lastAutoTable.finalY + 9;
+  }
+  function colorCol(idx) {
+    return function (d) {
+      if (d.section !== 'body' || d.column.index !== idx) return;
+      var t = String(d.cell.raw || '');
+      if (/Mangel|Mängel|überfällig|vorbei|Hoch/.test(t)) { d.cell.styles.textColor = [200, 30, 30]; d.cell.styles.fontStyle = 'bold'; }
+      else if (/^i\.O\.|in Ordnung|behoben/.test(t)) d.cell.styles.textColor = [21, 128, 61];
+      else if (/bald/.test(t)) d.cell.styles.textColor = [180, 83, 9];
+    };
+  }
+  function fotos(items) {
+    if (!items.length) return;
+    sub('Fotodokumentation'); y += 2;
+    var cw = (W - 2 * M - 6) / 2, col = 0, rowH = 0;
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i], pr;
+      try { pr = doc.getImageProperties(it.img); } catch (e) { continue; }
+      var w = cw, hh = cw * pr.height / pr.width; if (hh > 70) { hh = 70; w = hh * pr.width / pr.height; }
+      if (col === 0) need(84);
+      var x = M + col * (cw + 6);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(0, 0, 0);
+      doc.text(doc.splitTextToSize(it.cap, cw)[0], x, y + 3);
+      try { doc.addImage(it.img, 'JPEG', x, y + 5, w, hh); } catch (e2) {}
+      if (hh + 9 > rowH) rowH = hh + 9;
+      if (col === 1) { y += rowH + 4; rowH = 0; col = 0; } else col = 1;
+    }
+    if (col === 1) y += rowH + 4;
+    y += 2;
+  }
+
+  /* Kopf */
+  doc.setFillColor(185, 28, 28); doc.rect(0, 0, W, 27, 'F');
+  doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.text(o.titel || 'Brandschutzbuch', M, 12);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+  doc.text(doc.splitTextToSize(g.name + (g.adresse ? ', ' + g.adresse : ''), W - 2 * M)[0], M, 19);
+  var zl = o.single ? 'Datum: ' + fmtD(o.single.datum) : (o.nurStand ? 'Stand: ' + fmtD(todayStr()) : 'Zeitraum: ' + (o.von ? fmtD(o.von) : 'Beginn') + ' bis ' + (o.bis ? fmtD(o.bis) : 'heute') + '     Erstellt: ' + fmtD(todayStr()));
+  doc.text(zl, M, 24.5);
+  doc.setTextColor(0, 0, 0); y = 37;
+
+  var anl = byG(DB.anlagen); sortAnlagen(anl);
+  var begs = [], bl = byG(DB.begehungen);
+  for (var i = 0; i < bl.length; i++) if (inR(bl[i].datum)) begs.push(bl[i]);
+  begs.sort(function (a, b) { var x = a.datum + (a.zeit || ''), z = b.datum + (b.zeit || ''); return x < z ? -1 : 1; });
+  if (o.single) begs = [o.single];
+  var ma = byG(DB.maengel), mo = [], mb = [], mneu = 0;
+  for (var j = 0; j < ma.length; j++) {
+    if (ma[j].status !== 'behoben') mo.push(ma[j]); else if (inR(ma[j].behobenAm)) mb.push(ma[j]);
+    if (inR(ma[j].datum)) mneu++;
+  }
+  if (o.single) { mo = []; mb = []; var sm = maengelVonBeg(o.single.id); for (var s = 0; s < sm.length; s++) mo.push(sm[s]); }
+  mo.sort(function (a, b) { return (a.nr || 0) - (b.nr || 0); });
+  mb.sort(function (a, b) { return (a.nr || 0) - (b.nr || 0); });
+  var pru = [], pl = byG(DB.pruefungen);
+  for (var k = 0; k < pl.length; k++) if (inR(pl[k].datum)) pru.push(pl[k]);
+  pru.sort(function (a, b) { return a.datum < b.datum ? -1 : 1; });
+  var over = 0; for (var q = 0; q < anl.length; q++) { var dd = daysUntil(anl[q].naechstePruefung); if (dd !== null && dd < 0) over++; }
+  function nM(b) { var n = b.zusatz || 0; for (var u = 0; u < b.punkte.length; u++) if (b.punkte[u].status === 'mangel') n++; return n; }
+
+  if (o.geb) {
+    sec('Objekt');
+    var rows = [['Objekt', g.name]];
+    if (g.adresse) rows.push(['Adresse', g.adresse]);
+    if (g.verantwortlich) rows.push(['Betreiber / Verantwortliche/r', g.verantwortlich]);
+    if (g.bsb) rows.push(['Brandschutzbeauftragte/r', g.bsb]);
+    if (g.telefon) rows.push(['Telefon', g.telefon]);
+    if (g.firma) rows.push(['Wartungsfirma', g.firma]);
+    if (DB.settings.betreiber) rows.push(['Geführt von', DB.settings.betreiber]);
+    tbl(['Angabe', 'Inhalt'], rows, { columnStyles: { 0: { cellWidth: 60, fontStyle: 'bold' } } });
+    var bm = 0; for (var r = 0; r < begs.length; r++) if (nM(begs[r])) bm++;
+    sec('Zusammenfassung');
+    tbl(['Kennzahl', 'Wert'], [
+      ['Brandschutzeinrichtungen erfasst', String(anl.length)],
+      ['Begehungen im Zeitraum', String(begs.length)],
+      ['davon mit festgestellten Mängeln', String(bm)],
+      ['Prüfungen / Wartungen im Zeitraum', String(pru.length)],
+      ['Mängel neu festgestellt im Zeitraum', String(mneu)],
+      ['Mängel behoben im Zeitraum', String(mb.length)],
+      ['Offene Mängel (aktueller Stand)', String(mo.length)],
+      ['Überfällige Prüfungen (aktueller Stand)', String(over)]
+    ], { columnStyles: { 0: { cellWidth: 120 } } });
+  }
+  if (o.anl) {
+    sec('Verzeichnis der Brandschutzeinrichtungen');
+    if (!anl.length) note('Keine Einrichtungen erfasst.');
+    else {
+      var ar = [];
+      for (var a1 = 0; a1 < anl.length; a1++) { var A = anl[a1]; ar.push([A.kategorie, A.bezeichnung || '', A.nr || '', A.standort || '', fmtD(A.letztePruefung), fmtD(A.naechstePruefung), anlStatusText(A)]); }
+      tbl(['Kategorie', 'Bezeichnung', 'Nr.', 'Standort', 'Letzte Prüf.', 'Nächste Prüf.', 'Status'], ar, { didParseCell: colorCol(6), columnStyles: { 2: { cellWidth: 12 }, 4: { cellWidth: 20 }, 5: { cellWidth: 20 }, 6: { cellWidth: 20 } } });
+    }
+  }
+  if (o.pru) {
+    sec('Prüfungen und Wartungen');
+    if (!pru.length) note('Im Zeitraum keine Prüfungen oder Wartungen eingetragen.');
+    else {
+      var prr = [];
+      for (var p1 = 0; p1 < pru.length; p1++) { var P = pru[p1], PA = findById(DB.anlagen, P.aid); prr.push([fmtD(P.datum), PA ? anlName(PA) + (PA.standort ? ', ' + PA.standort : '') : '-', P.art, [P.firma, P.pruefer].join(' ').replace(/^\s+|\s+$/g, ''), P.ergebnis === 'mangel' ? 'Mängel' : 'in Ordnung', P.bemerkung || '']); }
+      tbl(['Datum', 'Einrichtung', 'Art', 'Firma / Prüfer', 'Ergebnis', 'Bemerkung'], prr, { didParseCell: colorCol(4), columnStyles: { 0: { cellWidth: 19 }, 4: { cellWidth: 18 } } });
+    }
+  }
+  if (o.beg && !o.single) {
+    sec('Begehungen');
+    if (!begs.length) note('Im Zeitraum keine Begehungen protokolliert.');
+    else {
+      var br = [];
+      for (var b1 = 0; b1 < begs.length; b1++) { var B = begs[b1], n = nM(B); br.push([fmtD(B.datum) + (B.zeit ? ' ' + B.zeit : ''), B.vorlageName, artLabel(B.art), B.pruefer, n ? n + (n === 1 ? ' Mangel' : ' Mängel') : 'i.O.', B.bemerkung || '']); }
+      tbl(['Datum', 'Checkliste', 'Intervall', 'Durchgeführt von', 'Ergebnis', 'Bemerkung'], br, { didParseCell: colorCol(4), columnStyles: { 0: { cellWidth: 26 }, 4: { cellWidth: 20 } } });
+    }
+  }
+  if (o.begd) {
+    if (!o.single) sec('Begehungsprotokolle');
+    for (var b2 = 0; b2 < begs.length; b2++) {
+      var BB = begs[b2], pr2 = [];
+      sub(fmtD(BB.datum) + (BB.zeit ? ' ' + BB.zeit : '') + ' - ' + BB.vorlageName + ' - durchgeführt von ' + BB.pruefer);
+      for (var p2 = 0; p2 < BB.punkte.length; p2++) { var PP = BB.punkte[p2]; pr2.push([String(p2 + 1), PP.text, PP.status === 'ok' ? 'i.O.' : PP.status === 'mangel' ? 'Mangel' : 'entfällt', PP.bemerkung || '']); }
+      tbl(['Nr.', 'Prüfpunkt', 'Ergebnis', 'Bemerkung'], pr2, { didParseCell: colorCol(2), columnStyles: { 0: { cellWidth: 10 }, 2: { cellWidth: 18 }, 3: { cellWidth: 50 } } });
+      y -= 4;
+      if (BB.bemerkung) note('Bemerkung: ' + BB.bemerkung);
+      if (BB.unterschrift) {
+        try {
+          var ip = doc.getImageProperties(BB.unterschrift), sh = 16, sw = sh * ip.width / ip.height; if (sw > 70) { sw = 70; sh = sw * ip.height / ip.width; }
+          need(sh + 12); doc.addImage(BB.unterschrift, 'PNG', M, y + 1, sw, sh);
+          doc.setDrawColor(150, 150, 150); doc.line(M, y + sh + 2, M + 70, y + sh + 2);
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(100, 100, 100); doc.text('Unterschrift ' + BB.pruefer, M, y + sh + 6); doc.setTextColor(0, 0, 0);
+          y += sh + 10;
+        } catch (e3) {}
+      }
+      y += 5;
+    }
+  }
+  if (o.mo) {
+    sec(o.single ? 'Festgestellte Mängel' : 'Offene Mängel');
+    if (!mo.length) note(o.single ? 'Bei dieser Begehung wurden keine Mängel festgestellt.' : 'Derzeit keine offenen Mängel.');
+    else {
+      var mr = [];
+      for (var m1 = 0; m1 < mo.length; m1++) {
+        var MM = mo[m1], fd = daysUntil(MM.frist);
+        mr.push(['M' + (MM.nr || ''), fmtD(MM.datum), MM.beschreibung, mangelOrt(MM), prioObj(MM.prioritaet).l, MM.status === 'behoben' ? 'behoben ' + fmtD(MM.behobenAm) : (MM.frist ? fmtD(MM.frist) + (fd < 0 ? ' (vorbei)' : '') : '-')]);
+      }
+      tbl(['Nr.', 'Festgest.', 'Beschreibung', 'Ort / Einrichtung', 'Priorität', 'Frist'], mr, { didParseCell: function (d) { colorCol(4)(d); colorCol(5)(d); }, columnStyles: { 0: { cellWidth: 11 }, 1: { cellWidth: 19 }, 4: { cellWidth: 16 }, 5: { cellWidth: 22 } } });
+    }
+    if (o.foto) {
+      var fi = [];
+      for (var m2 = 0; m2 < mo.length; m2++) if (mo[m2].foto) fi.push({ cap: 'M' + mo[m2].nr + ' ' + mo[m2].beschreibung, img: mo[m2].foto });
+      fotos(fi);
+    }
+  }
+  if (o.mb && !o.single) {
+    sec('Behobene Mängel');
+    if (!mb.length) note('Im Zeitraum wurden keine Mängel als behoben gemeldet.');
+    else {
+      var rr = [];
+      for (var m3 = 0; m3 < mb.length; m3++) { var X = mb[m3]; rr.push(['M' + (X.nr || ''), fmtD(X.datum), X.beschreibung, fmtD(X.behobenAm), X.behobenVon || '', X.massnahme || '']); }
+      tbl(['Nr.', 'Festgest.', 'Beschreibung', 'Behoben', 'Von', 'Maßnahme'], rr, { columnStyles: { 0: { cellWidth: 11 }, 1: { cellWidth: 19 }, 3: { cellWidth: 19 } } });
+      if (o.foto) {
+        var fb = [];
+        for (var m4 = 0; m4 < mb.length; m4++) {
+          if (mb[m4].foto) fb.push({ cap: 'M' + mb[m4].nr + ' vorher', img: mb[m4].foto });
+          if (mb[m4].fotoBehoben) fb.push({ cap: 'M' + mb[m4].nr + ' nachher', img: mb[m4].fotoBehoben });
+        }
+        fotos(fb);
+      }
+    }
+  }
+  if (!o.single) {
+    y += 4;
+    note('Hinweis: Diese Aufzeichnungen dienen der Dokumentation der Eigenkontrollen des Betreibers. Sie ersetzen kein behördlich vorgeschriebenes Brandschutzbuch und keine Prüfung durch befugte Fachfirmen.');
+    need(26); y += 14;
+    doc.setDrawColor(150, 150, 150); doc.line(M, y, M + 80, y); doc.line(W - M - 50, y, W - M, y);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(100, 100, 100);
+    doc.text('Betreiber / Verantwortliche/r', M, y + 4); doc.text('Datum', W - M - 50, y + 4);
+  }
+
+  var demo = !isLicensed(), np = doc.getNumberOfPages();
+  for (var pg = 1; pg <= np; pg++) {
+    doc.setPage(pg);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(120, 120, 120);
+    doc.text(doc.splitTextToSize((o.titel || 'Brandschutzbuch') + ' - ' + g.name, 140)[0], M, H - 9);
+    doc.text('Seite ' + pg + ' / ' + np, W - M, H - 9, { align: 'right' });
+    doc.text(FIRMA_FOOTER, W / 2, H - 5, { align: 'center' });
+    if (demo) {
+      try { doc.setGState(new doc.GState({ opacity: 0.18 })); } catch (e4) {}
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(64); doc.setTextColor(200, 30, 30);
+      doc.text('DEMOVERSION', 38, 205, { angle: 40 });
+      try { doc.setGState(new doc.GState({ opacity: 1 })); } catch (e5) {}
+    }
+  }
+  return doc;
+}
+function shareBlob(blob, fname, mime) {
+  var file = null;
+  try { file = new File([blob], fname, { type: mime }); } catch (e) { file = null; }
+  if (file && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+    navigator.share({ files: [file], title: fname })['catch'](function (err) { if (err && err.name !== 'AbortError') downloadBlob(blob, fname); });
+    return;
+  }
+  downloadBlob(blob, fname);
+}
+function downloadBlob(blob, fname) {
+  var url = URL.createObjectURL(blob), a = document.createElement('a');
+  a.href = url; a.download = fname; document.body.appendChild(a); a.click();
+  setTimeout(function () { document.body.removeChild(a); URL.revokeObjectURL(url); }, 5000);
+}
+function pdfReady(doc, fname) {
+  var blob = doc.output('blob');
+  var kb = Math.round(blob.size / 1024);
+  modal('PDF ist fertig', '<p style="line-height:1.5">' + esc(fname) + '<br><span class="small">' + doc.getNumberOfPages() + ' Seite(n), ' + (kb > 1024 ? (kb / 1024).toFixed(1) + ' MB' : kb + ' KB') + '</span></p><p class="small">Über "Teilen / Sichern" können Sie das PDF per Mail senden, in Dateien sichern oder drucken.</p>',
+    [{ label: 'Schließen', fn: closeModal }, { label: 'Teilen / Sichern', cls: 'pri', fn: function () { shareBlob(blob, fname, 'application/pdf'); } }]);
+}
+
+/* ---------- Einstellungen ---------- */
+function openSettings() {
+  var s = DB.settings, lic = isLicensed(), h = '';
+  h += '<div class="grp">Lizenz</div>';
+  if (lic) h += '<p>' + pill('p-ok', 'Vollversion') + ' lizenziert für <b>' + esc(s.lizenzName) + '</b></p>';
+  else h += '<p class="small" style="line-height:1.5">' + pill('p-warn', 'Demoversion') + ' 1 Gebäude, PDF mit Wasserzeichen.<br>Lizenz erhältlich bei: ' + esc(FIRMA_KONTAKT) + '</p>' +
+    '<label>Lizenznehmer (genau wie auf der Lizenz)</label><input id="s_ln" value="' + esc(s.lizenzName) + '">' +
+    '<label>Lizenzcode</label><input id="s_lc" value="' + esc(s.lizenzCode) + '" placeholder="BSB-XXXX-XXXX" autocapitalize="characters">' +
+    '<button class="btn pri full" onclick="activateLic()">Freischalten</button>';
+  h += '<div class="grp">Allgemein</div><label>Geführt von (Name / Firma, erscheint im Bericht)</label><input id="s_bet" value="' + esc(s.betreiber) + '">' +
+    '<button class="btn full" onclick="DB.settings.betreiber=val(\'s_bet\');save(\'settings\');toast(\'Gespeichert\')">Speichern</button>';
+  h += '<div class="grp">Gebäude</div>';
+  for (var i = 0; i < DB.gebaeude.length; i++) h += '<div class="row" onclick="editGebaeude(\'' + DB.gebaeude[i].id + '\')"><div class="m"><div class="t">' + esc(DB.gebaeude[i].name) + '</div><div class="s">' + esc(DB.gebaeude[i].adresse || '') + '</div></div><span class="small">Bearbeiten</span></div>';
+  h += '<button class="btn full" onclick="editGebaeude()">+ Gebäude anlegen</button>';
+  h += '<div class="grp">Checklisten für Begehungen</div>';
+  for (var j = 0; j < DB.vorlagen.length; j++) h += '<div class="row" onclick="editVorlage(\'' + DB.vorlagen[j].id + '\')"><div class="m"><div class="t">' + esc(DB.vorlagen[j].name) + '</div><div class="s">' + artLabel(DB.vorlagen[j].art) + ' - ' + DB.vorlagen[j].punkte.length + ' Punkte</div></div><span class="small">Bearbeiten</span></div>';
+  h += '<div class="btns"><button class="btn sm" onclick="editVorlage()">+ Neue Checkliste</button><button class="btn sm" onclick="resetVorlagen()">Standard-Checklisten hinzufügen</button></div>';
+  h += '<div class="grp">Datensicherung</div><p class="small" style="line-height:1.5">Alle Daten sind nur auf diesem Gerät gespeichert. Sichern Sie regelmäßig - z. B. in iCloud Drive oder per Mail. Letzte Sicherung: ' + (s.letztesBackup ? fmtD(s.letztesBackup) : 'noch keine') + '</p>' +
+    '<button class="btn pri full" onclick="exportBackup()">Daten sichern (Datei)</button>' +
+    '<label>Sicherung wiederherstellen</label><input type="file" accept=".json,application/json" onchange="importBackup(this)">';
+  h += '<div class="grp">Info</div><p class="small" style="line-height:1.5">Brandschutzbuch Version ' + APP_VERSION + '<br>' + esc(FIRMA_KONTAKT) + '</p>';
+  modal('Einstellungen', h, [{ label: 'Schließen', fn: function () { closeModal(); render(); } }]);
+}
+function activateLic() {
+  var n = val('s_ln'), c = val('s_lc').toUpperCase().replace(/\s/g, '');
+  if (!n || !c) { toast('Bitte Name und Code eingeben'); return; }
+  if (lizCode(n) !== c) { toast('Lizenzcode passt nicht zum Namen'); return; }
+  DB.settings.lizenzName = n; DB.settings.lizenzCode = c; save('settings');
+  toast('Vollversion freigeschaltet'); openSettings(); render();
+}
+function editVorlage(id) {
+  var v = id ? findById(DB.vorlagen, id) : null, p = v || { art: 'monatlich', punkte: [] }, o = '';
+  for (var i = 0; i < ARTEN.length; i++) o += '<option value="' + ARTEN[i].k + '"' + (ARTEN[i].k === p.art ? ' selected' : '') + '>' + ARTEN[i].l + '</option>';
+  var h = '<label>Name der Checkliste</label><input id="v_n" value="' + esc(p.name) + '" placeholder="z. B. Wöchentliche Kontrolle Küche">' +
+    '<label>Intervall</label><select id="v_a">' + o + '</select>' +
+    '<label>Prüfpunkte (je Zeile ein Punkt)</label><textarea id="v_p" style="min-height:260px">' + esc(p.punkte.join('\n')) + '</textarea>' +
+    '<div class="small" style="margin-top:4px">Änderungen gelten für künftige Begehungen. Bestehende Protokolle bleiben unverändert.</div>';
+  if (v) h += '<button class="btn full" style="margin-top:18px;color:var(--red2)" onclick="delVorlage(\'' + v.id + '\')">Checkliste löschen</button>';
+  modal(v ? 'Checkliste bearbeiten' : 'Neue Checkliste', h, [{ label: 'Zurück', fn: openSettings }, { label: 'Speichern', cls: 'pri', fn: function () {
+    var n = val('v_n'), lines = val('v_p').split(/\n/), pts = [];
+    for (var k = 0; k < lines.length; k++) { var t = lines[k].replace(/^\s+|\s+$/g, ''); if (t) pts.push(t); }
+    if (!n) { toast('Bitte einen Namen angeben'); return; }
+    if (!pts.length) { toast('Bitte mindestens einen Prüfpunkt angeben'); return; }
+    if (!v) { v = { id: uid() }; DB.vorlagen.push(v); }
+    v.name = n; v.art = val('v_a'); v.punkte = pts; save('vorlagen'); toast('Checkliste gespeichert'); openSettings();
+  } }]);
+}
+function delVorlage(id) {
+  if (DB.vorlagen.length <= 1) { toast('Mindestens eine Checkliste muss bleiben'); return; }
+  ask('Checkliste löschen? Bestehende Protokolle bleiben erhalten.', function () { removeById(DB.vorlagen, id); save('vorlagen'); openSettings(); }, 'Löschen');
+}
+function resetVorlagen() {
+  var d = defVorlagen(), add = 0;
+  for (var i = 0; i < d.length; i++) {
+    var ex = false;
+    for (var j = 0; j < DB.vorlagen.length; j++) if (DB.vorlagen[j].name === d[i].name) ex = true;
+    if (!ex) { DB.vorlagen.push(d[i]); add++; }
+  }
+  save('vorlagen'); toast(add ? add + ' Standard-Checkliste(n) hinzugefügt' : 'Alle Standard-Checklisten sind bereits vorhanden'); openSettings();
+}
+function exportBackup() {
+  var data = { app: 'brandschutzbuch', version: 1, exportiert: new Date().toISOString(), db: DB };
+  var blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+  DB.settings.letztesBackup = todayStr(); save('settings');
+  shareBlob(blob, 'Brandschutzbuch-Sicherung_' + todayStr() + '.json', 'application/json');
+  render();
+}
+function importBackup(input) {
+  var f = input.files && input.files[0]; if (!f) return;
+  var rd = new FileReader();
+  rd.onload = function () {
+    var data;
+    try { data = JSON.parse(rd.result); } catch (e) { toast('Datei ist keine gültige Sicherung'); return; }
+    if (!data || data.app !== 'brandschutzbuch' || !data.db) { toast('Datei ist keine Brandschutzbuch-Sicherung'); return; }
+    ask('Alle aktuellen Daten durch die Sicherung vom ' + String(data.exportiert || '').substr(0, 10) + ' ersetzen?', function () {
+      for (var i = 0; i < COLLS.length; i++) { var c = COLLS[i]; DB[c] = data.db[c] || (c === 'settings' ? {} : []); save(c); }
+      STATE.gid = DB.gebaeude.length ? DB.gebaeude[0].id : null;
+      render(); toast('Sicherung wiederhergestellt');
+    }, 'Ersetzen');
+  };
+  rd.readAsText(f);
+}
+
+/* ---------- Start ---------- */
+function init() {
+  dbOpen(function () {
+    for (var i = 0; i < COLLS.length; i++) {
+      var c = COLLS[i];
+      if (c === 'settings') { if (!DB.settings || typeof DB.settings !== 'object' || DB.settings.length !== undefined) DB.settings = {}; }
+      else if (!DB[c] || DB[c].length === undefined) DB[c] = [];
+    }
+    if (!DB.vorlagen.length) { DB.vorlagen = defVorlagen(); save('vorlagen'); }
+    var g = null; try { g = localStorage.getItem('bsb_gid'); } catch (e) {}
+    STATE.gid = (g && findById(DB.gebaeude, g)) ? g : (DB.gebaeude.length ? DB.gebaeude[0].id : null);
+    render();
+  });
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+    try { navigator.serviceWorker.register('sw.js')['catch'](function () {}); } catch (e) {}
+  }
+}
+init();
+</script>
+</body>
+</html>
