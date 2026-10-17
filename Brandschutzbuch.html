@@ -100,7 +100,7 @@ textarea{min-height:80px;resize:vertical}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 /* Brandschutzbuch - lokale Web-App (Janiba Brandschutztechnik GmbH) */
-var APP_VERSION = '1.4';
+var APP_VERSION = '1.5';
 var LIZ_SALT = 'JaNiBa-2380-BSB';
 var FIRMA_FOOTER = 'Brandschutzbuch-App | Janiba Brandschutztechnik GmbH | Tel. 0676/305 83 98 | www.brandschutztechnik-janiba.at';
 var FIRMA_KONTAKT = 'Janiba Brandschutztechnik GmbH, Ketzergasse 299, 2380 Perchtoldsdorf, Tel. 0676/305 83 98, info@loeschtechnik.at';
@@ -852,6 +852,71 @@ function anlStatusText(a) {
   if (d <= 30) return 'bald fällig';
   return 'in Ordnung';
 }
+/* ---------- Zeiträume (Monat / Quartal / Halbjahr / Jahr) ---------- */
+var MONATE = ['Jänner', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+var MON_K = ['Jän', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+function isPerArt(art) { return art === 'monatlich' || art === 'vierteljaehrlich' || art === 'halbjaehrlich' || art === 'jaehrlich'; }
+function perOf(art, d) {
+  if (!d || !isPerArt(art)) return '';
+  var y = d.substr(0, 4), m = +d.substr(5, 2);
+  if (art === 'monatlich') return y + '-' + pad(m);
+  if (art === 'vierteljaehrlich') return y + '-Q' + Math.ceil(m / 3);
+  if (art === 'halbjaehrlich') return y + '-H' + (m <= 6 ? 1 : 2);
+  return y;
+}
+function perList(art, y) {
+  var r = [], i;
+  if (art === 'monatlich') for (i = 1; i <= 12; i++) r.push(y + '-' + pad(i));
+  else if (art === 'vierteljaehrlich') for (i = 1; i <= 4; i++) r.push(y + '-Q' + i);
+  else if (art === 'halbjaehrlich') { r.push(y + '-H1'); r.push(y + '-H2'); }
+  else if (art === 'jaehrlich') r.push(String(y));
+  return r;
+}
+function perRange(p) {
+  var y = +p.substr(0, 4), s, e;
+  if (p.length === 4) { s = 1; e = 12; }
+  else if (p.charAt(5) === 'Q') { var q = +p.charAt(6); s = q * 3 - 2; e = q * 3; }
+  else if (p.charAt(5) === 'H') { var hh = +p.charAt(6); s = hh === 1 ? 1 : 7; e = hh === 1 ? 6 : 12; }
+  else { s = e = +p.substr(5, 2); }
+  return { von: y + '-' + pad(s) + '-01', bis: ymd(new Date(y, e, 0)) };
+}
+function perLabel(p) {
+  if (!p) return '';
+  var y = p.substr(0, 4);
+  if (p.length === 4) return 'Jahr ' + y;
+  if (p.charAt(5) === 'Q') return p.charAt(6) + '. Quartal ' + y;
+  if (p.charAt(5) === 'H') return p.charAt(6) + '. Halbjahr ' + y;
+  return MONATE[+p.substr(5, 2) - 1] + ' ' + y;
+}
+function perSide(p) {
+  if (!p) return '';
+  if (p.length === 4) return 'Jährlich';
+  if (p.charAt(5) === 'Q') return p.charAt(6) + '. Quartal';
+  if (p.charAt(5) === 'H') return p.charAt(6) + '. Halbjahr';
+  return MONATE[+p.substr(5, 2) - 1];
+}
+function perShort(p) {
+  if (p.length === 4) return p;
+  if (p.charAt(5) === 'Q') return p.charAt(6) + '. Quartal';
+  if (p.charAt(5) === 'H') return p.charAt(6) + '. Halbjahr';
+  return MON_K[+p.substr(5, 2) - 1];
+}
+function begPer(b) { return b.periode || perOf(b.art, b.datum); }
+function begFor(vid, p) {
+  var l = byG(DB.begehungen), r = null;
+  for (var i = 0; i < l.length; i++) if (l[i].vorlageId === vid && begPer(l[i]) === p && (!r || l[i].datum > r.datum)) r = l[i];
+  return r;
+}
+function perStatus(vid, p) {
+  var b = begFor(vid, p), r = perRange(p), t = todayStr();
+  if (b) return { b: b, cls: 'p-ok', txt: 'erledigt ' + fmtD(b.datum).substr(0, 6), k: 'ok' };
+  var g = curGeb(), ab = g ? (g.startDatum || g.erstellt || '') : '';
+  if (ab && r.bis < ab) return { b: null, cls: 'p-mut', txt: 'vor Beginn', k: 'vorher' };
+  if (t > r.bis) return { b: null, cls: 'p-err', txt: 'fehlt', k: 'fehlt' };
+  if (t >= r.von) return { b: null, cls: 'p-warn', txt: 'fällig bis ' + fmtD(r.bis).substr(0, 6), k: 'faellig' };
+  return { b: null, cls: 'p-mut', txt: 'geplant', k: 'zukunft' };
+}
+function begAnzahl(b) { var n = b.zusatz || 0; for (var j = 0; j < b.punkte.length; j++) if (b.punkte[j].status === 'mangel') n++; return n; }
 function lastBeg(vid) {
   var l = byG(DB.begehungen), last = null;
   for (var i = 0; i < l.length; i++) { if (l[i].vorlageId === vid && (!last || l[i].datum > last.datum)) last = l[i]; }
@@ -859,6 +924,10 @@ function lastBeg(vid) {
 }
 function begStatus(v) {
   var last = lastBeg(v.id), a = artObj(v.art);
+  if (isPerArt(v.art)) {
+    var cp = perOf(v.art, todayStr()), s = perStatus(v.id, cp);
+    return { last: last, cls: s.k === 'ok' ? 'p-ok' : 'p-warn', txt: (s.k === 'ok' ? 'erledigt' : 'fällig') + ' - ' + perSide(cp), per: cp };
+  }
   if (!last) return { last: null, cls: a.d ? 'p-warn' : 'p-mut', txt: 'noch keine' };
   var since = -daysUntil(last.datum);
   if (a.d && since >= a.d) return { last: last, cls: 'p-err', txt: 'fällig' };
@@ -921,6 +990,8 @@ function editGebaeude(id) {
     '<label>Adresse (Straße, PLZ Ort)</label><input id="g_adr" value="' + esc(p.adresse) + '" placeholder="z. B. Hochstraße 28, 2380 Perchtoldsdorf">' +
     '<label>Objektfoto (für den Mängelbericht)</label><div id="g_fprev">' + (p.foto ? '<img src="' + p.foto + '" style="width:180px;border-radius:8px;display:block">' : '') + '</div>' +
     '<div class="btns"><label class="btn sm" style="margin:4px 6px 0 0;color:var(--tx);font-weight:600">Foto wählen<input type="file" accept="image/*" style="display:none" onchange="pickFotoCrop(this,34/18.5,900,function(d){GFOTO=d;$(\'g_fprev\').innerHTML=\'<img src=\'+d+\' style=width:180px;border-radius:8px;display:block>\';})"></label><button class="btn sm" onclick="GFOTO=\'\';$(\'g_fprev\').innerHTML=\'\'">Foto entfernen</button></div>' +
+    '<label>Brandschutzbuch geführt ab</label><input id="g_ab" type="date" value="' + esc(p.startDatum || p.erstellt || todayStr()) + '">' +
+    '<div class="small" style="margin-top:4px">Begehungen vor diesem Datum werden nicht als „fehlt“ angezeigt.</div>' +
     '<label>Projektbeschreibung (Standard für den Mängelbericht)</label><textarea id="g_pb" style="min-height:60px">' + esc(p.beschreibung) + '</textarea>' +
     '<label>Betreiber / Verantwortliche/r</label><input id="g_ver" value="' + esc(p.verantwortlich) + '">' +
     '<label>Brandschutzbeauftragte/r</label><input id="g_bsb" value="' + esc(p.bsb) + '">' +
@@ -934,7 +1005,7 @@ function saveGebaeude(id) {
   var name = val('g_name'); if (!name) { toast('Bitte eine Bezeichnung angeben'); return; }
   var g = id ? findById(DB.gebaeude, id) : null;
   if (!g) { g = { id: uid(), erstellt: todayStr() }; DB.gebaeude.push(g); }
-  g.name = name; g.adresse = val('g_adr'); g.verantwortlich = val('g_ver'); g.bsb = val('g_bsb'); g.telefon = val('g_tel'); g.firma = val('g_fa'); g.notiz = val('g_not'); g.foto = GFOTO; g.beschreibung = val('g_pb');
+  g.name = name; g.adresse = val('g_adr'); g.verantwortlich = val('g_ver'); g.bsb = val('g_bsb'); g.telefon = val('g_tel'); g.firma = val('g_fa'); g.notiz = val('g_not'); g.foto = GFOTO; g.beschreibung = val('g_pb'); g.startDatum = val('g_ab') || g.erstellt;
   save('gebaeude');
   STATE.gid = g.id; try { localStorage.setItem('bsb_gid', g.id); } catch (e) {}
   closeModal(); render(); toast('Gebäude gespeichert');
@@ -1094,21 +1165,61 @@ function delPruefung(aid, pid) { ask('Diesen Prüfeintrag löschen?', function (
 
 /* ---------- Begehungen ---------- */
 function viewBegehungen() {
-  var h = '<h2>Begehungen</h2><button class="btn pri full" onclick="newBegehung()" style="margin-bottom:14px">Neue Begehung starten</button>';
-  var l = byG(DB.begehungen);
-  l.sort(function (a, b) { var x = a.datum + (a.zeit || ''), y = b.datum + (b.zeit || ''); return x < y ? 1 : -1; });
-  var vk = '<div class="card"><h3>Leere Vorlagen zum Ausdrucken</h3>';
-  for (var q = 0; q < DB.vorlagen.length; q++) vk += '<div class="row" onclick="vorlagePdf(\'' + DB.vorlagen[q].id + '\')"><div class="m"><div class="t">' + esc(DB.vorlagen[q].name) + '</div><div class="s">' + artLabel(DB.vorlagen[q].art) + ' - ' + nFragen(DB.vorlagen[q]) + ' Fragen</div></div><span class="small lnk">PDF</span></div>';
-  vk += '</div>';
-  if (!l.length) return h + '<div class="empty">Noch keine Begehungen protokolliert.</div>' + vk;
-  h += '<div class="card"><h3>Protokolle</h3>';
-  for (var i = 0; i < l.length; i++) {
-    var b = l[i], n = 0;
-    for (var j = 0; j < b.punkte.length; j++) if (b.punkte[j].status === 'mangel') n++;
-    n += (b.zusatz || 0);
-    h += '<div class="row" onclick="showBegehung(\'' + b.id + '\')"><div class="m"><div class="t">' + fmtD(b.datum) + ' - ' + esc(b.vorlageName) + '</div><div class="s">' + artLabel(b.art) + ' - ' + esc(b.pruefer) + '</div></div>' + (n ? pill('p-err', n + (n === 1 ? ' Mangel' : ' Mängel')) : pill('p-ok', 'i.O.')) + '</div>';
+  var y = STATE.begJahr || new Date().getFullYear();
+  var h = '<h2>Begehungen</h2>' +
+    '<div style="display:flex;align-items:center;justify-content:center;margin-bottom:12px"><button class="btn sm" onclick="STATE.begJahr=' + (y - 1) + ';render()">&#9664;</button><div style="font-size:20px;font-weight:700;margin:0 22px">' + y + '</div><button class="btn sm" onclick="STATE.begJahr=' + (y + 1) + ';render()">&#9654;</button></div>';
+  var ord = { jaehrlich: 0, halbjaehrlich: 1, vierteljaehrlich: 2, monatlich: 3 };
+  var pv = [], sonst = [];
+  for (var i = 0; i < DB.vorlagen.length; i++) { if (isPerArt(DB.vorlagen[i].art)) pv.push(DB.vorlagen[i]); else sonst.push(DB.vorlagen[i]); }
+  pv.sort(function (a, b) { return ord[a.art] - ord[b.art]; });
+  for (var k = 0; k < pv.length; k++) {
+    var v = pv[k], ps = perList(v.art, y), cols = v.art === 'monatlich' ? 3 : (v.art === 'jaehrlich' ? 1 : 2);
+    h += '<div class="card"><h3>' + esc(v.name) + '</h3><div style="display:grid;grid-template-columns:repeat(' + cols + ',1fr);grid-gap:8px">';
+    for (var j = 0; j < ps.length; j++) {
+      var s = perStatus(v.id, ps[j]);
+      var bg = s.k === 'ok' ? 'var(--okbg)' : s.k === 'fehlt' ? 'var(--errbg)' : s.k === 'faellig' ? 'var(--warnbg)' : 'var(--bg)';
+      var fg = s.k === 'ok' ? 'var(--ok)' : s.k === 'fehlt' ? 'var(--red2)' : s.k === 'faellig' ? 'var(--warn)' : 'var(--mut)';
+      var n = s.b ? begAnzahl(s.b) : 0;
+      h += '<div onclick="perTap(\'' + v.id + '\',\'' + ps[j] + '\')" style="background:' + bg + ';border:1px solid var(--bd);border-radius:10px;padding:9px 8px;text-align:center">' +
+        '<div style="font-weight:700;font-size:15px">' + (v.art === 'jaehrlich' ? 'Jahresbegehung ' + y : perShort(ps[j])) + '</div>' +
+        '<div style="font-size:12px;font-weight:700;color:' + fg + ';margin-top:2px">' + (s.k === 'ok' ? '&#10003; ' + fmtD(s.b.datum).substr(0, 6) : s.k === 'fehlt' ? 'fehlt' : s.k === 'faellig' ? 'jetzt fällig' : s.k === 'vorher' ? 'vor Beginn' : '&ndash;') + '</div>' +
+        (n ? '<div style="font-size:11px;color:var(--red2);font-weight:700">' + n + (n === 1 ? ' Mangel' : ' Mängel') + '</div>' : '') + '</div>';
+    }
+    h += '</div></div>';
   }
-  return h + '</div>' + vk;
+  for (var q = 0; q < sonst.length; q++) {
+    var w = sonst[q], bl = [], all = byG(DB.begehungen);
+    for (var z = 0; z < all.length; z++) if (all[z].vorlageId === w.id && all[z].datum.substr(0, 4) === String(y)) bl.push(all[z]);
+    bl.sort(function (a, b) { return a.datum < b.datum ? 1 : -1; });
+    h += '<div class="card"><h3>' + esc(w.name) + '</h3><div class="small" style="margin-bottom:6px">' + bl.length + ' Kontrolle(n) in ' + y + '</div>';
+    for (var x = 0; x < bl.length && x < 5; x++) h += begRow(bl[x]);
+    h += '<button class="btn full" onclick="startBegehung(\'' + w.id + '\')">' + esc(w.name) + ' jetzt durchführen</button></div>';
+  }
+  var l = byG(DB.begehungen), ly = [];
+  for (var r = 0; r < l.length; r++) if (begPer(l[r]).substr(0, 4) === String(y) || l[r].datum.substr(0, 4) === String(y)) ly.push(l[r]);
+  ly.sort(function (a, b) { var x1 = a.datum + (a.zeit || ''), y1 = b.datum + (b.zeit || ''); return x1 < y1 ? 1 : -1; });
+  h += '<div class="card"><h3>Alle Protokolle ' + y + '</h3>';
+  if (!ly.length) h += '<div class="small" style="padding:6px 0">Noch keine.</div>';
+  for (var u = 0; u < ly.length; u++) h += begRow(ly[u]);
+  h += '</div>';
+  h += '<div class="card"><h3>Leere Vorlagen zum Ausdrucken</h3>';
+  for (var qq = 0; qq < DB.vorlagen.length; qq++) h += '<div class="row" onclick="vorlagePdf(\'' + DB.vorlagen[qq].id + '\')"><div class="m"><div class="t">' + esc(DB.vorlagen[qq].name) + '</div><div class="s">' + artLabel(DB.vorlagen[qq].art) + ' - ' + nFragen(DB.vorlagen[qq]) + ' Fragen</div></div><span class="small lnk">PDF</span></div>';
+  h += '</div>';
+  return h + '<button class="fab" onclick="newBegehung()">+ Begehung</button>';
+}
+function begRow(b) {
+  var n = begAnzahl(b), p = begPer(b);
+  return '<div class="row" onclick="showBegehung(\'' + b.id + '\')"><div class="m"><div class="t">' + esc(b.vorlageName) + (p ? ' - ' + perLabel(p) : '') + '</div><div class="s">' + fmtD(b.datum) + ' - ' + esc(b.pruefer) + '</div></div>' + (n ? pill('p-err', n + (n === 1 ? ' Mangel' : ' Mängel')) : pill('p-ok', 'i.O.')) + '</div>';
+}
+function perTap(vid, p) {
+  var v = findById(DB.vorlagen, vid), s = perStatus(vid, p);
+  if (s.b) { showBegehung(s.b.id); return; }
+  var r = perRange(p);
+  var h = '<p style="font-size:17px;font-weight:700;margin:12px 0 4px">' + esc(v.name) + '</p><p style="margin:0 0 10px">' + perLabel(p) + ' ' + pill(s.cls, s.k === 'fehlt' ? 'nicht durchgeführt' : s.k === 'faellig' ? 'jetzt fällig' : 'noch nicht fällig') + '</p>' +
+    '<p class="small">Zeitraum: ' + fmtD(r.von) + ' bis ' + fmtD(r.bis) + ' - ' + nFragen(v) + ' Fragen</p>' +
+    '<button class="btn pri full" onclick="startBegehung(\'' + vid + '\',\'' + p + '\')">Begehung jetzt durchführen</button>' +
+    '<button class="btn full" onclick="vorlagePdf(\'' + vid + '\',\'' + p + '\')">Leere Vorlage für ' + perSide(p) + ' drucken</button>';
+  modal(perLabel(p), h, [{ label: 'Schließen', fn: closeModal }]);
 }
 function newBegehung() {
   if (!curGeb()) { editGebaeude(); return; }
@@ -1120,12 +1231,19 @@ function newBegehung() {
   h += '<div class="small" style="margin-top:12px">Checklisten können unter Einstellungen angepasst werden.</div>';
   modal('Neue Begehung', h, [{ label: 'Abbrechen', fn: closeModal }]);
 }
-function startBegehung(vid) {
+function startBegehung(vid, per) {
   var v = findById(DB.vorlagen, vid); if (!v) return;
+  var perSel = '';
+  if (isPerArt(v.art)) {
+    var cur = per || perOf(v.art, todayStr()), yy = +cur.substr(0, 4), opts = '', lst = perList(v.art, yy - 1).concat(perList(v.art, yy), perList(v.art, yy + 1));
+    for (var pi = 0; pi < lst.length; pi++) opts += '<option value="' + lst[pi] + '"' + (lst[pi] === cur ? ' selected' : '') + '>' + perLabel(lst[pi]) + (begFor(vid, lst[pi]) ? ' (bereits erledigt)' : '') + '</option>';
+    perSel = '<label>Begehung für</label><select id="b_per">' + opts + '</select>';
+  }
   BEG = { vid: vid, st: [] };
   for (var k = 0; k < v.punkte.length; k++) BEG.st.push(isHdr(v.punkte[k]) ? 'hdr' : '');
   var h = '<div class="small" style="margin-top:8px">' + esc(curGeb().name) + ' - ' + artLabel(v.art) + ' - ' + nFragen(v) + ' Fragen</div>' +
     '<div class="two"><div><label>Datum</label><input id="b_d" type="date" value="' + todayStr() + '"></div><div><label>Uhrzeit</label><input id="b_z" type="time" value="' + nowTime() + '"></div></div>' +
+    perSel +
     '<label>Durchgeführt von *</label><input id="b_pr" value="' + esc(DB.settings.letzterPruefer || '') + '">' +
     '<div class="small" style="margin-top:10px">Ja = in Ordnung, Nein = Mangel</div>' +
     '<div class="btns" style="margin-top:6px"><button class="btn sm" onclick="begAllOk()">Alle offenen mit Ja beantworten</button></div>';
@@ -1162,7 +1280,7 @@ function saveBegehung() {
   if (offen) { toast(offen + ' Frage(n) noch nicht beantwortet'); var el = $('seg' + first); if (el && el.scrollIntoView) el.scrollIntoView({ block: 'center' }); return; }
   var pr = val('b_pr'); if (!pr) { toast('Bitte angeben, wer die Begehung durchgeführt hat'); return; }
   var d = val('b_d') || todayStr();
-  var b = { id: uid(), gid: STATE.gid, vorlageId: v.id, vorlageName: v.name, art: v.art, datum: d, zeit: val('b_z'), pruefer: pr, punkte: [], bemerkung: val('b_bem'), unterschrift: SIG && !SIG.isEmpty() ? SIG.data() : '', zusatz: 0 };
+  var b = { id: uid(), gid: STATE.gid, vorlageId: v.id, vorlageName: v.name, art: v.art, periode: val('b_per') || perOf(v.art, d), datum: d, zeit: val('b_z'), pruefer: pr, punkte: [], bemerkung: val('b_bem'), unterschrift: SIG && !SIG.isEmpty() ? SIG.data() : '', zusatz: 0 };
   var neu = [], nr = nextMangelNr(), sec = '';
   for (var j = 0; j < v.punkte.length; j++) {
     if (isHdr(v.punkte[j])) { sec = hdrText(v.punkte[j]); continue; }
@@ -1173,19 +1291,19 @@ function saveBegehung() {
   var zus = val('b_zus').split(/\n/);
   for (var z = 0; z < zus.length; z++) { var t = zus[z].replace(/^\s+|\s+$/g, ''); if (t) { neu.push({ t: t, b: '' }); b.zusatz++; } }
   for (var k = 0; k < neu.length; k++) {
-    DB.maengel.push({ id: uid(), gid: STATE.gid, nr: nr++, begehungId: b.id, aid: '', datum: d, titel: neu[k].t, beschreibung: neu[k].b, standort: '', inventar: '', massnahme: '', prioritaet: 'mittel', frist: '', status: 'offen', zustaendig: DB.settings.letzteZust || 'Brandschutzbeauftragter', arbeitszeit: '', quelle: v.name + ' vom ' + fmtD(d), fotos: [] });
+    DB.maengel.push({ id: uid(), gid: STATE.gid, nr: nr++, begehungId: b.id, aid: '', datum: d, titel: neu[k].t, beschreibung: neu[k].b, standort: '', inventar: '', massnahme: '', prioritaet: 'mittel', frist: '', status: 'offen', zustaendig: DB.settings.letzteZust || 'Brandschutzbeauftragter', arbeitszeit: '', quelle: v.name + (val('b_per') ? ' ' + perLabel(val('b_per')) : '') + ' vom ' + fmtD(d), fotos: [] });
   }
   DB.begehungen.push(b);
   DB.settings.letzterPruefer = pr;
   save('begehungen'); save('maengel'); save('settings');
-  closeModal(); STATE.tab = 'beg'; render();
+  closeModal(); STATE.tab = 'beg'; STATE.begJahr = +(b.periode || d).substr(0, 4); render();
   if (neu.length) {
     info('Begehung gespeichert', '<p style="line-height:1.5">' + neu.length + (neu.length === 1 ? ' Mangel wurde' : ' Mängel wurden') + ' automatisch in die Mängelliste übernommen. Dort können Sie Fotos, Priorität und Frist ergänzen.</p>');
   } else toast('Begehung gespeichert - alles in Ordnung');
 }
 function showBegehung(id) {
   var b = findById(DB.begehungen, id); if (!b) return;
-  var h = '<table class="kv"><tr><td>Datum</td><td>' + fmtD(b.datum) + (b.zeit ? ', ' + esc(b.zeit) : '') + '</td></tr><tr><td>Checkliste</td><td>' + esc(b.vorlageName) + ' (' + artLabel(b.art) + ')</td></tr><tr><td>Durchgeführt von</td><td>' + esc(b.pruefer) + '</td></tr></table>';
+  var h = '<table class="kv"><tr><td>Datum</td><td>' + fmtD(b.datum) + (b.zeit ? ', ' + esc(b.zeit) : '') + '</td></tr><tr><td>Checkliste</td><td>' + esc(b.vorlageName) + ' (' + artLabel(b.art) + ')</td></tr>' + (begPer(b) ? '<tr><td>Begehung für</td><td>' + perLabel(begPer(b)) + '</td></tr>' : '') + '<tr><td>Durchgeführt von</td><td>' + esc(b.pruefer) + '</td></tr></table>';
   var sec = null;
   if (!b.punkte.length || !b.punkte[0].sec) h += '<div class="grp">Fragen</div>';
   for (var i = 0; i < b.punkte.length; i++) {
@@ -1573,12 +1691,33 @@ function makeReport(o) {
     }
   }
   if (o.beg && !o.single) {
+    var jy0 = +(o.von && o.von > '2000' ? o.von : todayStr()).substr(0, 4), jy1 = +(o.bis && o.bis < '9999' ? o.bis : todayStr()).substr(0, 4);
+    if (jy1 - jy0 > 4) jy0 = jy1 - 4;
+    for (var jy = jy0; jy <= jy1; jy++) {
+      var jr = [];
+      for (var jv = 0; jv < DB.vorlagen.length; jv++) {
+        var JV = DB.vorlagen[jv]; if (!isPerArt(JV.art)) continue;
+        var jps = perList(JV.art, jy);
+        for (var jp = 0; jp < jps.length; jp++) {
+          var JS = perStatus(JV.id, jps[jp]);
+          jr.push([JV.name, perLabel(jps[jp]), JS.b ? 'durchgeführt' : (JS.k === 'fehlt' ? 'nicht durchgeführt' : (JS.k === 'faellig' ? 'fällig' : (JS.k === 'vorher' ? '-' : 'geplant'))), JS.b ? fmtD(JS.b.datum) : '', JS.b ? JS.b.pruefer : '', JS.b ? (nM(JS.b) ? nM(JS.b) + (nM(JS.b) === 1 ? ' Mangel' : ' Mängel') : 'i.O.') : '']);
+        }
+      }
+      if (jr.length) {
+        sec('Jahresübersicht Begehungen ' + jy);
+        tbl(['Checkliste', 'Zeitraum', 'Status', 'Datum', 'Durchgeführt von', 'Ergebnis'], jr, { didParseCell: function (d) {
+          if (d.section !== 'body' || d.column.index !== 2) return;
+          var t = String(d.cell.raw);
+          if (t === 'durchgeführt') d.cell.styles.textColor = [21, 128, 61]; else if (t === 'nicht durchgeführt') { d.cell.styles.textColor = [200, 30, 30]; d.cell.styles.fontStyle = 'bold'; } else if (t === 'fällig') d.cell.styles.textColor = [180, 83, 9]; else d.cell.styles.textColor = [130, 130, 130];
+        }, columnStyles: { 3: { cellWidth: 20 }, 5: { cellWidth: 20 } } });
+      }
+    }
     sec('Begehungen');
     if (!begs.length) note('Im Zeitraum keine Begehungen protokolliert.');
     else {
       var br = [];
-      for (var b1 = 0; b1 < begs.length; b1++) { var B = begs[b1], n = nM(B); br.push([fmtD(B.datum) + (B.zeit ? ' ' + B.zeit : ''), B.vorlageName, artLabel(B.art), B.pruefer, n ? n + (n === 1 ? ' Mangel' : ' Mängel') : 'i.O.', B.bemerkung || '']); }
-      tbl(['Datum', 'Checkliste', 'Intervall', 'Durchgeführt von', 'Ergebnis', 'Bemerkung'], br, { didParseCell: colorCol(4), columnStyles: { 0: { cellWidth: 26 }, 4: { cellWidth: 20 } } });
+      for (var b1 = 0; b1 < begs.length; b1++) { var B = begs[b1], n = nM(B); br.push([fmtD(B.datum) + (B.zeit ? ' ' + B.zeit : ''), B.vorlageName, begPer(B) ? perLabel(begPer(B)) : artLabel(B.art), B.pruefer, n ? n + (n === 1 ? ' Mangel' : ' Mängel') : 'i.O.', B.bemerkung || '']); }
+      tbl(['Datum', 'Checkliste', 'Zeitraum', 'Durchgeführt von', 'Ergebnis', 'Bemerkung'], br, { didParseCell: colorCol(4), columnStyles: { 0: { cellWidth: 26 }, 4: { cellWidth: 20 } } });
     }
   }
   if (o.begd) {
@@ -1667,7 +1806,7 @@ function makeReport(o) {
   return doc;
 }
 /* Leere Checkliste zum Ausdrucken - im Stil des gedruckten Brandschutzbuchs */
-function vorlagePdf(vid) {
+function vorlagePdf(vid, per) {
   var v = findById(DB.vorlagen, vid); if (!v) return;
   var doc = newDoc(); if (!doc) return;
   var g = curGeb();
@@ -1676,12 +1815,13 @@ function vorlagePdf(vid) {
   function need(hh) { if (y + hh > H - 22) { doc.addPage(); y = 18; } }
 
   doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(0, 0, 0);
-  doc.text(v.name, ML, y + 2); y += 8;
+  doc.text(v.name + (per ? ' - ' + perLabel(per) : ''), ML, y + 2); y += 8;
   doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5);
   if (g) { doc.text(doc.splitTextToSize('Objekt: ' + g.name + (g.adresse ? ', ' + g.adresse : ''), W - ML - MR)[0], ML, y); y += 6; }
   doc.text('Durchgeführt von:', ML, y + 1); doc.text('Jahr / Zeitraum:', 120, y + 1);
   doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.2);
   doc.line(ML + 30, y + 1.5, 115, y + 1.5); doc.line(146, y + 1.5, W - MR, y + 1.5);
+  if (per) doc.text(perLabel(per), 147, y + 0.6);
   y += 9;
 
   /* Abschnitte bilden */
@@ -1727,7 +1867,7 @@ function vorlagePdf(vid) {
   doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(80, 80, 80);
   doc.text('Name', ML, y + 4); doc.text('Datum', ML + 65, y + 4); doc.text('Unterschrift', ML + 115, y + 4);
 
-  var np = doc.getNumberOfPages(), lbl = artLabel(v.art), demo = !isLicensed();
+  var np = doc.getNumberOfPages(), lbl = per ? perSide(per) : artLabel(v.art), demo = !isLicensed();
   for (var pg = 1; pg <= np; pg++) {
     doc.setPage(pg);
     doc.setFont('helvetica', 'bold'); doc.setFontSize(30); doc.setTextColor(ORANGE[0], ORANGE[1], ORANGE[2]);
@@ -1739,7 +1879,7 @@ function vorlagePdf(vid) {
     doc.text('Seite ' + pg + ' von ' + np, W - MR, H - 10, { align: 'right' });
     if (demo) demoMark(doc);
   }
-  pdfReady(doc, 'Vorlage_' + safeName(v.name) + '.pdf');
+  pdfReady(doc, 'Vorlage_' + safeName(v.name + (per ? ' ' + perLabel(per) : '')) + '.pdf');
 }
 /* ---------- Mängelbericht im Layout "Gesamtübersicht" ---------- */
 function bk() {
