@@ -100,7 +100,7 @@ textarea{min-height:80px;resize:vertical}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 /* Brandschutzbuch - lokale Web-App (Janiba Brandschutztechnik GmbH) */
-var APP_VERSION = '1.2';
+var APP_VERSION = '1.4';
 var LIZ_SALT = 'JaNiBa-2380-BSB';
 var FIRMA_FOOTER = 'Brandschutzbuch-App | Janiba Brandschutztechnik GmbH | Tel. 0676/305 83 98 | www.brandschutztechnik-janiba.at';
 var FIRMA_KONTAKT = 'Janiba Brandschutztechnik GmbH, Ketzergasse 299, 2380 Perchtoldsdorf, Tel. 0676/305 83 98, info@loeschtechnik.at';
@@ -124,22 +124,33 @@ var ARTEN = [
 ];
 var KATS = [
   { k: 'Feuerlöscher', i: 24 },
-  { k: 'Brandschutzklappe', i: 12 },
-  { k: 'Brandschutztür / -tor', i: 12 },
-  { k: 'Brandmeldeanlage / Melder', i: 12 },
-  { k: 'Rauchwarnmelder', i: 12 },
-  { k: 'Sicherheitsbeleuchtung', i: 12 },
-  { k: 'Wandhydrant / Steigleitung', i: 12 },
-  { k: 'Rauch- und Wärmeabzug (RWA)', i: 12 },
+  { k: 'Brandmeldeanlage', i: 12 },
+  { k: 'Brandschutztüren / Feststellanlagen', i: 12 },
+  { k: 'Brandschutzklappen', i: 12 },
+  { k: 'Sicherheitsbeleuchtung / Fluchtwegorientierung', i: 12 },
+  { k: 'Wandhydranten', i: 12 },
+  { k: 'Steigleitungen (nass/trocken)', i: 12 },
+  { k: 'Rauch- und Wärmeabzugsanlage (RWA)', i: 12 },
   { k: 'Sprinkleranlage', i: 12 },
-  { k: 'Löschdecke', i: 24 },
-  { k: 'Fluchtweg / Notausgang', i: 12 },
-  { k: 'Flucht- und Rettungsplan', i: 12 },
-  { k: 'Sonstiges', i: 12 }
+  { k: 'Löschanlage', i: 12 },
+  { k: 'Interne Alarmanlage', i: 24 },
+  { k: 'Objektfunk / Notwarnsystem', i: 24 },
+  { k: 'CO-Warnanlage', i: 12 },
+  { k: 'Gaswarnanlage', i: 12 },
+  { k: 'Blitzschutzanlage', i: 36 },
+  { k: 'Elektroanlage (E-Befund)', i: 60 },
+  { k: 'Notstrom / USV', i: 12 },
+  { k: 'Aufzug', i: 12 },
+  { k: 'Lüftungs- / Klimaanlage', i: 12 },
+  { k: 'Feuerstätten / Rauchfangkehrer', i: 12 },
+  { k: 'Räumungsübung', i: 12 },
+  { k: 'Brandschutz-Unterweisung', i: 12 },
+  { k: 'Brandschutzordnung / Pläne aktualisieren', i: 12 },
+  { k: 'Spielgeräte / Spielplatz', i: 12 }
 ];
 var PRIOS = [{ k: 'hoch', l: 'Hoch', c: '#dc2626' }, { k: 'mittel', l: 'Mittel', c: '#f59e0b' }, { k: 'gering', l: 'Gering', c: '#16a34a' }];
 
-var VORLAGEN_VER = 4;
+var VORLAGEN_VER = 5;
 /* Zeilen mit # am Anfang sind Abschnitts-Überschriften (z. B. Pos. 1) */
 function jahresBegehung() {
   return { id: uid(), name: 'Jährliche Begehung', art: 'jaehrlich', punkte: [
@@ -781,7 +792,7 @@ var ICONS = {
   mae: '<path d="M12 3l9.5 17H2.5z"/><path d="M12 10v4"/><path d="M12 17.5v.5"/>',
   ber: '<path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4"/><path d="M9 13h6M9 17h6"/>'
 };
-var TABS = [['home', 'Übersicht'], ['anl', 'Anlagen'], ['beg', 'Begehung'], ['mae', 'Mängel'], ['ber', 'Bericht']];
+var TABS = [['home', 'Übersicht'], ['anl', 'Prüffristen'], ['beg', 'Begehung'], ['mae', 'Mängel'], ['ber', 'Bericht']];
 function renderTabs() {
   var h = '', mo = STATE.gid ? offeneMaengel().length : 0;
   for (var i = 0; i < TABS.length; i++) {
@@ -872,7 +883,7 @@ function viewHome() {
   var bk = DB.settings.letztesBackup;
   if ((anl.length || begs.length) && (!bk || -daysUntil(bk) > 30)) h += '<div class="hint">Die Daten liegen nur auf diesem Gerät. ' + (bk ? 'Letzte Sicherung: ' + fmtD(bk) + '. ' : 'Noch keine Sicherung. ') + '<span class="lnk" onclick="exportBackup()">Jetzt sichern</span></div>';
   h += '<div class="card"><div style="font-size:19px;font-weight:700">' + esc(g.name) + '</div>' + (g.adresse ? '<div class="small">' + esc(g.adresse) + '</div>' : '') + (g.bsb ? '<div class="small">Brandschutzbeauftragte/r: ' + esc(g.bsb) + '</div>' : '') + '<div class="btns"><button class="btn sm" onclick="editGebaeude(\'' + g.id + '\')">Gebäudedaten</button></div></div>';
-  h += '<div class="stats">' + stat(anl.length, 'Brandschutzeinrichtungen', 'anl', false) + stat(mo.length, 'Offene Mängel', 'mae', mo.length > 0) + stat(fa.length, 'Prüfungen fällig (30 Tage)', 'anl', fa.length > 0) + stat(begs.length, 'Begehungen gesamt', 'beg', false) + '</div>';
+  h += '<div class="stats">' + stat(anl.length, 'Prüffristen', 'anl', false) + stat(mo.length, 'Offene Mängel', 'mae', mo.length > 0) + stat(fa.length, 'Prüfungen fällig (30 Tage)', 'anl', fa.length > 0) + stat(begs.length, 'Begehungen gesamt', 'beg', false) + '</div>';
   h += '<div class="card"><h3>Begehungen</h3>';
   for (var i = 0; i < DB.vorlagen.length; i++) {
     var v = DB.vorlagen[i], s = begStatus(v);
@@ -881,7 +892,7 @@ function viewHome() {
   h += '</div>';
   if (fa.length) {
     h += '<div class="card"><h3>Fällige Prüfungen</h3>';
-    for (var j = 0; j < fa.length && j < 6; j++) h += '<div class="row" onclick="showAnlage(\'' + fa[j].id + '\')"><div class="m"><div class="t">' + esc(anlName(fa[j])) + '</div><div class="s">' + esc(fa[j].kategorie) + (fa[j].standort ? ' - ' + esc(fa[j].standort) : '') + '</div></div>' + anlStatus(fa[j]) + '</div>';
+    for (var j = 0; j < fa.length && j < 6; j++) h += '<div class="row" onclick="showAnlage(\'' + fa[j].id + '\')"><div class="m"><div class="t">' + esc(anlName(fa[j])) + '</div><div class="s">zuletzt: ' + (fmtD(fa[j].letztePruefung) || '-') + '</div></div>' + anlStatus(fa[j]) + '</div>';
     if (fa.length > 6) h += '<div class="small" style="padding-top:8px">... und ' + (fa.length - 6) + ' weitere</div>';
     h += '</div>';
   }
@@ -930,7 +941,7 @@ function saveGebaeude(id) {
 }
 function delGebaeude(id) {
   var g = findById(DB.gebaeude, id); if (!g) return;
-  ask('Gebäude "' + g.name + '" mit allen Einrichtungen, Begehungen und Mängeln endgültig löschen?', function () {
+  ask('Gebäude "' + g.name + '" mit allen Anlagen, Begehungen und Mängeln endgültig löschen?', function () {
     var cs = ['anlagen', 'pruefungen', 'begehungen', 'maengel'];
     for (var c = 0; c < cs.length; c++) { var a = DB[cs[c]]; for (var i = a.length - 1; i >= 0; i--) if (a[i].gid === id) a.splice(i, 1); save(cs[c]); }
     removeById(DB.gebaeude, id); save('gebaeude');
@@ -939,76 +950,88 @@ function delGebaeude(id) {
   }, 'Löschen');
 }
 
-/* ---------- Anlagen ---------- */
+/* ---------- Prüffristen (früher Anlagen) ---------- */
 function viewAnlagen() {
-  var h = '<h2>Brandschutzeinrichtungen</h2><input id="anlQ" type="search" placeholder="Suchen (Bezeichnung, Nr., Standort)" value="' + esc(STATE.anlQ) + '" oninput="STATE.anlQ=this.value;$(\'anlList\').innerHTML=anlListHtml();">';
-  h += '<div id="anlList">' + anlListHtml() + '</div><button class="fab" onclick="editAnlage()">+ Einrichtung</button>';
+  var all = byG(DB.anlagen);
+  var h = '<h2>Prüffristen</h2><p class="small" style="margin:-6px 0 12px;line-height:1.45">Wann ist welche Anlage zu prüfen? Tragen Sie je Anlage das Intervall und die letzte Prüfung ein - die App berechnet die nächste Fälligkeit und zeigt rechtzeitig an, was fällig wird.</p>';
+  if (!all.length) {
+    h += '<div class="card" style="text-align:center"><p style="line-height:1.5;margin-top:4px">Noch keine Prüffristen eingetragen.</p><button class="btn pri full" onclick="pfAuswahl()">Prüffristen auswählen</button><p class="small">z. B. Feuerlöscher, Brandmeldeanlage, Brandschutztüren ...</p></div>';
+    return h;
+  }
+  h += '<div id="anlList">' + anlListHtml() + '</div><button class="fab" onclick="pfAuswahl()">+ Prüffrist</button>';
   return h;
 }
 function anlListHtml() {
-  var q = STATE.anlQ.toLowerCase(), all = byG(DB.anlagen), l = [];
-  for (var i = 0; i < all.length; i++) {
-    var a = all[i], s = [a.kategorie, a.bezeichnung, a.nr, a.standort].join(' ').toLowerCase();
-    if (!q || s.indexOf(q) >= 0) l.push(a);
-  }
-  if (!all.length) return '<div class="empty">Noch keine Einrichtungen erfasst.<br>Tippen Sie auf "+ Einrichtung", um Feuerlöscher, Brandschutzklappen, Türen usw. anzulegen.</div>';
-  if (!l.length) return '<div class="empty">Keine Treffer.</div>';
-  sortAnlagen(l);
-  var h = '<div class="card" style="padding-top:2px">', kat = null;
+  var l = byG(DB.anlagen); sortAnlagen(l);
+  var h = '<div class="card" style="padding-top:4px;padding-bottom:4px">';
   for (var j = 0; j < l.length; j++) {
     var b = l[j];
-    if (b.kategorie !== kat) { kat = b.kategorie; h += '<div class="grp">' + esc(kat) + '</div>'; }
-    h += '<div class="row" onclick="showAnlage(\'' + b.id + '\')"><div class="m"><div class="t">' + esc(anlName(b)) + '</div><div class="s">' + esc(b.standort || '-') + '</div></div>' + anlStatus(b) + '</div>';
+    h += '<div class="row" onclick="showAnlage(\'' + b.id + '\')"><div class="m"><div class="t">' + esc(anlName(b)) + '</div><div class="s">' +
+      (b.intervall ? 'alle ' + intvText(b.intervall) : 'kein Intervall') + ' - zuletzt: ' + (fmtD(b.letztePruefung) || 'nicht eingetragen') + (b.standort ? ' - ' + esc(b.standort) : '') + '</div></div>' + anlStatus(b) + '</div>';
   }
   return h + '</div>';
 }
+function intvText(m) { m = +m; if (!m) return '-'; if (m % 12 === 0) return (m / 12) + (m === 12 ? ' Jahr' : ' Jahre'); return m + (m === 1 ? ' Monat' : ' Monate'); }
 function sortAnlagen(l) {
   l.sort(function (a, b) {
-    var d = katIdx(a.kategorie) - katIdx(b.kategorie); if (d) return d;
-    var s = (a.standort || '').localeCompare(b.standort || ''); if (s) return s;
-    return String(a.nr || '').localeCompare(String(b.nr || ''), undefined, { numeric: true });
+    var x = a.naechstePruefung || '9999', y = b.naechstePruefung || '9999';
+    if (x !== y) return x < y ? -1 : 1;
+    return katIdx(a.kategorie) - katIdx(b.kategorie);
   });
 }
-function editAnlage(id, preset) {
-  var a = id ? findById(DB.anlagen, id) : null, p = a || preset || {};
-  var kat = p.kategorie || KATS[0].k, opts = '';
-  for (var i = 0; i < KATS.length; i++) opts += '<option' + (KATS[i].k === kat ? ' selected' : '') + '>' + esc(KATS[i].k) + '</option>';
-  var intv = (p.intervall !== undefined && p.intervall !== null) ? p.intervall : katInt(kat);
-  var h = '<label>Kategorie</label><select id="f_kat" onchange="$(\'f_int\').value=katInt(this.value)">' + opts + '</select>' +
-    '<label>Bezeichnung / Typ</label><input id="f_bez" value="' + esc(p.bezeichnung) + '" placeholder="z. B. PG 6 ABC-Pulver, BSK DN200">' +
-    '<div class="two"><div><label>Nr. / Kennzeichnung</label><input id="f_nr" value="' + esc(id ? p.nr : '') + '"></div><div><label>Baujahr</label><input id="f_bj" type="text" inputmode="numeric" value="' + esc(p.baujahr) + '"></div></div>' +
-    '<label>Standort</label><input id="f_sto" value="' + esc(p.standort) + '" placeholder="z. B. EG Gang links">' +
-    '<label>Hersteller</label><input id="f_her" value="' + esc(p.hersteller) + '">' +
-    '<label>Prüfintervall (Monate)</label><input id="f_int" type="text" inputmode="numeric" value="' + esc(intv) + '">' +
-    '<div class="two"><div><label>Letzte Prüfung</label><input id="f_lp" type="date" value="' + esc(p.letztePruefung) + '"></div><div><label>Nächste Prüfung</label><input id="f_np" type="date" value="' + esc(p.naechstePruefung) + '"></div></div>' +
-    '<div class="small" style="margin-top:4px">Leer lassen = wird aus letzter Prüfung + Intervall berechnet.</div>' +
-    '<label>Notiz</label><textarea id="f_not">' + esc(id ? p.notiz : '') + '</textarea>';
-  if (a) h += '<button class="btn full" style="margin-top:18px;color:var(--red2)" onclick="delAnlage(\'' + a.id + '\')">Einrichtung löschen</button>';
-  var btns = [{ label: 'Abbrechen', fn: closeModal }];
-  if (!a) btns.push({ label: 'Speichern + weitere', fn: function () { saveAnlage(null, true); } });
-  btns.push({ label: 'Speichern', cls: 'pri', fn: function () { saveAnlage(id, false); } });
-  modal(a ? 'Einrichtung bearbeiten' : 'Neue Einrichtung', h, btns);
+function pfAuswahl() {
+  var vorh = {}, l = byG(DB.anlagen);
+  for (var i = 0; i < l.length; i++) vorh[l[i].kategorie] = true;
+  var h = '<p class="small" style="line-height:1.45">Anhaken, was es im Gebäude gibt. Intervall in Monaten bei Bedarf anpassen (Vorschlagswerte - bitte nach Bescheid/Norm prüfen).</p>';
+  for (var k = 0; k < KATS.length; k++) {
+    if (vorh[KATS[k].k]) continue;
+    h += '<div class="row" style="padding:7px 0"><label class="chk" style="flex:1;margin:0;padding:0"><input type="checkbox" class="pfchk" data-i="' + k + '">' + esc(KATS[k].k) + '</label>' +
+      '<input id="pfi' + k + '" type="text" inputmode="numeric" value="' + KATS[k].i + '" style="width:64px;text-align:center;padding:8px"><span class="small" style="width:46px">Mon.</span></div>';
+  }
+  h += '<label>Eigene Prüffrist (optional)</label><div class="two"><div><input id="pf_eig" placeholder="Bezeichnung"></div><div><input id="pf_eigi" type="text" inputmode="numeric" placeholder="Monate"></div></div>';
+  modal('Prüffristen auswählen', h, [{ label: 'Abbrechen', fn: closeModal }, { label: 'Übernehmen', cls: 'pri', fn: pfUebernehmen }]);
 }
-function saveAnlage(id, weiter) {
+function pfUebernehmen() {
+  var c = document.querySelectorAll('.pfchk'), n = 0;
+  for (var i = 0; i < c.length; i++) {
+    if (!c[i].checked) continue;
+    var k = +c[i].getAttribute('data-i');
+    DB.anlagen.push({ id: uid(), gid: STATE.gid, erstellt: todayStr(), kategorie: KATS[k].k, intervall: parseInt(val('pfi' + k), 10) || KATS[k].i, letztePruefung: '', naechstePruefung: '', firma: '', notiz: '' });
+    n++;
+  }
+  var eig = val('pf_eig');
+  if (eig) { DB.anlagen.push({ id: uid(), gid: STATE.gid, erstellt: todayStr(), kategorie: eig, intervall: parseInt(val('pf_eigi'), 10) || 12, letztePruefung: '', naechstePruefung: '', firma: '', notiz: '' }); n++; }
+  if (!n) { toast('Bitte mindestens eine Prüffrist anhaken'); return; }
+  save('anlagen'); closeModal(); render();
+  info('Prüffristen angelegt', '<p style="line-height:1.5">' + n + ' Prüffrist(en) angelegt. Tippen Sie jetzt auf eine Zeile und tragen Sie das Datum der letzten Prüfung ein - die nächste Fälligkeit wird automatisch berechnet.</p>');
+}
+function editAnlage(id) {
+  var a = id ? findById(DB.anlagen, id) : null, p = a || {};
+  var g = curGeb(), dl = '<datalist id="katlist">';
+  for (var i = 0; i < KATS.length; i++) dl += '<option value="' + esc(KATS[i].k) + '">';
+  dl += '</datalist>';
+  var h = '<label>Prüfung / Anlage *</label><input id="f_kat" list="katlist" value="' + esc(p.kategorie) + '" placeholder="z. B. Feuerlöscher">' + dl +
+    '<div class="two"><div><label>Intervall (Monate)</label><input id="f_int" type="text" inputmode="numeric" value="' + esc(p.intervall || 12) + '" oninput="pfCalc()"></div><div><label>Anzahl / Standort</label><input id="f_sto" value="' + esc(p.standort) + '" placeholder="optional"></div></div>' +
+    '<div class="two"><div><label>Letzte Prüfung</label><input id="f_lp" type="date" value="' + esc(p.letztePruefung) + '" onchange="pfCalc()"></div><div><label>Nächste Prüfung</label><input id="f_np" type="date" value="' + esc(p.naechstePruefung) + '"></div></div>' +
+    '<div class="small" style="margin-top:4px">Die nächste Prüfung wird aus letzter Prüfung + Intervall berechnet und kann überschrieben werden.</div>' +
+    '<label>Prüffirma</label><input id="f_fa" value="' + esc(p.firma !== undefined ? p.firma : (g && g.firma) || '') + '">' +
+    '<label>Notiz</label><textarea id="f_not">' + esc(p.notiz) + '</textarea>';
+  if (a) h += '<button class="btn full" style="margin-top:18px;color:var(--red2)" onclick="delAnlage(\'' + a.id + '\')">Prüffrist löschen</button>';
+  modal(a ? 'Prüffrist bearbeiten' : 'Neue Prüffrist', h, [{ label: 'Abbrechen', fn: closeModal }, { label: 'Speichern', cls: 'pri', fn: function () { saveAnlage(id); } }]);
+}
+function pfCalc() { var lp = val('f_lp'), iv = parseInt(val('f_int'), 10); if (lp && iv) $('f_np').value = addMonths(lp, iv); }
+function saveAnlage(id) {
   var a = id ? findById(DB.anlagen, id) : null, neu = !a;
-  var bez = val('f_bez'), sto = val('f_sto'), nr = val('f_nr');
-  if (!bez && !sto && !nr) { toast('Bitte Bezeichnung, Nr. oder Standort angeben'); return; }
+  var kat = val('f_kat'); if (!kat) { toast('Bitte angeben, was geprüft wird'); return; }
   if (neu) a = { id: uid(), gid: STATE.gid, erstellt: todayStr() };
-  a.kategorie = val('f_kat'); a.bezeichnung = bez; a.nr = nr; a.standort = sto; a.baujahr = val('f_bj'); a.hersteller = val('f_her');
-  a.intervall = parseInt(val('f_int'), 10) || 0; a.letztePruefung = val('f_lp'); a.naechstePruefung = val('f_np'); a.notiz = val('f_not');
+  a.kategorie = kat; a.standort = val('f_sto'); a.intervall = parseInt(val('f_int'), 10) || 0;
+  a.letztePruefung = val('f_lp'); a.naechstePruefung = val('f_np'); a.firma = val('f_fa'); a.notiz = val('f_not');
   if (!a.naechstePruefung && a.letztePruefung && a.intervall) a.naechstePruefung = addMonths(a.letztePruefung, a.intervall);
   if (neu) DB.anlagen.push(a);
-  save('anlagen');
-  if (weiter) {
-    editAnlage(null, { kategorie: a.kategorie, bezeichnung: a.bezeichnung, standort: a.standort, baujahr: a.baujahr, hersteller: a.hersteller, intervall: a.intervall, letztePruefung: a.letztePruefung, naechstePruefung: a.naechstePruefung });
-    toast('Gespeichert - nächste Einrichtung');
-    render();
-    return;
-  }
-  closeModal(); render(); toast('Gespeichert');
+  save('anlagen'); closeModal(); render(); toast('Gespeichert');
 }
 function delAnlage(id) {
-  ask('Diese Einrichtung samt Prüfhistorie löschen? (Mängel bleiben erhalten)', function () {
+  ask('Diese Prüffrist samt Prüfhistorie löschen? (Mängel bleiben erhalten)', function () {
     removeById(DB.anlagen, id);
     for (var i = DB.pruefungen.length - 1; i >= 0; i--) if (DB.pruefungen[i].aid === id) DB.pruefungen.splice(i, 1);
     save('anlagen'); save('pruefungen'); render(); toast('Gelöscht');
@@ -1017,29 +1040,22 @@ function delAnlage(id) {
 function showAnlage(id) {
   var a = findById(DB.anlagen, id); if (!a) return;
   var h = '<table class="kv">' +
-    '<tr><td>Kategorie</td><td>' + esc(a.kategorie) + '</td></tr>' +
-    (a.bezeichnung ? '<tr><td>Bezeichnung</td><td>' + esc(a.bezeichnung) + '</td></tr>' : '') +
-    (a.nr ? '<tr><td>Nr.</td><td>' + esc(a.nr) + '</td></tr>' : '') +
-    '<tr><td>Standort</td><td>' + esc(a.standort || '-') + '</td></tr>' +
-    (a.hersteller ? '<tr><td>Hersteller</td><td>' + esc(a.hersteller) + '</td></tr>' : '') +
-    (a.baujahr ? '<tr><td>Baujahr</td><td>' + esc(a.baujahr) + '</td></tr>' : '') +
-    '<tr><td>Prüfintervall</td><td>' + (a.intervall ? a.intervall + ' Monate' : '-') + '</td></tr>' +
+    '<tr><td>Intervall</td><td>' + (a.intervall ? 'alle ' + intvText(a.intervall) : '-') + '</td></tr>' +
     '<tr><td>Letzte Prüfung</td><td>' + (fmtD(a.letztePruefung) || '-') + '</td></tr>' +
     '<tr><td>Nächste Prüfung</td><td>' + anlStatus(a) + '</td></tr>' +
+    (a.standort ? '<tr><td>Anzahl / Standort</td><td>' + esc(a.standort) + '</td></tr>' : '') +
+    (a.firma ? '<tr><td>Prüffirma</td><td>' + esc(a.firma) + '</td></tr>' : '') +
     (a.notiz ? '<tr><td>Notiz</td><td>' + esc(a.notiz) + '</td></tr>' : '') + '</table>';
   var pr = [];
   for (var i = 0; i < DB.pruefungen.length; i++) if (DB.pruefungen[i].aid === id) pr.push(DB.pruefungen[i]);
   pr.sort(function (x, y) { return x.datum < y.datum ? 1 : -1; });
-  h += '<div class="grp">Prüfungen / Wartungen</div>';
+  h += '<div class="grp">Bisherige Prüfungen</div>';
   if (!pr.length) h += '<div class="small" style="padding:8px 0">Noch keine Einträge.</div>';
   for (var j = 0; j < pr.length; j++) {
     var p = pr[j];
-    h += '<div class="row" onclick="editPruefung(\'' + id + '\',\'' + p.id + '\')"><div class="m"><div class="t">' + fmtD(p.datum) + ' - ' + esc(p.art) + '</div><div class="s">' + esc([p.firma, p.pruefer].join(' ').replace(/^\s+|\s+$/g, '') || '-') + (p.bemerkung ? ' - ' + esc(p.bemerkung) : '') + '</div></div>' + (p.ergebnis === 'mangel' ? pill('p-err', 'Mängel') : pill('p-ok', 'i.O.')) + '</div>';
+    h += '<div class="row" onclick="editPruefung(\'' + id + '\',\'' + p.id + '\')"><div class="m"><div class="t">' + fmtD(p.datum) + '</div><div class="s">' + esc([p.firma, p.pruefer].join(' ').replace(/^\s+|\s+$/g, '') || '-') + (p.bemerkung ? ' - ' + esc(p.bemerkung) : '') + '</div></div>' + (p.ergebnis === 'mangel' ? pill('p-err', 'Mängel') : pill('p-ok', 'i.O.')) + '</div>';
   }
-  var ms = [];
-  for (var k = 0; k < DB.maengel.length; k++) if (DB.maengel[k].aid === id) ms.push(DB.maengel[k]);
-  if (ms.length) { sortMaengel(ms); h += '<div class="grp">Mängel</div>'; for (var m = 0; m < ms.length; m++) h += mangelRow(ms[m]); }
-  h += '<div class="btns" style="margin-top:14px"><button class="btn" onclick="editMangel(null,{aid:\'' + id + '\'})">Mangel erfassen</button><button class="btn" onclick="editAnlage(\'' + id + '\')">Bearbeiten</button></div>';
+  h += '<div class="btns" style="margin-top:14px"><button class="btn" onclick="editAnlage(\'' + id + '\')">Bearbeiten</button></div>';
   modal(anlName(a), h, [{ label: 'Schließen', fn: closeModal }, { label: 'Prüfung eintragen', cls: 'pri', fn: function () { editPruefung(id); } }]);
 }
 function editPruefung(aid, pid) {
@@ -1050,10 +1066,10 @@ function editPruefung(aid, pid) {
   var h = '<div class="small" style="margin-top:8px">' + esc(anlName(a)) + (a.standort ? ' - ' + esc(a.standort) : '') + '</div>' +
     '<label>Datum</label><input id="p_d" type="date" value="' + esc(q.datum || todayStr()) + '">' +
     '<label>Art</label><select id="p_a">' + o + '</select>' +
-    '<div class="two"><div><label>Firma</label><input id="p_f" value="' + esc(q.firma !== undefined ? q.firma : (g && g.firma) || '') + '"></div><div><label>Prüfer/in</label><input id="p_p" value="' + esc(q.pruefer) + '"></div></div>' +
+    '<div class="two"><div><label>Firma</label><input id="p_f" value="' + esc(q.firma !== undefined ? q.firma : a.firma || (g && g.firma) || '') + '"></div><div><label>Prüfer/in</label><input id="p_p" value="' + esc(q.pruefer) + '"></div></div>' +
     '<label>Ergebnis</label><select id="p_e"><option value="ok"' + (q.ergebnis !== 'mangel' ? ' selected' : '') + '>In Ordnung</option><option value="mangel"' + (q.ergebnis === 'mangel' ? ' selected' : '') + '>Mängel festgestellt</option></select>' +
     '<label>Bemerkung</label><textarea id="p_b">' + esc(q.bemerkung) + '</textarea>';
-  if (!p) h += '<label class="chk"><input type="checkbox" id="p_upd" checked>Termine der Einrichtung aktualisieren (nächste Prüfung in ' + (a.intervall || 0) + ' Monaten)</label>';
+  if (!p) h += '<label class="chk"><input type="checkbox" id="p_upd" checked>Nächste Prüfung automatisch neu berechnen (in ' + intvText(a.intervall || 0) + ')</label>';
   if (p) h += '<button class="btn full" style="margin-top:18px;color:var(--red2)" onclick="delPruefung(\'' + aid + '\',\'' + p.id + '\')">Eintrag löschen</button>';
   modal(p ? 'Prüfung bearbeiten' : 'Prüfung eintragen', h, [{ label: 'Zurück', fn: function () { showAnlage(aid); } }, { label: 'Speichern', cls: 'pri', fn: function () { savePruefung(aid, pid); } }]);
 }
@@ -1071,7 +1087,7 @@ function savePruefung(aid, pid) {
     }
   }
   save('pruefungen'); render();
-  if (neu && p.ergebnis === 'mangel') { editMangel(null, { aid: aid, beschreibung: p.bemerkung, standort: a.standort }); toast('Prüfung gespeichert - bitte Mangel erfassen'); return; }
+  if (neu && p.ergebnis === 'mangel') { editMangel(null, { aid: aid, titel: anlName(a), beschreibung: p.bemerkung, standort: a.standort }); toast('Prüfung gespeichert - bitte Mangel erfassen'); return; }
   showAnlage(aid); toast('Prüfung gespeichert');
 }
 function delPruefung(aid, pid) { ask('Diesen Prüfeintrag löschen?', function () { removeById(DB.pruefungen, pid); save('pruefungen'); showAnlage(aid); render(); }, 'Löschen'); }
@@ -1259,14 +1275,14 @@ function editMangel(id, preset) {
   var st = (preset && preset.status) || p.status || 'offen';
   MFORM = { fotos: mFotos(p).slice(0), prio: p.prioritaet || 'mittel', status: st };
   var anl = byG(DB.anlagen); sortAnlagen(anl);
-  var o = '<option value="">- keine bestimmte Einrichtung -</option>';
+  var o = '<option value="">- keine (allgemeiner Mangel) -</option>';
   for (var i = 0; i < anl.length; i++) o += '<option value="' + anl[i].id + '"' + (anl[i].id === p.aid ? ' selected' : '') + '>' + esc(anl[i].kategorie + ': ' + anlName(anl[i]) + (anl[i].standort ? ' (' + anl[i].standort + ')' : '')) + '</option>';
   var pb = '', sb = '';
   for (var j = 0; j < PRIOS.length; j++) pb += '<button id="mp_' + PRIOS[j].k + '" class="' + (MFORM.prio === PRIOS[j].k ? 'on' : '') + '" onclick="mPrio(\'' + PRIOS[j].k + '\')">' + PRIOS[j].l + '</button>';
   for (var s = 0; s < MSTATUS.length; s++) sb += '<button id="ms_' + MSTATUS[s].k + '" class="' + (st === MSTATUS[s].k ? 'on' : '') + '" onclick="mStat(\'' + MSTATUS[s].k + '\')">' + MSTATUS[s].l + '</button>';
   var zust = p.zustaendig !== undefined ? p.zustaendig : (DB.settings.letzteZust || 'Brandschutzbeauftragter');
   var h = '<label>Tätigkeitsnachweis / Titel *</label><input id="m_t" value="' + esc(p.titel) + '" placeholder="z. B. Tausch BSK – Gang Kletterhalle">' +
-    '<label>Betroffene Einrichtung</label><select id="m_a" onchange="mAnlChg(this)">' + o + '</select>' +
+    '<input type="hidden" id="m_a" value="' + esc(p.aid || '') + '">' +
     '<div class="two"><div><label>Inventar Nr.</label><input id="m_inv" value="' + esc(p.inventar) + '"></div><div><label>Standort</label><input id="m_s" value="' + esc(p.standort) + '" placeholder="z. B. Gang Kletterhalle"></div></div>' +
     '<label>Beschreibung</label><textarea id="m_b" style="min-height:110px">' + esc(p.beschreibung) + '</textarea>' +
     '<label>Fotos</label><div id="m_prev"></div>' +
@@ -1392,7 +1408,7 @@ function viewBericht() {
     '<div class="btns"><button class="btn sm" onclick="rZeit(0)">Dieses Jahr</button><button class="btn sm" onclick="rZeit(1)">Letztes Jahr</button><button class="btn sm" onclick="rZeit(2)">Letzte 12 Monate</button><button class="btn sm" onclick="rZeit(3)">Alles</button></div></div>' +
     '<div class="card"><h3>Inhalt</h3>' +
     '<label class="chk"><input type="checkbox" id="r_geb" checked>Objektdaten und Zusammenfassung</label>' +
-    '<label class="chk"><input type="checkbox" id="r_anl" checked>Verzeichnis der Brandschutzeinrichtungen</label>' +
+    '<label class="chk"><input type="checkbox" id="r_anl" checked>Prüffristen</label>' +
     '<label class="chk"><input type="checkbox" id="r_pru" checked>Prüfungen und Wartungen</label>' +
     '<label class="chk"><input type="checkbox" id="r_beg" checked>Begehungen (Übersicht)</label>' +
     '<label class="chk"><input type="checkbox" id="r_begd">Begehungsprotokolle im Detail</label>' +
@@ -1528,7 +1544,7 @@ function makeReport(o) {
     var bm = 0; for (var r = 0; r < begs.length; r++) if (nM(begs[r])) bm++;
     sec('Zusammenfassung');
     tbl(['Kennzahl', 'Wert'], [
-      ['Brandschutzeinrichtungen erfasst', String(anl.length)],
+      ['Prüffristen eingetragen', String(anl.length)],
       ['Begehungen im Zeitraum', String(begs.length)],
       ['davon mit festgestellten Mängeln', String(bm)],
       ['Prüfungen / Wartungen im Zeitraum', String(pru.length)],
@@ -1539,12 +1555,12 @@ function makeReport(o) {
     ], { columnStyles: { 0: { cellWidth: 120 } } });
   }
   if (o.anl) {
-    sec('Verzeichnis der Brandschutzeinrichtungen');
-    if (!anl.length) note('Keine Einrichtungen erfasst.');
+    sec('Prüffristen');
+    if (!anl.length) note('Keine Prüffristen eingetragen.');
     else {
       var ar = [];
-      for (var a1 = 0; a1 < anl.length; a1++) { var A = anl[a1]; ar.push([A.kategorie, A.bezeichnung || '', A.nr || '', A.standort || '', fmtD(A.letztePruefung), fmtD(A.naechstePruefung), anlStatusText(A)]); }
-      tbl(['Kategorie', 'Bezeichnung', 'Nr.', 'Standort', 'Letzte Prüf.', 'Nächste Prüf.', 'Status'], ar, { didParseCell: colorCol(6), columnStyles: { 2: { cellWidth: 12 }, 4: { cellWidth: 20 }, 5: { cellWidth: 20 }, 6: { cellWidth: 20 } } });
+      for (var a1 = 0; a1 < anl.length; a1++) { var A = anl[a1]; ar.push([anlName(A) + (A.standort ? '\n' + A.standort : ''), A.intervall ? intvText(A.intervall) : '-', fmtD(A.letztePruefung), fmtD(A.naechstePruefung), anlStatusText(A), A.firma || '']); }
+      tbl(['Prüfung / Anlage', 'Intervall', 'Letzte Prüf.', 'Nächste Prüf.', 'Status', 'Prüffirma'], ar, { didParseCell: colorCol(4), columnStyles: { 1: { cellWidth: 18 }, 2: { cellWidth: 21 }, 3: { cellWidth: 21 }, 4: { cellWidth: 21 } } });
     }
   }
   if (o.pru) {
@@ -1553,7 +1569,7 @@ function makeReport(o) {
     else {
       var prr = [];
       for (var p1 = 0; p1 < pru.length; p1++) { var P = pru[p1], PA = findById(DB.anlagen, P.aid); prr.push([fmtD(P.datum), PA ? anlName(PA) + (PA.standort ? ', ' + PA.standort : '') : '-', P.art, [P.firma, P.pruefer].join(' ').replace(/^\s+|\s+$/g, ''), P.ergebnis === 'mangel' ? 'Mängel' : 'in Ordnung', P.bemerkung || '']); }
-      tbl(['Datum', 'Einrichtung', 'Art', 'Firma / Prüfer', 'Ergebnis', 'Bemerkung'], prr, { didParseCell: colorCol(4), columnStyles: { 0: { cellWidth: 19 }, 4: { cellWidth: 18 } } });
+      tbl(['Datum', 'Anlage', 'Art', 'Firma / Prüfer', 'Ergebnis', 'Bemerkung'], prr, { didParseCell: colorCol(4), columnStyles: { 0: { cellWidth: 19 }, 4: { cellWidth: 18 } } });
     }
   }
   if (o.beg && !o.single) {
@@ -1606,7 +1622,7 @@ function makeReport(o) {
         var MM = mo[m1], fd = daysUntil(MM.frist);
         mr.push(['M' + (MM.nr || ''), fmtD(MM.datum), mTitel(MM) + (MM.titel && MM.beschreibung ? '\n' + MM.beschreibung : ''), mangelOrt(MM), prioObj(MM.prioritaet).l, MM.status === 'behoben' ? 'behoben ' + fmtD(MM.behobenAm) : (MM.frist ? fmtD(MM.frist) + (fd < 0 ? ' (vorbei)' : '') : '-')]);
       }
-      tbl(['Nr.', 'Festgest.', 'Beschreibung', 'Ort / Einrichtung', 'Priorität', 'Frist'], mr, { didParseCell: function (d) { colorCol(4)(d); colorCol(5)(d); }, columnStyles: { 0: { cellWidth: 11 }, 1: { cellWidth: 19 }, 4: { cellWidth: 16 }, 5: { cellWidth: 22 } } });
+      tbl(['Nr.', 'Festgest.', 'Beschreibung', 'Ort / Anlage', 'Priorität', 'Frist'], mr, { didParseCell: function (d) { colorCol(4)(d); colorCol(5)(d); }, columnStyles: { 0: { cellWidth: 11 }, 1: { cellWidth: 19 }, 4: { cellWidth: 16 }, 5: { cellWidth: 22 } } });
     }
     if (o.foto) {
       var fi = [];
@@ -1940,7 +1956,7 @@ function openSettings() {
   h += '<button class="btn full" onclick="editGebaeude()">+ Gebäude anlegen</button>';
   h += '<div class="grp">Checklisten für Begehungen</div>';
   for (var j = 0; j < DB.vorlagen.length; j++) h += '<div class="row" onclick="editVorlage(\'' + DB.vorlagen[j].id + '\')"><div class="m"><div class="t">' + esc(DB.vorlagen[j].name) + '</div><div class="s">' + artLabel(DB.vorlagen[j].art) + ' - ' + nFragen(DB.vorlagen[j]) + ' Fragen</div></div><span class="small">Bearbeiten</span></div>';
-  h += '<div class="btns"><button class="btn sm" onclick="editVorlage()">+ Neue Checkliste</button><button class="btn sm" onclick="resetVorlagen()">Standard-Checklisten hinzufügen</button></div>';
+  h += '<div class="btns"><button class="btn sm" onclick="editVorlage()">+ Neue Checkliste</button><button class="btn sm" onclick="buchVorlagen()">Auf Buch-Standard zurücksetzen</button></div>';
   h += '<div class="grp">Datensicherung</div><p class="small" style="line-height:1.5">Alle Daten sind nur auf diesem Gerät gespeichert. Sichern Sie regelmäßig - z. B. in iCloud Drive oder per Mail. Letzte Sicherung: ' + (s.letztesBackup ? fmtD(s.letztesBackup) : 'noch keine') + '</p>' +
     '<button class="btn pri full" onclick="exportBackup()">Daten sichern (Datei)</button>' +
     '<label>Sicherung wiederherstellen</label><input type="file" accept=".json,application/json" onchange="importBackup(this)">';
@@ -1982,6 +1998,19 @@ function editVorlage(id) {
 function delVorlage(id) {
   if (DB.vorlagen.length <= 1) { toast('Mindestens eine Checkliste muss bleiben'); return; }
   ask('Checkliste löschen? Bestehende Protokolle bleiben erhalten.', function () { removeById(DB.vorlagen, id); save('vorlagen'); openSettings(); }, 'Löschen');
+}
+function buchVorlagen() {
+  ask('Tägliche, monatliche, vierteljährliche und jährliche Checkliste auf den Stand des Brandschutzbuchs zurücksetzen? Eigene Änderungen daran gehen verloren, eigene zusätzliche Checklisten und alle Protokolle bleiben erhalten.', function () {
+    var std = defVorlagen(), names = {};
+    for (var i = 0; i < std.length; i++) names[std[i].name] = std[i];
+    for (var j = DB.vorlagen.length - 1; j >= 0; j--) {
+      var v = DB.vorlagen[j];
+      if (v.name === 'Jährliche Überprüfung' || v.name === 'Jährliche Unterlagen und Prüfbefunde') { DB.vorlagen.splice(j, 1); continue; }
+      if (names[v.name]) { v.punkte = names[v.name].punkte; v.art = names[v.name].art; v.geaendert = false; names[v.name] = null; }
+    }
+    for (var k = 0; k < std.length; k++) if (names[std[k].name]) DB.vorlagen.push(std[k]);
+    save('vorlagen'); toast('Checklisten zurückgesetzt'); openSettings();
+  }, 'Zurücksetzen');
 }
 function resetVorlagen() {
   var d = defVorlagen(), add = 0;
@@ -2031,7 +2060,8 @@ function init() {
     if (mig) save('maengel');
     if (!DB.vorlagen.length) { DB.vorlagen = defVorlagen(); DB.settings.vorlagenVer = VORLAGEN_VER; save('vorlagen'); save('settings'); }
     if ((DB.settings.vorlagenVer || 1) < VORLAGEN_VER) {
-      var std = [monatsBegehung(), quartalBegehung(), jahresBegehung()];
+      var std = [defVorlagen()[0], monatsBegehung(), quartalBegehung(), jahresBegehung()];
+      for (var ov = DB.vorlagen.length - 1; ov >= 0; ov--) if (DB.vorlagen[ov].name === 'Jährliche Überprüfung' || DB.vorlagen[ov].name === 'Jährliche Unterlagen und Prüfbefunde') DB.vorlagen.splice(ov, 1);
       for (var sv = 0; sv < std.length; sv++) {
         var ex = null;
         for (var vv = 0; vv < DB.vorlagen.length; vv++) if (DB.vorlagen[vv].name === std[sv].name) ex = DB.vorlagen[vv];
