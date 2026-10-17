@@ -100,16 +100,18 @@ textarea{min-height:80px;resize:vertical}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 /* Brandschutzbuch - lokale Web-App (Janiba Brandschutztechnik GmbH) */
-var APP_VERSION = '1.0';
+var APP_VERSION = '1.2';
 var LIZ_SALT = 'JaNiBa-2380-BSB';
 var FIRMA_FOOTER = 'Brandschutzbuch-App | Janiba Brandschutztechnik GmbH | Tel. 0676/305 83 98 | www.brandschutztechnik-janiba.at';
 var FIRMA_KONTAKT = 'Janiba Brandschutztechnik GmbH, Ketzergasse 299, 2380 Perchtoldsdorf, Tel. 0676/305 83 98, info@loeschtechnik.at';
 
+var BK_DEFAULT = { z1: 'Wolfgang Janiba Brandschutztechnik GmbH', z2: 'Wolfgang Janiba', z3: 'Ketzergasse 299', z4: '2380 Perchtoldsdorf', fuss: '\u00a9 | Wolfgang Janiba Brandschutztechnik GmbH | Ketzergasse 299, 2380 Perchtoldsdorf' };
+var LOGO_DEFAULT = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEBAQEBAgGBgUGCQgKCgkICQkKDA8MCgsOCwkJDRENDg8QEBEQCgwSExIQEw8QEBD/2wBDAQMDAwQDBAgEBAgQCwkLEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBD/wAARCAJYAlgDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDwyiiivzc/rgKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAor6Q/Zz/ZC1L4zaRL4l1rUZNM0zdsgZUy0p9RntUvxg/Yh+IXgFJdU8MZ13TUBY+Uv71B7rXYsBiHS9qo6Hgy4myuOMeBlWSqLTXa/a+1z5qoqa7s7qwuHtb23kgmjO1kkUqwP0NQ1xnuppq6CiiigYUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFdZ8LvAmo/EfxvpfhTTomZrudRIQPupnkn8K5Ovvr/gn/8ACGCx0S5+J2qQK1xdkwWmRyqDqfxrswOGeKrqn06+h4PEmbxyTLp4n7W0fV7f5n1f4I8J6d4J8Lad4Z0uFY4LGBYgFGMkDk1uMquCrKCD1BpaK+7j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RRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQB//Z';
 var COLLS = ['gebaeude', 'anlagen', 'pruefungen', 'begehungen', 'maengel', 'vorlagen', 'settings'];
 var DB = { gebaeude: [], anlagen: [], pruefungen: [], begehungen: [], maengel: [], vorlagen: [], settings: {} };
 var idb = null;
 var STATE = { tab: 'home', gid: null, anlQ: '', mFilter: 'offen' };
-var BEG = null, SIG = null, MFORM = null;
+var BEG = null, SIG = null, MFORM = null, GFOTO = '', LOGOTMP = null;
 
 var ARTEN = [
   { k: 'taeglich', l: 'Täglich', d: 1 },
@@ -137,42 +139,542 @@ var KATS = [
 ];
 var PRIOS = [{ k: 'hoch', l: 'Hoch', c: '#dc2626' }, { k: 'mittel', l: 'Mittel', c: '#f59e0b' }, { k: 'gering', l: 'Gering', c: '#16a34a' }];
 
+var VORLAGEN_VER = 4;
+/* Zeilen mit # am Anfang sind Abschnitts-Überschriften (z. B. Pos. 1) */
+function jahresBegehung() {
+  return { id: uid(), name: 'Jährliche Begehung', art: 'jaehrlich', punkte: [
+    '# Pos. 1 – Feuerwehrzufahrt und -aufstellfläche',
+    'Sind Zufahrten, Bewegungs- und Aufstellflächen dauerhaft freigehalten (nicht verstellt)?',
+    'Sind Bodenmarkierungen gut sichtbar und unbeschädigt?',
+    'Werden Halte- und Parkverbote konsequent eingehalten?',
+    'Ist die Sperrbarkeit / Freischaltung von Schranken, Pollern u. Ä. gegeben?',
+    'Sind Beschilderungen („Feuerwehrzufahrt“, „Anleitbereich“) vorhanden und gut lesbar?',
+    'Ist die Zugänglichkeit zu Schlüsseltresor / Feuerwehr-Schlüsselsafe (FWS) gewährleistet?',
+    'Wird die Schneeräumung / Streuung bei Bedarf ordnungsgemäß durchgeführt?',
+    '# Pos. 2 – Löschwasserversorgung',
+    'Sind Über- und Unterflurhydranten jederzeit frei zugänglich und hindernisfrei?',
+    'Wurde die jährliche Funktionsprüfung/Wartung durchgeführt und dokumentiert?',
+    'Sind Unterflurhydranten durch Hinweisschilder ordnungsgemäß gekennzeichnet?',
+    'Sind die Hydranten im Brandschutzplan korrekt eingezeichnet?',
+    'Sind Gehäuse, Anschlüsse und Spindeln beschädigungsfrei und betriebsbereit?',
+    '# Pos. 3 – Löschwasserentnahmestellen (Bach, Brunnen, Teiche usw.)',
+    'Ist die freie Zufahrt für Feuerwehrfahrzeuge ungehindert möglich?',
+    'Ist die Benutzbarkeit auch im Winter (Eisfreihaltung/Schneeräumung) gewährleistet?',
+    'Ist die Zusatzausrüstung (Saugleitung, FW-Schloss, Beschilderung) vollständig u. in Ordnung?',
+    'Ist die Entnahmestelle frei von Bewuchs, Anschwemmungen oder Verunreinigungen?',
+    '# Pos. 4 – Löschwasserrückhaltung',
+    'Ist der Bescheid erfüllt?',
+    'Ist die Funktionsfähigkeit und Dichtheit gegeben?',
+    '# Pos. 5 – Löschmittel- und Sonderlöschmittelbevorratung',
+    'Ist das Löschmittel innerhalb des Ablaufdatums (nicht abgelaufen)?',
+    'Ist der Bescheid erfüllt?',
+    '# Pos. 6 – Brandabschnitte (Wände, Decken etc.)',
+    'Ist die Brandwand im Dachbereich normgerecht und unbeschädigt ausgeführt?',
+    'Sind Brandabschnittswände und -decken frei von sichtbaren Beschädigungen und Rissen?',
+    'Sind alle Leitungs- und Rohrdurchführungen ordnungsgemäß verschottet?',
+    'Sind nachträglich eingebaute Leitungen/Kabel vollkommen verschlossen?',
+    'Sind Lüftungsleitungen im Wand-/Deckendurchtritt regelkonform mit Klappen versehen?',
+    'Sind Brandschutzanstriche/-beschichtungen unbeschädigt und vollständig?',
+    '# Pos. 7 – Brandschutzklappen',
+    'Sind die Klappen direkt und fachgerecht an die Wand/Decke angeschlossen?',
+    'Sind freie Strecken ordnungsgemäß mit Brandschutzplatten verkleidet?',
+    'Wurde die jährliche Wartung/Überprüfung durchgeführt und dokumentiert?',
+    'Sind Auslösemechanismen und Rückstellhebel frei zugänglich?',
+    'Sind Brandschutzklappen und Kanäle frei von übermäßigen Verschmutzungen?',
+    '# Pos. 8 – Lüftungsleitungen',
+    'Sind die Leitungen frei von gefahrenträchtigen Ablagerungen brennbarer Stoffe?',
+    'Ist eine ausreichende Anzahl an Revisions-/Reinigungsöffnungen vorhanden?',
+    'Werden Reinigungsprogramme ordnungsgemäß durchgeführt und dokumentiert?',
+    '# Pos. 9 – Abschottungen',
+    'Ist der Brandschutzanstrich am und um das Schott vollständig vorhanden?',
+    'Sind alle Abschottungen vollständig verschlossen und ohne Beschädigungen?',
+    'Sind alle Abschottungen richtlinienkonform gekennzeichnet (Schott-Schilder)?',
+    '# Pos. 10 – Brandschutzpläne',
+    'Sind Brandschutzpläne sowie Flucht- und Rettungspläne aktuell und korrekt?',
+    '# Pos. 11 – Brandschutzordnung',
+    'Ist die Brandschutzordnung auf dem aktuellen Stand?',
+    'Wurde sie allen Mitarbeitern (inkl. Neueingetretenen) nachweislich übergeben?',
+    'Wurde die Brandschutzordnung auch Fremdfirmen nachweislich zur Kenntnis gebracht?',
+    'Stehen die Brandschutzunterlagen auch bei der Hausverwaltung / Eigentümer zur Verfügung?',
+    '# Pos. 12 – Alarmordnung',
+    'Sind die Alarmordnungen an allen geforderten Plätzen gut sichtbar ausgehängt?',
+    'Ist die Alarmordnung Bestandteil der aktuellen Brandschutzordnung?',
+    '# Pos. 13 – Interne Alarmanlage',
+    'Ist die interne Alarmanlage notstromversorgt und betriebsbereit?',
+    'Wurde die gesamte Anlage fristgerecht (mind. alle 2 Jahre) einer Inspektion unterzogen?',
+    'Ist das Alarmsignal in allen Gebäudebereichen deutlich hörbar?',
+    'Sind erforderliche optische Signalgeber (z. B. bei Lärmbereichen) vorhanden u. funktionstüchtig?',
+    'Sind alle Mitarbeiter mit den Alarmsignalen und Abläufen vertraut?',
+    'Sind Druckknopfmelder für internen Alarm (blau) unbeschädigt und frei zugänglich?',
+    'Sind Sammelplätze festgelegt, gekennzeichnet und ungehindert erreichbar?',
+    'Werden regelmäßige Eigenkontrollen gemäß Hersteller- und Normvorgaben durchgeführt?',
+    '# Pos. 14 – Blitzschutz',
+    'Ist die Blitzschutzanlage frei von sichtbaren Mängeln und Beschädigungen?',
+    'Liegt ein aktuelles, mängelfreies Prüfattest nach ÖVE/ÖNORM-Richtlinien vor?',
+    'Erfolgen Prüfungen und Wartungen nach außergewöhnlichen Ereignissen (z. B. Blitzeinschlag)?',
+    '# Pos. 15 – Explosionsgeschützte Elektroinstallationen',
+    'Liegen für ex-geschützte Bereiche/Anlagen gültige Explosionsschutzdokumente u. E-Atteste vor?',
+    '# Pos. 16 – Hauptabsperreinrichtungen Gas',
+    'Sind Rohrleitungen und Fließrichtungen ordnungsgemäß gekennzeichnet?',
+    'Sind wichtige Schieber/Ventile im Brandschutzplan eingezeichnet und gekennzeichnet?',
+    'Sind Gas-Hauptabsperreinrichtungen frei von Verstellungen und jederzeit zugänglich?',
+    '# Pos. 17 – Hauptabsperreinrichtungen Wasser',
+    'Sind Rohrleitungen und Fließrichtungen ordnungsgemäß gekennzeichnet?',
+    'Sind wichtige Schieber/Ventile im Brandschutzplan eingezeichnet und gekennzeichnet?',
+    'Sind Wasser-Hauptabsperreinrichtungen frei von Verstellungen und jederzeit zugänglich?',
+    '# Pos. 18 – Hauptabsperreinrichtungen Heizung',
+    'Sind Rohrleitungen und Fließrichtungen ordnungsgemäß gekennzeichnet?',
+    'Sind wichtige Schieber/Ventile im Brandschutzplan eingezeichnet u. gekennzeichnet?',
+    'Sind Absperreinrichtungen der Heizungsanlage frei von Verstellungen u. jederzeit zugänglich?',
+    '# Pos. 19 – Wartungen',
+    'Liegen aktuelle Wartungspläne und Intervalle für alle Brandschutzeinrichtungen vor?',
+    'Werden alle geforderten Wartungen fristgerecht durchgeführt u. dokumentiert?',
+    'Wird im Budget Vorsorge für Wartungen im Bereich Brandschutz getroffen?',
+    '# Pos. 20 – Schlüsselsysteme Allgemeinbereich',
+    'Sind alle Allgemein- und Betriebsräume mit dem vorgesehenen Schließsystem sperrbar?',
+    '# Pos. 21 – Heißarbeiten',
+    'Sind betriebstechnische Abläufe für Heißarbeiten im Unternehmen verbindlich geregelt?',
+    'Sind Personen für die Freigabe von Heißarbeiten nachweislich geschult/beauftragt?',
+    'Werden Heißarbeiten konsequent mit Freigabeschein (gemäß TRVB 104) freigegeben?',
+    'Ist die Instandhaltung/Haustechnik vor Beginn der Arbeiten eingebunden?',
+    'Werden kaltverarbeitende Alternativmethoden vorrangig geprüft und eingesetzt?',
+    'Sind Brandwachen während und Nachkontrollen nach den Arbeiten sichergestellt?',
+    'Werden Heißarbeitsgeräte (Schweißgeräte etc.) regelmäßig geprüft u. in Ordnung gehalten?',
+    '# Pos. 22 – Feuerstätten',
+    'Wird die Kehrung und Abgasmessung durch den Rauchfangkehrer regelmäßig durchgeführt?',
+    'Wird das Kehrbuch lückenlos geführt und aufbewahrt?',
+    'Sind die Sicherheitsabstände um Feuerstätten frei von brennbaren Lagerungen?',
+    'Ist die Rückbrandsicherung (RBS) bei Pellets-/Hackschnitzelheizungen in Ordnung?',
+    'Ist der Heizraum frei von unzulässigen brennbaren Lagerungen?',
+    'Ist eine ausreichende Verbrennungsluftzufuhr/Lüftung für den Heizraum vorhanden?',
+    'Wurde die Dichtheitsprüfung der Brennstoffleitungen ordnungsgemäß durchgeführt?',
+    'Ist der Heizungs-Notschalter gut sichtbar gekennzeichnet, frei zugänglich u. funktionstüchtig?',
+    '# Pos. 23 – Öltankraum',
+    'Wurde die vorgeschriebene Sicherheitsüberprüfung/Wartung durchgeführt u. dokumentiert?',
+    'Sind Öltank, Auffangwanne und Armaturen frei von Leckagen und Leckspuren?',
+    'Ist der Öltankraum frei von brennbaren Lagerungen und unbefugtem Zutritt geschützt?',
+    '# Pos. 24 – Brennstofflagerraum, Bunker, Silos samt Armaturen',
+    'Wurde die regelmäßige Sicherheits- und Instandhaltungsüberprüfung durchgeführt?',
+    'Ist der Lagerraum/Silo ordnungsgemäß und gut sichtbar gekennzeichnet?',
+    'Sind Lagerbehälter, Fördereinrichtungen u. Armaturen dicht u. frei von Beschädigungen?',
+    'Ist eine ausreichende, funktionstüchtige Be- und Entlüftung vorhanden?',
+    '# Pos. 25 – Eigenkontrolle',
+    'Werden die Eigenkontrollen in den vorgeschriebenen regelmäßigen Abständen durchgeführt?',
+    'Sind die Intervalle für die Eigenkontrollen schriftlich festgelegt und eingehalten?',
+    'Werden alle Feststellungen, Mängel u. Kontrollen lückenlos im Brandschutzbuch dokumentiert?',
+    'Werden Kontrollberichte der Brandschutzwarte fortlaufend an den verantwortlichen BSB übergeben?',
+    '# Pos. 26 – Schulungen',
+    'Werden alle Mitarbeiter regelmäßig (mind. 1x jährlich) im Brandschutz geschult?',
+    'Werden praktische Brandschutzübungen (z. B. Feuerlöschertraining) durchgeführt?',
+    'Wird die Brandschutzordnung den Mitarbeitern im Rahmen der Schulungen erläutert?',
+    'Ist ein aktueller Schulungsbedarfsplan für das laufende Jahr erstellt und vorhanden?',
+    '# Pos. 27 – Räumungsübung',
+    'Wird mindestens einmal jährlich eine Räumungsübung durchgeführt und dokumentiert?',
+    'Wurde die Räumungsübung bei aufgetretenen Mängeln zeitnah wiederholt?',
+    '# Pos. 28 – Feuerwehrübungen',
+    'Werden regelmäßige gemeinsame Übungen oder Begehungen mit der örtlichen Feuerwehr abgestimmt?',
+    'Wurde die Feuerwehr zur gemeinsamen Besichtigung/Übung eingeladen?',
+    'Wurden der Feuerwehr die aktuellen Brandschutzpläne übergeben?',
+    '# Pos. 29 – Betriebsfeuerwehr',
+    'Ist der vorgeschriebene Mannschaftsbestand der Betriebsfeuerwehr vollständig vorhanden?',
+    'Werden regelmäßige Übungen und Ausbildungen gemäß Dienstplan durchgeführt u. dokumentiert?',
+    'Werden alle Auflagen der Gewerbebehörde und des Landesfeuerwehrverbandes erfüllt?',
+    '# Pos. 30 – Interne Kommunikation',
+    'Werden sicherheits- und brandschutzrelevante Informationen regelmäßig an die Mitarbeiter weitergeleitet?',
+    'Werden geplante Brandschutzmaßnahmen und -programme aktiv im Betrieb kommuniziert?',
+    'Werden Ergebnisse von Überprüfungen sowie Mängelbehebungen transparent dargestellt?',
+    '# Pos. 31 – Sprinkleranlage',
+    'Wird das vorgeschriebene Sprinkler-Kontrollbuch lückenlos geführt?',
+    'Wurde die Sprinkleranlage einer Erstabnahme unterzogen?',
+    'Liegt ein gültiger Prüfbefund der jährlichen Inspektion durch eine akkreditierte Stelle vor?',
+    'Sind die erforderlichen Freiräume unter den Sprinklerköpfen (Lagerhöhen/Abstände) eingehalten?',
+    'Werden die Eigenkontrollen gemäß Richtlinien/Normen ordnungsgemäß durchgeführt?',
+    '# Pos. 32 – Löschanlage',
+    'Liegt ein gültiger Prüfbefund der Erstabnahme bzw. wiederkehrenden Prüfung vor?',
+    'Ist der Löschbereich frei von verstellenden Lagerungen u. die Düsen ungehindert wirksam?',
+    'Wurde die gesamte Anlage (höchstens jährlich) einer fachgerechten Inspektion unterzogen?',
+    'Sind Auslöseeinrichtungen, Druckbehälter u. Warnmittel unbeschädigt u. frei zugänglich?',
+    '# Pos. 33 – Brandschutzkonzept und Behördenauflagen',
+    'Werden die Vorgaben des Brandschutzkonzepts und der Einreichpläne im Betrieb eingehalten?',
+    'Sind alle spezifischen Behördenauflagen aus den Bescheiden erfüllt und kontrolliert?',
+    '# Pos. 34 – Elektronische Schließsysteme',
+    'Ist die Zugänglichkeit für Einsatzkräfte u. Sicherheitsbeauftragte jederzeit gewährleistet?',
+    'Werden Lesegeräte und Update-Terminals in ihrer Funktionsfähigkeit aufrechterhalten?',
+    'Wird der Batteriewechsel bei Motorschlössern/Beschlägen nach Herstellervorgaben durchgeführt?',
+    'Werden Alarmanlagen und Videoüberwachung gemäß Herstellervorgaben regelmäßig auf Funktionsfähigkeit überprüft?',
+    '# Pos. 35 – Zivilschutz',
+    'Werden Funktionskontrollen an Abschlüssen, Lüftungs-, Versorgungs- u. Entsorgungseinrichtungen regelmäßig durchgeführt u. dokumentiert?',
+    '# Pos. 36 – Hochwasserschutz',
+    'Werden Funktionsprüfungen an Hochwasserschutzeinrichtungen (Wehre, Dammbalken, Schotts) nach Herstellervorgaben durchgeführt?',
+    'Sind Evakuierungs- und Notfallpläne mit der Behörde, Gemeinde und den Einsatzorganisationen aktuell abgestimmt?',
+    'Sind Maßnahmen u. Verhaltensregeln zur Schadensabwehr an die aktuellen Gegebenheiten u. Gefahrenpotenziale angepasst?',
+    '# Pos. 37 – Lawinenschutz, Muren, Felsstürze u. dgl.',
+    'Werden Funktionsprüfungen an Schutzbauten (Fangzäune, Netze, Galerien) gemäß Herstellervorgaben regelmäßig durchgeführt?',
+    'Sind Notfall- und Evakuierungspläne mit Behörden und Einsatzorganisationen aktuell abgestimmt?',
+    'Sind Verhaltensregeln und Maßnahmen zur Schadensabwehr an das Gefahrenpotenzial angepasst?',
+    '# Pos. 38 – Fassaden/Gesimse',
+    'Sind Fassaden und Gesimse frei von Rissen, losen Teilen und Hohlstellen?',
+    'Sind Glaselemente, Verkleidungen und Oberflächen frei von Sprüngen oder Verformungen?',
+    'Sind Konstruktionen und Metallteile frei von Korrosionsspuren und Abplatzungen?',
+    'Sind Wasseranschlüsse, Ablaufkanäle und Hinterlüftungen sauber und unbeschädigt?',
+    'Sind Befestigungen, Abdeckungen und Verfugungen im Fassadenbereich vollständig und intakt?',
+    'Sind Fassaden frei von unzulässigen Einbauten oder Beeinträchtigungen durch Nutzer (z. B. SAT-Anlagen, Bepflanzungen)?',
+    'Sind Werbeanlagen und Schilder genehmigt, ordnungsgemäß befestigt und unbeschädigt?',
+    'Sind Fassadenbefahranlagen fristgerecht überprüft, gewartet und betriebsbereit?',
+    'Sind Sonnenschutz-, Wetter- und Sichtschutzelemente unbeschädigt und sicher befestigt?',
+    'Sind Balkone und Loggien konstruktiv einwandfrei, sicher befestigt und frei von unzulässigen Lagerungen?',
+    '# Pos. 39 – Dach',
+    'Sind Vordächer, Lichtkuppeln und Überkopfverglasungen unbeschädigt und dicht?',
+    'Sind Dacheindeckung und Schneefangeinrichtungen vollständig, intakt und fest verankert?',
+    'Sind Kamin- und Lüftungsköpfe im Dachbereich frei von Beschädigungen und Verstopfungen?',
+    'Sind Attika-, Saum- und Ortgangverblechungen unbeschädigt u. fest montiert?',
+    'Sind Dachrinnen und Regenfallrohre sauber, dicht und funktionstüchtig?',
+    'Wurden Dachrinnenreinigung und Funktionsprüfungen ordnungsgemäß durchgeführt?',
+    'Sind Dachaufbauten (z. B. Klimageräte, PV-Anlagen, Antennen) sicher befestigt und unbeschädigt?',
+    'Sind Anschlagpunkte und Sekuranten (PSA gegen Absturz) fristgerecht überprüft u. zugelassen?',
+    'Sind Rauchfangkehrer-Laufstege, Aufstiege und Dachausstiege unbeschädigt u. sicher begehbar?',
+    'Sind Antennenleiter, Absturzsicherungen und Geländer am Dach überprüft und in Ordnung?',
+    '# Pos. 40 – Allgemein genutzte Teile der Gesamtanlage',
+    'Sind Wand- und Deckenflächen im Allgemeinbereich frei von Rissen und Abplatzungen?',
+    'Sind Bodenbeläge frei von Stolperstellen, Beschädigungen und übermäßigen Verschmutzungen?',
+    'Sind Treppenläufe und Stufenkanten unbeschädigt, rutschhemmend und sicher begehbar?',
+    'Sind Geländer und Handläufe fest verankert, normgerecht ausgeführt und unbeschädigt?',
+    'Sind alle Verglasungen im Allgemeinbereich frei von Brüchen und Sprüngen?',
+    'Ist die Allgemeinbeleuchtung (inkl. Schalter/Taster) voll funktionsfähig?',
+    '# Pos. 41 – Fenster- und Türkonstruktionen',
+    'Sind Schließfunktionen und Selbstschließer von Türen/Fenstern geprüft u. voll funktionstüchtig?',
+    'Sind Beschläge, Bänder und Verriegelungen gängig, unbeschädigt und gewartet?',
+    'Sind erforderliche Absturzsicherungen bei Fenstern vorhanden und sicher befestigt?',
+    'Sind Tür- und Fensterverglasungen unbeschädigt und frei von Sprüngen?',
+    '# Pos. 42 – Sauna / Fitness',
+    'Wird eine Scheuerdesinfektion wöchentlich durchgeführt und dokumentiert?',
+    'Liegt ein gültiger E-Befund nach ÖVE-Richtlinie vor?',
+    'Wurde eine Behördenbegehung durchgeführt?',
+    '# Pos. 43 – Schwimmbad / Schwimmbiotop',
+    'Werden alle erforderlichen Wasseruntersuchungen und Prüfungen fristgerecht durchgeführt?',
+    'Erfolgt die Aufbereitung/Desinfektion nach Bäderhygienegesetz bzw. Behördenauflagen u. Betriebsanleitung?',
+    'Wurde eine Behördenbegehung durchgeführt?',
+    'Wird die Wasserqualität täglich geprüft, messtechnisch erfasst u. im Betriebsbuch dokumentiert?',
+    '# Pos. 44 – Trinkwasserbrunnen',
+    'Liegt ein aktueller, positiver Befund über Trinkwasserqualität u. bakteriologische Unbedenklichkeit vor?',
+    '# Pos. 45 – Grundwasserbrunnen',
+    'Liegt ein aktueller Prüfbefund über Wasserqualität u. bakteriologische Unbedenklichkeit vor?',
+    '# Pos. 46 – Wasseraufbereitung',
+    'Wurde die jährliche Wartung und Funktionsprüfung der Wasseraufbereitung durchgeführt u. dokumentiert?',
+    '# Pos. 47 – Hebeanlagen',
+    'Werden Abwasser-/Fäkalienhebeanlagen regelmäßig gewartet u. auf Funktion/Alarmierung geprüft?',
+    '# Pos. 48 – Drucksteigerungsanlagen',
+    'Wurde die jährliche Inspektion, Wartung u. Funktionsprüfung der Drucksteigerung durchgeführt?',
+    '# Pos. 49 – Allgemein zugängliche Sanitärbereiche (Toiletten, Bäder, Nassräume)',
+    'Werden die grundsätzlichen Hygieneanforderungen eingehalten?',
+    'Ist ein Reinigungsplan vorhanden und wird dieser eingehalten?',
+    '# Pos. 50 – Trinkwasser und Nutzwasser',
+    'Wurde die jährliche Wasseruntersuchung (insbes. Warmwasser auf Legionellen) durchgeführt u. dokumentiert?',
+    'Werden Nutzer/Mieter über die aktuellen Ergebnisse der Trinkwasserqualität informiert?',
+    'Sind Nicht-Trinkwasser-Entnahmestellen (Nutz-/Regenwasser) dauerhaft u. gut sichtbar gekennzeichnet?',
+    '# Pos. 51 – Sonstige Lüftungsanlagen',
+    'Werden Filterwechsel und Einregulierung fristgerecht (mind. halbjährlich) durchgeführt u. dokumentiert?',
+    'Ist die geforderte Luftleistung und Funktion der Lüftungsanlage uneingeschränkt gegeben?',
+    'Sind Befestigungen, Kanäle und Aufhängungen der Lüftungsanlage in ordnungsgemäßem Zustand?',
+    'Wird eine regelmäßige Funktionsprüfung der Gesamtanlage durchgeführt und dokumentiert?',
+    'Ist die Lüftungsanlage sichtbar dicht, beschädigungsfrei und ohne unzulässige Geräusche/Vibrationen?',
+    '# Pos. 52 – Garagentore / Schrankenanlagen',
+    'Wurde die jährliche Sicherheitsprüfung und Wartung durchgeführt und im Prüfbuch dokumentiert?',
+    'Sind Sicherheitseinrichtungen (Lichtschranken, Kontaktleisten, Not-Aus) voll funktionstüchtig?',
+    '# Pos. 53 – Mechanische Stellplatzeinrichtungen',
+    'Wurde die Sicherheitsprüfung und Wartung der mechanischen Stellplätze durchgeführt u. dokumentiert?',
+    'Sind Bedienelemente, Absturzsicherungen und Not-Halt-Einrichtungen geprüft und intakt?',
+    '# Pos. 54 – Parkplätze im Freien (z. B. in Höfen)',
+    'Sind Beschilderungen, Bodenmarkierungen u. Stellplatzkennzeichnungen gut sichtbar u. intakt?',
+    'Wird der Mindestabstand von 2 m zu Fassadenfenstern, Aufenthaltsräumen u. Fluchtwegen eingehalten?',
+    '# Pos. 55 – Technische Einrichtungen für barrierefreie Gestaltung',
+    'Sind Aufstiegshilfen, Rampen und Hebebühnen geprüft, unbeschädigt und voll betriebsbereit?',
+    'Werden Behinderten-Notrufeinrichtungen (z. B. in WC-Anlagen) regelmäßig auf Funktion geprüft?',
+    '# Pos. 56 – Hygiene, Gesundheit und Umweltschutz für spezielle Gebäude bzw. Nutzungen',
+    'Werden Eigenkontrollen gemäß HACCP-Konzept (Gefahrenanalyse) regelmäßig durchgeführt u. dokumentiert?',
+    '# Pos. 57 – Schutz vor Feuchtigkeit',
+    'Sind Wände, Decken und Bauteile frei von Schimmel und sichtbaren Feuchtigkeitsschäden?',
+    'Sind Rohrleitungen und Installationen frei von erkennbaren Korrosionsschäden?',
+    'Ist der Bereich frei von Hinweisen auf unerkannte oder akute Wasserschäden?',
+    '# Pos. 58 – Abfallwirtschaft',
+    'Ist die Abfallsammelstelle sauber, hygienisch und frei von unzulässigen Brandlasten?',
+    'Liegt ein aktuelles und den Betriebsabläufen entsprechendes Abfallwirtschaftskonzept vor?',
+    '# Pos. 59 – Energiewirtschaft',
+    'Wurde ein Energiekonzept bzw. Energieaudit gemäß Bundes-Energieeffizienzgesetz erstellt?',
+    '# Pos. 60 – Ungezieferbekämpfung',
+    'Wird die Ungezieferbekämpfung (Schädlingsmonitoring) regelmäßig kontrolliert und dokumentiert?',
+    '# Pos. 61 – Abwasser und sonstige Abflüsse',
+    'Wurde die Wartung und Kontrolle von Versickerungsschächten ordnungsgemäß durchgeführt?',
+    'Wurde die Dichtheit von Öl- und Benzinauffangbecken (z. B. Verdunstungsrinnen) geprüft?',
+    'Wurde die Dichtheitsprüfung der Zuleitungen zu Mineralöl- und Fettabscheidern durchgeführt?',
+    'Sind Senkgruben (Einstiegsöffnung, Entlüftung, tagwasserdichte Abdeckung) in einwandfreiem Zustand?',
+    'Wurde die Dichtheit von Sammelanlagen (z. B. Silos, Jauchengruben) erfolgreich überprüft?',
+    'Werden Einleitungsbescheide und vorgeschriebene Grenzwerte konsequent eingehalten?',
+    'Wurde die gesetzliche Wartung von Mineralöl- und Fettabscheidern durch eine Fachfirma durchgeführt?',
+    'Erfolgt die regelmäßige Entleerung und fachgerechte Entsorgung von Auffangbecken/Rinnen?'
+  ] };
+}
+function quartalBegehung() {
+  return { id: uid(), name: 'Vierteljährliche Begehung', art: 'vierteljaehrlich', punkte: [
+    '# Pos. 62 – Brandschutztüren',
+    'Wird der Schließbereich von Brandschutztüren dauerhaft freigehalten?',
+    'Schließt die Tür aus einer Spaltbreite von 200 mm selbstständig und vollständig?',
+    'Sind Türblatt, Zarge und Beschläge frei von Beschädigungen und Mängeln?',
+    'Befindet sich im Falzbereich oder auf der Tür eine intakte Kennzeichnung?',
+    '# Pos. 63 – Rauchschutztüren',
+    'Wird der Schließbereich freigehalten?',
+    'Schließt die Rauchschutztür aus 200 mm Spaltbreite selbstständig?',
+    'Sind Türblatt und Beschläge unbeschädigt?',
+    'Ist die Kennzeichnung im Falzbereich oder auf der Tür vorhanden und lesbar?',
+    'Sind Verglasungen der Rauchschutztür frei von Beschädigungen und Rissen?',
+    'Sind alle Dichtungen intakt, unbeschädigt und voll funktionsfähig?',
+    '# Pos. 64 – Feststellanlagen',
+    'Wird ein Kontrollbuch für Feststellanlagen ordnungsgemäß geführt?',
+    'Werden die vorgeschriebenen Prüfungen durchgeführt und dokumentiert?',
+    'Gibt der Haftmagnet die Tür bei Auslösung zuverlässig und sofort frei?',
+    'Ist die Schließfolge (bei zweiflügeligen Türen) korrekt und funktionsfähig?',
+    '# Pos. 65 – Notausgänge',
+    'Ist ein Panikverschluss vorhanden und voll funktionsfähig?',
+    'Ist ein erforderlicher Stoßriegel (Panikstange) am Notausgang vorhanden und gängig?',
+    'Ist der Notausgang dauerhaft frei, gekennzeichnet und beleuchtet?',
+    '# Pos. 66 – Notausstiege',
+    'Ist der Notausstieg jederzeit frei zugänglich und unverstellt?',
+    'Sind erforderliche Aufstiegshilfen vorhanden und unverrückbar befestigt?',
+    'Ist der Notausstieg ordnungsgemäß gekennzeichnet und beleuchtet?',
+    '# Pos. 67 – Panikverschlüsse',
+    'Sind alle Panikverschlüsse leichtgängig und frei beweglich?',
+    '# Pos. 68 – Stoßriegel',
+    'Ist die Mechanik der Stoßriegel frei beweglich und einsatzbereit?',
+    '# Pos. 69 – Sauberkeit und Ordnung',
+    'Werden Verpackungsmaterialien und Abfälle in geeigneten Räumen/Behältern sicher verwahrt?',
+    'Sind Lagerungen im Außenbereich so ausgeführt, dass eine Brandübertragung oder Brandstiftung vermieden wird?',
+    'Werden brennbare Ablagerungen und Abfälle regelmäßig und ordnungsgemäß entsorgt?',
+    '# Pos. 70 – Fluchtwegkennzeichnung',
+    'Werden normgerechte Symbole und Kennzeichnungen (gemäß ÖNORM EN ISO 7010) verwendet?',
+    'Sind die Kennzeichnungen in ausreichender Anzahl und Erfassungsweite vorhanden?',
+    '# Pos. 71 – Kennzeichen nach ÖNORM F 2030, ÖNORM Z 1000, ÖNORM EN ISO 7010',
+    'Sind alle Sicherheitskennzeichnungen gut sichtbar, unbeschädigt und gut lesbar?',
+    'Ist die Kennzeichnung „Verhalten im Brandfall“ an strategisch wichtigen Stellen gut sichtbar angebracht?',
+    '# Pos. 72 – Rauchverbot',
+    'Sind Rauchverbotsschilder an allen erforderlichen Stellen gut sichtbar und unbeschädigt?',
+    'Sind neu entstandene bzw. geänderte Gebäudebereiche bezüglich Rauchverbot ordnungsgemäß beschildert?',
+    'Sind geeignete nichtbrennbare Sicherheitsabfallbehälter (Aschenbecher) bereitgestellt?',
+    'Werden Zigarettenreste und Aschenbecherinhalte gefahrlos und ordnungsgemäß entsorgt?',
+    '# Pos. 73 – Raucherbereiche',
+    'Sind ausgewiesene Raucherbereiche klar gekennzeichnet und von brennbaren Stoffen getrennt?',
+    'Sind in den Raucherbereichen nichtbrennbare Sicherheitsabfallbehälter vorhanden?',
+    'Werden bestehende Rauchverbote im Betrieb konsequent eingehalten?',
+    '# Pos. 74 – Feuerlöscher',
+    'Sind alle Feuerlöscher an den vorgesehenen Plätzen ordnungsgemäß montiert und leicht zugänglich?',
+    'Wurden alle Feuerlöscher fristgerecht (mind. alle 2 Jahre) überprüft u. mit gültiger Plakette versehen?',
+    'Wird ein lückenloses Verzeichnis über Bestand, Standorte sowie Zu- und Abgänge geführt?',
+    'Werden Personen/Mitarbeiter regelmäßig in der Handhabung der Feuerlöscher geschult?',
+    'Sind die Feuerlöscher entsprechend der jeweiligen Brandklasse u. Brandgefahr richtig ausgewählt?',
+    'Sind Standorte von Feuerlöschern gut sichtbar und normgerecht gekennzeichnet?',
+    '# Pos. 75 – Wandhydranten',
+    'Wird ein Kontrollbuch für Wandhydranten ordnungsgemäß geführt?',
+    'Wird ein Kontrollbuch (TÜV) für brandschutztechnische Anlagen geführt und werden die Eigenkontrollen dokumentiert?',
+    'Wurden wiederkehrende Überprüfungen nach TRVB 128, TRVB 128 S und EN 671 durchgeführt?',
+    'Sind Wandhydranten frei von sichtbaren Mängeln und Beschädigungen?',
+    'Sind die Schlauchanschlussventile ordnungsgemäß geschlossen und dicht?',
+    'Sind Absperrschieber, Ventile und Türverschlüsse leichtgängig u. funktionsfähig?',
+    'Sind sämtliche Wandhydranten dauerhaft frei zugänglich u. ungehindert erreichbar?',
+    '# Pos. 76 – Steigleitungen (Schlauchanschlüsse / Einspeisungsstelle)',
+    'Wird das Kontrollbuch für Steigleitungen ordnungsgemäß geführt?',
+    'Wird ein Kontrollbuch (TÜV) für brandschutztechnische Anlagen geführt und werden die Eigenkontrollen dokumentiert?',
+    'Wurden wiederkehrende Überprüfungen nach TRVB 128 und TRVB 128 S fristgerecht durchgeführt?',
+    'Sind Steigleitungen, Anschlüsse und Schränke frei von sichtbaren Mängeln?',
+    'Ist die Gängigkeit der Absperrschieber und Türverschlüsse gegeben?',
+    'Sind die Schlauchanschlussventile ordnungsgemäß geschlossen?',
+    'Sind alle Blindkupplungen an Entnahme- u. Einspeisestellen vorhanden u. gesichert?',
+    'Sind sämtliche Entnahme- und Einspeisestellen dauerhaft frei zugänglich?',
+    '# Pos. 77 – Elektroinstallation',
+    'Sind die Hauptabsperreinrichtungen im Brandschutzplan eingezeichnet u. gekennzeichnet?',
+    'Sind Schutzgläser und Körbe an Beleuchtungskörpern vollständig und unbeschädigt?',
+    'Ist die E-Installation frei von offensichtlichen Mängeln (offene Verteilerdosen, freiliegende Kabel, defekte Steckdosen)?',
+    'Befinden sich die elektrischen Betriebsmittel in einwandfreiem Zustand?',
+    'Ist die Eigenstromversorgung/USV (unabhängige Stromversorgung) funktionsfähig und geprüft?',
+    'Ist die Notstromversorgung funktionsfähig und geprüft?',
+    'Wird auf Verlängerungskabel als Stationärleitung verzichtet?',
+    'Sind elektrische Verteilerschränke geschlossen und zugänglich?',
+    '# Pos. 78 – Aufstellung von Wärmegeräten',
+    'Ist die Standsicherheit der Wärmegeräte gegeben?',
+    'Ist die Funktion der Kontrollleuchte in Ordnung?',
+    'Wird der erforderliche Sicherheitsabstand in Strahlungsrichtung zu brennbaren Stoffen eingehalten?',
+    'Ist eine geeignete, nicht brennbare Unterlage vorhanden?',
+    'Wurde der Aufstellungsort durch die Betriebsleitung oder den BSB genehmigt?',
+    '# Pos. 79 – Maschinenräume',
+    'Sind Maschinenräume vollkommen frei von unzulässigen Lagerungen und Brandlasten?',
+    'Sind Auffangwannen/Auffangtassen vorhanden u. verhindern eine Verölung des Bodens?',
+    '# Pos. 80 – Maschinenzustand und -reinigung',
+    'Werden regelmäßige Sicht- und Reinigungskontrollen der Maschinen durchgeführt?',
+    'Werden ausschließlich geeignete und zugelassene Reinigungsmittel verwendet?',
+    'Werden bei Reinigungsarbeiten bei Bedarf zusätzliche Brandschutzmaßnahmen getroffen?',
+    '# Pos. 81 – Absaugleitungen',
+    'Werden Sicherheitsabstände zu brennbaren Bauteilen eingehalten u. brennbare Gegenstände ferngehalten?',
+    '# Pos. 82 – Treibstoffbehälter',
+    'Sind Treibstoffbehälter dicht, unbeschädigt u. werden zulässige Lagermengen eingehalten?',
+    '# Pos. 83 – Ortsfeste und transportable Schweißgeräte',
+    'Befinden sich Schweißgeräte und Zubehör in einwandfreiem, beschädigungsfreiem Zustand?',
+    'Sind Gasflaschen gegen Umfallen gesichert und senkrecht aufgestellt?',
+    'Werden Schweißgeräte nach Betriebsschluss ordnungsgemäß und sicher verwahrt?',
+    'Sind Rückschlagsicherungen, Druckminderer und Schlauchklemmen intakt u. geprüft?',
+    'Sind erforderliche Schutzausrüstungen (hitzefeste Handschuhe, Gasflaschenschlüssel) vorhanden?',
+    'Wurden Schweiß- und Schneidgeräte gemäß Herstellervorgaben regelmäßig überprüft?',
+    '# Pos. 84 – Hubstapler, Schlepper, Kfz',
+    'Werden in ex-gefährdeten Bereichen ausschließlich zugelassene ex-geschützte Fahrzeuge eingesetzt u. abgestellt?',
+    '# Pos. 85 – Fernüberwachungsanlagen',
+    'Wurde die Funktionsprüfung u. Wartung von Fernüberwachungsanlagen (z. B. Hebeanlagen) durchgeführt?'
+  ] };
+}
+function monatsBegehung() {
+  return { id: uid(), name: 'Monatliche Begehung', art: 'monatlich', punkte: [
+    '# Pos. 86 – Sicherheitsabfallbehälter',
+    'Ist der Löschkonus ordnungsgemäß und dicht aufgesetzt?',
+    'Sind die Sicherheitsabfallbehälter frei von Verformungen und Beschädigungen?',
+    'Ist jeder ausgewiesene Raucherbereich mit nichtbrennbaren Sicherheitsabfallbehältern ausgestattet?',
+    '# Pos. 87 – Fluchtwege (Lagerungen)',
+    'Sind alle Flucht- und Rettungswege ständig frei von jeglichen Lagerungen und Hindernissen?',
+    'Sind angrenzende Lagerungen standsicher ausgeführt, sodass Fluchtwege nicht gefährdet werden?',
+    'Sind Flucht- und Rettungswege normgerecht gekennzeichnet und gut beleuchtet?',
+    'Schlagen Türen im Verlauf von Fluchtwegen in Fluchtrichtung auf und lassen sich ungehindert öffnen?',
+    '# Pos. 88 – Lagerungen',
+    'Erfolgen Lagerungen ausschließlich auf den dafür vorgesehenen und freigegebenen Flächen?',
+    'Werden Sauberkeit und Ordnung in allen Betriebsbereichen konsequent eingehalten?',
+    'Werden brennbare Abfälle u. selbstentzündliche Stoffe in geeigneten Spezialbehältern entsorgt?',
+    'Werden Verpackungsmaterialien unverzüglich an einen sicheren Sammelplatz gebracht?',
+    '# Pos. 89 – Lagerräume für brennbare Flüssigkeiten',
+    'Ist der Lagerraum ordnungsgemäß und gut sichtbar als Gefahrstofflager gekennzeichnet?',
+    'Wird die höchstzulässige Lagermenge an brennbaren Flüssigkeiten eingehalten?',
+    'Sind alle im Lagerraum befindlichen Elektrogeräte und Installationen explosionsgeschützt ausgeführt?',
+    'Werden Abfüllvorgänge ausschließlich unter Einhaltung der geforderten Schutzmaßnahmen durchgeführt?',
+    'Sind wirksame Maßnahmen gegen elektrostatische Aufladung (Erdung, Potenzialausgleich) vorhanden?',
+    'Werden brennbare Flüssigkeiten ausschließlich in zugelassenen Sicherheitsbehältern vorgehalten?',
+    '# Pos. 90 – Lagerung für brennbare Flüssigkeiten',
+    'Wird die am Arbeitsplatz vorgehaltene Menge brennbarer Flüssigkeiten streng auf den Tagesbedarf beschränkt?',
+    'Wird die Substitution brennbarer Flüssigkeiten durch weniger gefährliche Stoffe regelmäßig geprüft?',
+    '# Pos. 91 – Lagerräume für Druckgaspackungen',
+    'Ist der Lagerraum für Druckgaspackungen ordnungsgemäß u. gut sichtbar gekennzeichnet?',
+    'Wird die höchstzulässige Lagermenge für Druckgaspackungen strikt eingehalten?',
+    'Ist die Elektroinstallation im Lagerraum den ex-schutztechnischen Anforderungen entsprechend ausgeführt?',
+    'Ist im Raum eine erforderliche Druckentlastung bzw. ausreichende Be- und Entlüftung vorhanden?',
+    'Werden Abfüllvorgänge ausschließlich unter Einhaltung aller vorgeschriebenen Schutzmaßnahmen durchgeführt?',
+    'Sind erforderliche Maßnahmen gegen elektrostatische Entladung (Erdung/Potenzialausgleich) vorhanden?',
+    '# Pos. 92 – Lagerraum für pyrotechnische Gegenstände',
+    'Werden alle gewerbebehördlichen Auflagen für die Lagerung pyrotechnischer Gegenstände erfüllt?',
+    'Ist der Lagerraum ordnungsgemäß und gut sichtbar gekennzeichnet?',
+    'Wird die höchstzulässige Lagermenge strikt eingehalten?',
+    'Ist die Elektroinstallation im Lagerraum explosionsgeschützt ausgeführt?',
+    'Ist im Lagerraum eine funktionstüchtige Druckentlastung bzw. Lüftung vorhanden?',
+    '# Pos. 93 – Abfalllagerung',
+    'Werden betriebliche Abfälle vorschriftsmäßig und getrennt gesammelt?',
+    'Werden brennbare Abfälle regelmäßig aus dem Betriebsgebäude entfernt und entsorgt?',
+    'Sind Abfallsammelstellen stets sauber, übersichtlich und frei von unzulässigen Brandlasten?',
+    '# Pos. 94 – Lagerraum für Flüssiggas',
+    'Mündet die Lüftung des Lagerraumes gefahrlos ins Freie bzw. in einen gesicherten Bereich?',
+    'Ist der Lagerraum für Flüssiggas ordnungsgemäß und gut sichtbar gekennzeichnet?',
+    'Wird die höchstzulässige Lagermenge für Flüssiggasbehälter eingehalten?',
+    'Werden alle Auflagen der Gewerbebehörde und der Flüssiggasverordnung erfüllt?',
+    '# Pos. 95 – Fluchtwegbeleuchtung Zentralbatterieanlage',
+    'Wird das elektronische Prüfbuch regelmäßig ausgedruckt bzw. lückenlos aufbewahrt?',
+    'Sind alle Not- und Fluchtwegleuchten im Test- und Normalbetrieb voll funktionsfähig?',
+    'Ist die Zentralbatterieanlage völlig störungsfrei und betriebsbereit?',
+    'Werden die vorgeschriebenen Funktionskontrollen regelmäßig durchgeführt u. dokumentiert?',
+    '# Pos. 96 – Fluchtwegbeleuchtung (Einzelbatterieleuchten)',
+    'Wird das Kontrollbuch für Einzelbatterieleuchten ordnungsgemäß u. lückenlos geführt?',
+    'Wird ein Kontrollbuch (TÜV) für brandschutztechnische Anlagen geführt und werden die Eigenkontrollen dokumentiert?',
+    'Sind alle Einzelbatterieleuchten optisch unbeschädigt u. voll funktionsfähig?',
+    'Sind alle Rettungszeichen/Piktogramme vorhanden, unbeschädigt und gut lesbar?',
+    'Wird eine regelmäßige Funktionskontrolle durchgeführt?',
+    '# Pos. 97 – Brandmeldeanlage',
+    'Wird das BMA-Kontrollbuch ordnungsgemäß und lückenlos geführt?',
+    'Wird ein Kontrollbuch (TÜV) für brandschutztechnische Anlagen geführt und werden die Eigenkontrollen dokumentiert?',
+    'Liegt ein gültiger Befund der Erstabnahme/Inbetriebnahme vor?',
+    'Wurde die Anlage innerhalb der letzten zwei Jahre einer fachgerechten Inspektion unterzogen?',
+    'Ist die Gängigkeit der Absperrschieber und Türverschlüsse gegeben?',
+    'Werden die wiederkehrenden Überprüfungen nach TRVB 123 fristgerecht durchgeführt?',
+    'Ist die Brandmeldeanlage frei von Störungsmeldungen und voll betriebsbereit?',
+    '# Pos. 98 – Objektfunkanlage / Elektroakustische Notwarnsysteme',
+    'Wird das Kontrollbuch für Notwarn- bzw. Objektfunkanlagen ordnungsgemäß geführt?',
+    'Wird ein Kontrollbuch (TÜV) für brandschutztechnische Anlagen geführt und werden die Eigenkontrollen dokumentiert?',
+    'Wurde die Anlage einer ordnungsgemäßen Erstabnahme unterzogen?',
+    'Wurde die gesamte Anlage innerhalb von höchstens zwei Jahren einer Inspektion unterzogen?',
+    'Werden wiederkehrende Überprüfungen nach TRVB 159 durchgeführt?',
+    'Ist die Anlage völlig störungsfrei und betriebsbereit?',
+    '# Pos. 99 – Brandrauchentlüftungsanlage (RWA, DBA, RASA)',
+    'Wird das Kontrollbuch für Rauch- und Wärmeabzugsanlagen ordnungsgemäß geführt?',
+    'Wird ein Kontrollbuch (TÜV) für brandschutztechnische Anlagen geführt und werden die Eigenkontrollen dokumentiert?',
+    'Wurde die Brandrauchentlüftungsanlage einer Erstabnahme unterzogen?',
+    'Wurde die gesamte Anlage in Abständen von höchstens zwei Jahren einer Inspektion unterzogen?',
+    'Werden wiederkehrende Überprüfungen nach TRVB 125 S vorgenommen?',
+    'Sind alle Druckknopfmelder (RWA-Taster) richtig und gut sichtbar gekennzeichnet?',
+    '# Pos. 100 – Brandrauchentlüftung Stiegenhaus',
+    'Wird das Kontrollbuch für die Stiegenhausentrauchung ordnungsgemäß u. lückenlos geführt?',
+    'Wird ein Kontrollbuch (TÜV) für brandschutztechnische Anlagen geführt und werden die Eigenkontrollen dokumentiert?',
+    'Liegt für die Stiegenhausentrauchung eine gültige Herstellerbescheinigung bzw. ein Befund vor?',
+    'Wird der regelmäßige Funktionstest durchgeführt und ist die Auslösung einwandfrei?',
+    'Wurden wiederkehrende Überprüfungen nach TRVB 125 S fristgerecht vorgenommen?',
+    'Sind alle Druckknopfmelder (Handauslösetaster) richtig und gut sichtbar gekennzeichnet?',
+    '# Pos. 101 – CO-Warnanlage',
+    'Wird das Kontrollbuch für die CO-Warnanlage ordnungsgemäß geführt?',
+    'Wurde die CO-Warnanlage einer ordnungsgemäßen Erstabnahme unterzogen?',
+    'Wurde die gesamte Anlage in Abständen von höchstens zwei Jahren einer Inspektion unterzogen?',
+    'Werden wiederkehrende Überprüfungen und Sensorkalibrierungen vorgenommen?',
+    'Ist die CO-Warnanlage (inkl. Warnanzeigen u. Signalgebern) richtig u. gut sichtbar gekennzeichnet?',
+    '# Pos. 102 – Batterielagerraum / Batterieladestation',
+    'Werden ausreichende Sicherheitsabstände zu brennbaren Materialien strikt eingehalten?',
+    'Ist der Laderaum / die Ladestation ordnungsgemäß gekennzeichnet (z. B. Explosionsgefahr, Rauchverbot)?',
+    'Ist eine ausreichende, funktionstüchtige Belüftung (zur Vermeidung von Knallgas) vorhanden?',
+    '# Pos. 103 – Ex-Bereiche',
+    'Ist der explosionsgefährdete Bereich (Ex-Zone) entsprechend gekennzeichnet?',
+    'Sind die Brandabschnitte und Abschottungen im Ex-Bereich ordnungsgemäß ausgeführt u. intakt?',
+    'Sind alle in diesen Bereichen genutzten Elektrogeräte durchgehend explosionsgeschützt (ATEX) ausgeführt?',
+    'Werden die spezifischen Lagervorschriften und Ex-Schutz-Auflagen konsequent eingehalten?',
+    '# Pos. 104 – Fassadenbegrünung',
+    'Wird zwischen oberem Abschluss der Begrünung und brennbarer Dachkonstruktion ein vertikaler Schutzabstand von mind. 1,20 m eingehalten?',
+    'Befinden sich die Pflanzen in einem vitalen, gepflegten Zustand (frei von Dürrholz/Brandlasten)?',
+    'Reicht die Fassadenbegrünung höchstens über die ersten oberirdischen Geschoße?',
+    'Ist zwischen den Geschoßen eine durchgehende Brandabschottung (Stahlblech mind. 1,0 mm, mind. 30 cm auskragend, am Wandbildner montiert) vorhanden und nicht überwachsen?',
+    'Wird bei vertikal durchgehender Begrünung ohne Fensteröffnungen dazwischen ein horizontaler Abstand von mind. 20 cm zu Fensteröffnungen eingehalten?',
+    'Haben fassadengebundene metallische Tragsysteme eine geschoßweise Brandabschottung (Stahlblech mind. 2,0 mm, mind. 10 cm ab Trogaußenkante) und mind. 20 cm Abstand zu Fenstern?',
+    '# Pos. 105 – Außenanlagen',
+    'Ist die Oberflächenentwässerung (Rigolen, Drainage, Rinnsale) voll funktionsfähig und sauber?',
+    'Sind Geh-/Radwege, Rampen, Stützmauern, Einfriedungen u. Absturzsicherungen frei von Rissen, Setzungen, Frostschäden u. Unebenheiten?',
+    'Sind Schachtabdeckungen und Gitterroste (z. B. Lichtschächte) ordnungsgemäß tragfähig u. gesichert?',
+    'Ist die Außenbeleuchtung voll funktionsfähig, ausreichend dimensioniert und sicher befestigt?',
+    'Sind Fahnenstangen und Aufbauten im Außenbereich standsicher und ordnungsgemäß verankert?',
+    'Ist die Verkehrssicherheit (freie Sicht, keine Totholzgefahr) bei Baumbestand/Bepflanzung gegeben?',
+    '# Pos. 106 – Kinderspielplätze',
+    'Befinden sich alle Spielgeräte in optisch u. technisch einwandfreiem, beschädigungsfreiem Zustand?',
+    'Wurden die regelmäßige Überprüfung der Spielgeräte, die Standsicherheit u. der Fallschutz dokumentiert?',
+    '# Pos. 107 – Aufzugsanlagen',
+    'Wird die wöchentliche Überprüfung der Kabinentüren und Kabinenbeleuchtung durchgeführt?',
+    'Sind Notrufsystem, Zwei-Wege-Kommunikation u. Fehlerüberwachung voll funktionsfähig?',
+    'Werden die vorgeschriebenen Wartungen und Sicherheitsüberprüfungen fristgerecht durchgeführt?',
+    '# Pos. 108 – Zentrale Abluftanlage, Lüftungsanlagen und Klimaanlagen',
+    'Werden Filterwechsel und Einregulierung nach Herstellervorgaben regelmäßig durchgeführt?',
+    'Ist die erforderliche Luftleistung und Funktion der Lüftungs-/Klimaanlage gegeben?',
+    'Sind Befestigungen, Kanäle und Aufhängungen ordnungsgemäß und sicher montiert?',
+    'Ist die Gesamtanlage dicht, frei von Leckagen u. sichtbaren Mängeln?',
+    'Werden regelmäßige Funktionsprüfungen und Wartungen durchgeführt u. dokumentiert?'
+  ] };
+}
+function isHdr(p) { return String(p).charAt(0) === '#'; }
+function hdrText(p) { return String(p).replace(/^#+\s*/, ''); }
+function nFragen(v) { var n = 0; for (var i = 0; i < v.punkte.length; i++) if (!isHdr(v.punkte[i])) n++; return n; }
 function defVorlagen() {
   return [
     { id: uid(), name: 'Tägliche Kontrolle', art: 'taeglich', punkte: [
-      'Fluchtwege und Stiegenhäuser frei von Gegenständen und Brandlasten',
-      'Notausgänge von innen ohne Hilfsmittel zu öffnen',
-      'Brandschutztüren geschlossen bzw. nicht verkeilt oder blockiert',
-      'Feuerlöscher an ihrem Platz und frei zugänglich',
-      'Rettungszeichen und Sicherheitsbeleuchtung sichtbar, keine Störung angezeigt',
-      'Keine offensichtlichen Gefahren (defekte Elektrogeräte, offene Zündquellen)'
+      'Sind Fluchtwege und Stiegenhäuser frei von Gegenständen und Brandlasten?',
+      'Lassen sich Notausgänge von innen ohne Hilfsmittel öffnen?',
+      'Sind Brandschutztüren geschlossen bzw. nicht verkeilt oder blockiert?',
+      'Sind die Feuerlöscher an ihrem Platz und frei zugänglich?',
+      'Sind Rettungszeichen und Sicherheitsbeleuchtung sichtbar, ohne Störungsanzeige?',
+      'Ist der Bereich frei von offensichtlichen Gefahren (defekte Elektrogeräte, offene Zündquellen)?'
     ] },
-    { id: uid(), name: 'Monatliche Begehung', art: 'monatlich', punkte: [
-      'Feuerlöscher: Plombe vorhanden, Prüfplakette gültig, keine Beschädigung',
-      'Feuerlöscher: Manometer im grünen Bereich (falls vorhanden)',
-      'Brandschutztüren: Selbstschließung und Schließfolge funktionieren',
-      'Feststellanlagen von Brandschutztüren funktionieren',
-      'Sicherheitsbeleuchtung: Funktionstest durchgeführt',
-      'Wandhydranten zugänglich, Schrank unbeschädigt, Schlauch in Ordnung',
-      'Brandmelder und Druckknopfmelder frei, nicht abgedeckt oder beschädigt',
-      'RWA-Bedienstellen zugänglich und gekennzeichnet',
-      'Flucht- und Rettungspläne vorhanden, lesbar und aktuell',
-      'Brandschutzordnung und Alarmplan ausgehängt',
-      'Feuerwehrzufahrt, Aufstellflächen und Hydranten frei',
-      'Lagerung brennbarer Stoffe ordnungsgemäß'
-    ] },
-    { id: uid(), name: 'Jährliche Überprüfung', art: 'jaehrlich', punkte: [
-      'Brandschutzordnung aktuell und überprüft',
-      'Unterweisung der Mitarbeiter/Bewohner durchgeführt',
-      'Räumungsübung durchgeführt und dokumentiert',
-      'Prüfbefund Feuerlöscher durch Fachfirma vorhanden',
-      'Prüfbefund Brandmeldeanlage vorhanden',
-      'Prüfbefund Sicherheitsbeleuchtung vorhanden',
-      'Prüfbefund Brandschutzklappen vorhanden',
-      'Prüfbefund RWA / Sprinkler vorhanden (falls vorhanden)',
-      'Elektrische Anlagen geprüft (Prüfbefund vorhanden)',
-      'Flucht- und Rettungspläne auf Aktualität geprüft'
-    ] }
+    monatsBegehung(),
+    quartalBegehung(),
+    jahresBegehung()
   ];
 }
 
@@ -200,7 +702,7 @@ function katIdx(k) { for (var i = 0; i < KATS.length; i++) { if (KATS[i].k === k
 function katInt(k) { var i = katIdx(k); return i < 99 ? KATS[i].i : 12; }
 function prioObj(k) { for (var i = 0; i < PRIOS.length; i++) { if (PRIOS[i].k === k) return PRIOS[i]; } return PRIOS[1]; }
 function pill(cls, t) { return '<span class="pill ' + cls + '">' + t + '</span>'; }
-function safeName(s) { return String(s || 'Objekt').replace(/[^A-Za-z0-9\-_]+/g, '_').substr(0, 40); }
+function safeName(s) { return String(s || 'Objekt').replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/Ä/g, 'Ae').replace(/Ö/g, 'Oe').replace(/Ü/g, 'Ue').replace(/ß/g, 'ss').replace(/[^A-Za-z0-9\-_]+/g, '_').substr(0, 40); }
 var toastT = null;
 function toast(t) { var e = $('toast'); e.textContent = t; e.className = 'on'; clearTimeout(toastT); toastT = setTimeout(function () { e.className = ''; }, 2800); }
 
@@ -313,7 +815,7 @@ function render() {
   else if (STATE.tab === 'anl') v.innerHTML = viewAnlagen();
   else if (STATE.tab === 'beg') v.innerHTML = viewBegehungen();
   else if (STATE.tab === 'mae') v.innerHTML = viewMaengel();
-  else if (STATE.tab === 'ber') v.innerHTML = viewBericht();
+  else if (STATE.tab === 'ber') { v.innerHTML = viewBericht(); mbRender(); }
 }
 
 /* ---------- Auswertungen ---------- */
@@ -403,8 +905,12 @@ function editGebaeude(id) {
     return;
   }
   var p = g || {};
+  GFOTO = p.foto || '';
   var h = '<label>Bezeichnung des Objekts *</label><input id="g_name" value="' + esc(p.name) + '" placeholder="z. B. Kindergarten Sonnenschein">' +
-    '<label>Adresse</label><input id="g_adr" value="' + esc(p.adresse) + '">' +
+    '<label>Adresse (Straße, PLZ Ort)</label><input id="g_adr" value="' + esc(p.adresse) + '" placeholder="z. B. Hochstraße 28, 2380 Perchtoldsdorf">' +
+    '<label>Objektfoto (für den Mängelbericht)</label><div id="g_fprev">' + (p.foto ? '<img src="' + p.foto + '" style="width:180px;border-radius:8px;display:block">' : '') + '</div>' +
+    '<div class="btns"><label class="btn sm" style="margin:4px 6px 0 0;color:var(--tx);font-weight:600">Foto wählen<input type="file" accept="image/*" style="display:none" onchange="pickFotoCrop(this,34/18.5,900,function(d){GFOTO=d;$(\'g_fprev\').innerHTML=\'<img src=\'+d+\' style=width:180px;border-radius:8px;display:block>\';})"></label><button class="btn sm" onclick="GFOTO=\'\';$(\'g_fprev\').innerHTML=\'\'">Foto entfernen</button></div>' +
+    '<label>Projektbeschreibung (Standard für den Mängelbericht)</label><textarea id="g_pb" style="min-height:60px">' + esc(p.beschreibung) + '</textarea>' +
     '<label>Betreiber / Verantwortliche/r</label><input id="g_ver" value="' + esc(p.verantwortlich) + '">' +
     '<label>Brandschutzbeauftragte/r</label><input id="g_bsb" value="' + esc(p.bsb) + '">' +
     '<label>Telefon</label><input id="g_tel" type="text" autocomplete="off" value="' + esc(p.telefon) + '">' +
@@ -417,7 +923,7 @@ function saveGebaeude(id) {
   var name = val('g_name'); if (!name) { toast('Bitte eine Bezeichnung angeben'); return; }
   var g = id ? findById(DB.gebaeude, id) : null;
   if (!g) { g = { id: uid(), erstellt: todayStr() }; DB.gebaeude.push(g); }
-  g.name = name; g.adresse = val('g_adr'); g.verantwortlich = val('g_ver'); g.bsb = val('g_bsb'); g.telefon = val('g_tel'); g.firma = val('g_fa'); g.notiz = val('g_not');
+  g.name = name; g.adresse = val('g_adr'); g.verantwortlich = val('g_ver'); g.bsb = val('g_bsb'); g.telefon = val('g_tel'); g.firma = val('g_fa'); g.notiz = val('g_not'); g.foto = GFOTO; g.beschreibung = val('g_pb');
   save('gebaeude');
   STATE.gid = g.id; try { localStorage.setItem('bsb_gid', g.id); } catch (e) {}
   closeModal(); render(); toast('Gebäude gespeichert');
@@ -575,7 +1081,10 @@ function viewBegehungen() {
   var h = '<h2>Begehungen</h2><button class="btn pri full" onclick="newBegehung()" style="margin-bottom:14px">Neue Begehung starten</button>';
   var l = byG(DB.begehungen);
   l.sort(function (a, b) { var x = a.datum + (a.zeit || ''), y = b.datum + (b.zeit || ''); return x < y ? 1 : -1; });
-  if (!l.length) return h + '<div class="empty">Noch keine Begehungen protokolliert.</div>';
+  var vk = '<div class="card"><h3>Leere Vorlagen zum Ausdrucken</h3>';
+  for (var q = 0; q < DB.vorlagen.length; q++) vk += '<div class="row" onclick="vorlagePdf(\'' + DB.vorlagen[q].id + '\')"><div class="m"><div class="t">' + esc(DB.vorlagen[q].name) + '</div><div class="s">' + artLabel(DB.vorlagen[q].art) + ' - ' + nFragen(DB.vorlagen[q]) + ' Fragen</div></div><span class="small lnk">PDF</span></div>';
+  vk += '</div>';
+  if (!l.length) return h + '<div class="empty">Noch keine Begehungen protokolliert.</div>' + vk;
   h += '<div class="card"><h3>Protokolle</h3>';
   for (var i = 0; i < l.length; i++) {
     var b = l[i], n = 0;
@@ -583,14 +1092,14 @@ function viewBegehungen() {
     n += (b.zusatz || 0);
     h += '<div class="row" onclick="showBegehung(\'' + b.id + '\')"><div class="m"><div class="t">' + fmtD(b.datum) + ' - ' + esc(b.vorlageName) + '</div><div class="s">' + artLabel(b.art) + ' - ' + esc(b.pruefer) + '</div></div>' + (n ? pill('p-err', n + (n === 1 ? ' Mangel' : ' Mängel')) : pill('p-ok', 'i.O.')) + '</div>';
   }
-  return h + '</div>';
+  return h + '</div>' + vk;
 }
 function newBegehung() {
   if (!curGeb()) { editGebaeude(); return; }
   var h = '<p class="small">Welche Begehung möchten Sie durchführen?</p>';
   for (var i = 0; i < DB.vorlagen.length; i++) {
     var v = DB.vorlagen[i], s = begStatus(v);
-    h += '<div class="row" onclick="startBegehung(\'' + v.id + '\')"><div class="m"><div class="t">' + esc(v.name) + '</div><div class="s">' + artLabel(v.art) + ' - ' + v.punkte.length + ' Prüfpunkte</div></div>' + pill(s.cls, s.txt) + '</div>';
+    h += '<div class="row" onclick="startBegehung(\'' + v.id + '\')"><div class="m"><div class="t">' + esc(v.name) + '</div><div class="s">' + artLabel(v.art) + ' - ' + nFragen(v) + ' Fragen</div></div>' + pill(s.cls, s.txt) + '</div>';
   }
   h += '<div class="small" style="margin-top:12px">Checklisten können unter Einstellungen angepasst werden.</div>';
   modal('Neue Begehung', h, [{ label: 'Abbrechen', fn: closeModal }]);
@@ -598,14 +1107,18 @@ function newBegehung() {
 function startBegehung(vid) {
   var v = findById(DB.vorlagen, vid); if (!v) return;
   BEG = { vid: vid, st: [] };
-  for (var k = 0; k < v.punkte.length; k++) BEG.st.push('');
-  var h = '<div class="small" style="margin-top:8px">' + esc(curGeb().name) + ' - ' + artLabel(v.art) + ' - ' + v.punkte.length + ' Prüfpunkte</div>' +
+  for (var k = 0; k < v.punkte.length; k++) BEG.st.push(isHdr(v.punkte[k]) ? 'hdr' : '');
+  var h = '<div class="small" style="margin-top:8px">' + esc(curGeb().name) + ' - ' + artLabel(v.art) + ' - ' + nFragen(v) + ' Fragen</div>' +
     '<div class="two"><div><label>Datum</label><input id="b_d" type="date" value="' + todayStr() + '"></div><div><label>Uhrzeit</label><input id="b_z" type="time" value="' + nowTime() + '"></div></div>' +
     '<label>Durchgeführt von *</label><input id="b_pr" value="' + esc(DB.settings.letzterPruefer || '') + '">' +
-    '<div class="btns" style="margin-top:12px"><button class="btn sm" onclick="begAllOk()">Alle Punkte in Ordnung</button></div>';
+    '<div class="small" style="margin-top:10px">Ja = in Ordnung, Nein = Mangel</div>' +
+    '<div class="btns" style="margin-top:6px"><button class="btn sm" onclick="begAllOk()">Alle offenen mit Ja beantworten</button></div>';
+  var nr = 0;
   for (var i = 0; i < v.punkte.length; i++) {
-    h += '<div class="pt"><div class="q">' + (i + 1) + '. ' + esc(v.punkte[i]) + '</div><div class="seg" id="seg' + i + '">' +
-      '<button onclick="begSet(' + i + ',\'ok\')">In Ordnung</button><button onclick="begSet(' + i + ',\'mangel\')">Mangel</button><button onclick="begSet(' + i + ',\'na\')">Entfällt</button></div>' +
+    if (isHdr(v.punkte[i])) { h += '<div class="grp" style="margin-top:22px;display:flex;align-items:center;justify-content:space-between"><span style="flex:1;margin-right:8px">' + esc(hdrText(v.punkte[i])) + '</span><button class="btn sm" style="text-transform:none;letter-spacing:0;font-size:12px" onclick="begSec(' + i + ',\'na\')">Entfällt</button></div>'; continue; }
+    nr++;
+    h += '<div class="pt"><div class="q">' + nr + '. ' + esc(v.punkte[i]) + '</div><div class="seg" id="seg' + i + '">' +
+      '<button onclick="begSet(' + i + ',\'ok\')">Ja</button><button onclick="begSet(' + i + ',\'mangel\')">Nein</button><button onclick="begSet(' + i + ',\'na\')">Entfällt</button></div>' +
       '<input id="bb' + i + '" placeholder="Mangel beschreiben (Ort, Art) ..." style="display:none;margin-top:8px"></div>';
   }
   h += '<label>Weitere Mängel (je Zeile ein Mangel)</label><textarea id="b_zus" placeholder="z. B. Feuerlöscher 2. OG fehlt"></textarea>' +
@@ -615,31 +1128,36 @@ function startBegehung(vid) {
   SIG = initSig($('sigc'));
 }
 function begSet(i, s) {
-  if (!BEG) return;
+  if (!BEG || BEG.st[i] === 'hdr') return;
   BEG.st[i] = s;
   var b = $('seg' + i).getElementsByTagName('button');
   b[0].className = s === 'ok' ? 'on-ok' : ''; b[1].className = s === 'mangel' ? 'on-err' : ''; b[2].className = s === 'na' ? 'on-na' : '';
   $('bb' + i).style.display = s === 'mangel' ? 'block' : 'none';
 }
-function begAllOk() { if (!BEG) return; for (var i = 0; i < BEG.st.length; i++) if (BEG.st[i] !== 'mangel' && BEG.st[i] !== 'na') begSet(i, 'ok'); }
+function begSec(i, s) {
+  if (!BEG) return;
+  for (var k = i + 1; k < BEG.st.length && BEG.st[k] !== 'hdr'; k++) begSet(k, s);
+}
+function begAllOk() { if (!BEG) return; for (var i = 0; i < BEG.st.length; i++) if (BEG.st[i] === '') begSet(i, 'ok'); }
 function saveBegehung() {
   if (!BEG) return;
   var v = findById(DB.vorlagen, BEG.vid), offen = 0, first = -1;
-  for (var i = 0; i < BEG.st.length; i++) if (!BEG.st[i]) { offen++; if (first < 0) first = i; }
-  if (offen) { toast(offen + ' Prüfpunkt(e) noch nicht bewertet'); var el = $('seg' + first); if (el && el.scrollIntoView) el.scrollIntoView({ block: 'center' }); return; }
+  for (var i = 0; i < BEG.st.length; i++) if (BEG.st[i] === '') { offen++; if (first < 0) first = i; }
+  if (offen) { toast(offen + ' Frage(n) noch nicht beantwortet'); var el = $('seg' + first); if (el && el.scrollIntoView) el.scrollIntoView({ block: 'center' }); return; }
   var pr = val('b_pr'); if (!pr) { toast('Bitte angeben, wer die Begehung durchgeführt hat'); return; }
   var d = val('b_d') || todayStr();
   var b = { id: uid(), gid: STATE.gid, vorlageId: v.id, vorlageName: v.name, art: v.art, datum: d, zeit: val('b_z'), pruefer: pr, punkte: [], bemerkung: val('b_bem'), unterschrift: SIG && !SIG.isEmpty() ? SIG.data() : '', zusatz: 0 };
-  var neu = [], nr = nextMangelNr();
+  var neu = [], nr = nextMangelNr(), sec = '';
   for (var j = 0; j < v.punkte.length; j++) {
+    if (isHdr(v.punkte[j])) { sec = hdrText(v.punkte[j]); continue; }
     var bem = val('bb' + j);
-    b.punkte.push({ text: v.punkte[j], status: BEG.st[j], bemerkung: BEG.st[j] === 'mangel' ? bem : '' });
-    if (BEG.st[j] === 'mangel') neu.push(bem ? bem + ' (' + v.punkte[j] + ')' : v.punkte[j]);
+    b.punkte.push({ text: v.punkte[j], status: BEG.st[j], bemerkung: BEG.st[j] === 'mangel' ? bem : '', sec: sec });
+    if (BEG.st[j] === 'mangel') neu.push({ t: sec || v.name, b: v.punkte[j] + (bem ? '\n' + bem : '') });
   }
   var zus = val('b_zus').split(/\n/);
-  for (var z = 0; z < zus.length; z++) { var t = zus[z].replace(/^\s+|\s+$/g, ''); if (t) { neu.push(t); b.zusatz++; } }
+  for (var z = 0; z < zus.length; z++) { var t = zus[z].replace(/^\s+|\s+$/g, ''); if (t) { neu.push({ t: t, b: '' }); b.zusatz++; } }
   for (var k = 0; k < neu.length; k++) {
-    DB.maengel.push({ id: uid(), gid: STATE.gid, nr: nr++, begehungId: b.id, aid: '', datum: d, beschreibung: neu[k], standort: '', prioritaet: 'mittel', frist: '', status: 'offen', quelle: v.name, foto: '' });
+    DB.maengel.push({ id: uid(), gid: STATE.gid, nr: nr++, begehungId: b.id, aid: '', datum: d, titel: neu[k].t, beschreibung: neu[k].b, standort: '', inventar: '', massnahme: '', prioritaet: 'mittel', frist: '', status: 'offen', zustaendig: DB.settings.letzteZust || 'Brandschutzbeauftragter', arbeitszeit: '', quelle: v.name + ' vom ' + fmtD(d), fotos: [] });
   }
   DB.begehungen.push(b);
   DB.settings.letzterPruefer = pr;
@@ -652,10 +1170,12 @@ function saveBegehung() {
 function showBegehung(id) {
   var b = findById(DB.begehungen, id); if (!b) return;
   var h = '<table class="kv"><tr><td>Datum</td><td>' + fmtD(b.datum) + (b.zeit ? ', ' + esc(b.zeit) : '') + '</td></tr><tr><td>Checkliste</td><td>' + esc(b.vorlageName) + ' (' + artLabel(b.art) + ')</td></tr><tr><td>Durchgeführt von</td><td>' + esc(b.pruefer) + '</td></tr></table>';
-  h += '<div class="grp">Prüfpunkte</div>';
+  var sec = null;
+  if (!b.punkte.length || !b.punkte[0].sec) h += '<div class="grp">Fragen</div>';
   for (var i = 0; i < b.punkte.length; i++) {
     var p = b.punkte[i];
-    h += '<div class="row"><div class="m"><div>' + (i + 1) + '. ' + esc(p.text) + '</div>' + (p.bemerkung ? '<div class="s">' + esc(p.bemerkung) + '</div>' : '') + '</div>' + (p.status === 'ok' ? pill('p-ok', 'i.O.') : p.status === 'mangel' ? pill('p-err', 'Mangel') : pill('p-mut', 'entfällt')) + '</div>';
+    if (p.sec && p.sec !== sec) { sec = p.sec; h += '<div class="grp">' + esc(sec) + '</div>'; }
+    h += '<div class="row"><div class="m"><div>' + (i + 1) + '. ' + esc(p.text) + '</div>' + (p.bemerkung ? '<div class="s">' + esc(p.bemerkung) + '</div>' : '') + '</div>' + (p.status === 'ok' ? pill('p-ok', 'Ja') : p.status === 'mangel' ? pill('p-err', 'Nein') : pill('p-mut', 'entfällt')) + '</div>';
   }
   if (b.bemerkung) h += '<div class="grp">Bemerkung</div><p style="margin:6px 0">' + esc(b.bemerkung) + '</p>';
   var ms = maengelVonBeg(id);
@@ -689,7 +1209,12 @@ function initSig(c) {
   };
 }
 
-/* ---------- Mängel ---------- */
+/* ---------- Mängel / Tätigkeitsnachweise ---------- */
+var MSTATUS = [{ k: 'offen', l: 'Nicht begonnen' }, { k: 'arbeit', l: 'In Bearbeitung' }, { k: 'behoben', l: 'Abgeschlossen' }];
+function mStatusText(k) { for (var i = 0; i < MSTATUS.length; i++) if (MSTATUS[i].k === k) return MSTATUS[i].l; return MSTATUS[0].l; }
+function mFotos(m) { return m.fotos && m.fotos.length !== undefined ? m.fotos : []; }
+function mTitel(m) { return m.titel || m.beschreibung || ''; }
+function mInv(m) { if (m.inventar) return m.inventar; var a = m.aid ? findById(DB.anlagen, m.aid) : null; return a && a.nr ? a.nr : ''; }
 function sortMaengel(l) {
   var po = { hoch: 0, mittel: 1, gering: 2 };
   l.sort(function (a, b) {
@@ -700,17 +1225,18 @@ function sortMaengel(l) {
   });
 }
 function mangelPill(m) {
-  if (m.status === 'behoben') return pill('p-ok', 'behoben');
+  if (m.status === 'behoben') return pill('p-ok', 'abgeschlossen');
   var d = daysUntil(m.frist);
   if (d !== null && d < 0) return pill('p-err', 'Frist vorbei');
   if (d !== null && d <= 7) return pill('p-warn', 'bis ' + fmtD(m.frist));
+  if (m.status === 'arbeit') return pill('p-warn', 'in Arbeit');
   return pill('p-warn', 'offen');
 }
 function mangelOrt(m) { var a = m.aid ? findById(DB.anlagen, m.aid) : null; var t = []; if (a) t.push(anlName(a)); if (m.standort) t.push(m.standort); else if (a && a.standort) t.push(a.standort); return t.join(' - '); }
 function mangelRow(m) {
-  var o = mangelOrt(m);
-  return '<div class="row" onclick="showMangel(\'' + m.id + '\')">' + (m.foto ? '<img class="thumb" src="' + m.foto + '">' : '<span class="dot" style="background:' + prioObj(m.prioritaet).c + '"></span>') +
-    '<div class="m"><div class="t">M' + (m.nr || '') + ' ' + esc(m.beschreibung) + '</div><div class="s">' + fmtD(m.datum) + (o ? ' - ' + esc(o) : '') + '</div></div>' + mangelPill(m) + '</div>';
+  var o = mangelOrt(m), f = mFotos(m);
+  return '<div class="row" onclick="showMangel(\'' + m.id + '\')">' + (f.length ? '<img class="thumb" src="' + f[0] + '">' : '<span class="dot" style="background:' + prioObj(m.prioritaet).c + '"></span>') +
+    '<div class="m"><div class="t">' + esc(mTitel(m)) + '</div><div class="s">' + fmtD(m.datum) + (o ? ' - ' + esc(o) : '') + (f.length > 1 ? ' - ' + f.length + ' Fotos' : '') + '</div></div>' + mangelPill(m) + '</div>';
 }
 function viewMaengel() {
   var all = byG(DB.maengel), no = 0, nb = 0, l = [];
@@ -721,7 +1247,8 @@ function viewMaengel() {
   }
   sortMaengel(l);
   var f = STATE.mFilter;
-  var h = '<h2>Mängel</h2><div class="seg" style="margin-bottom:12px"><button class="' + (f === 'offen' ? 'on' : '') + '" onclick="STATE.mFilter=\'offen\';render()">Offen (' + no + ')</button><button class="' + (f === 'behoben' ? 'on' : '') + '" onclick="STATE.mFilter=\'behoben\';render()">Behoben (' + nb + ')</button><button class="' + (f === 'alle' ? 'on' : '') + '" onclick="STATE.mFilter=\'alle\';render()">Alle</button></div>';
+  var h = '<h2>Mängel</h2><div class="seg" style="margin-bottom:12px"><button class="' + (f === 'offen' ? 'on' : '') + '" onclick="STATE.mFilter=\'offen\';render()">Offen (' + no + ')</button><button class="' + (f === 'behoben' ? 'on' : '') + '" onclick="STATE.mFilter=\'behoben\';render()">Erledigt (' + nb + ')</button><button class="' + (f === 'alle' ? 'on' : '') + '" onclick="STATE.mFilter=\'alle\';render()">Alle</button></div>';
+  if (all.length) h += '<button class="btn full" style="margin:0 0 12px" onclick="goTab(\'ber\')">Mängelbericht erstellen (PDF / Mail)</button>';
   if (!l.length) h += '<div class="empty">' + (f === 'offen' ? 'Keine offenen Mängel.' : 'Keine Einträge.') + '</div>';
   else { h += '<div class="card" style="padding-top:4px;padding-bottom:4px">'; for (var k = 0; k < l.length; k++) h += mangelRow(l[k]); h += '</div>'; }
   return h + '<button class="fab" onclick="editMangel()">+ Mangel</button>';
@@ -729,80 +1256,118 @@ function viewMaengel() {
 function editMangel(id, preset) {
   if (!curGeb()) { editGebaeude(); return; }
   var m = id ? findById(DB.maengel, id) : null, p = m || preset || {};
-  MFORM = { foto: p.foto || '', prio: p.prioritaet || 'mittel' };
+  var st = (preset && preset.status) || p.status || 'offen';
+  MFORM = { fotos: mFotos(p).slice(0), prio: p.prioritaet || 'mittel', status: st };
   var anl = byG(DB.anlagen); sortAnlagen(anl);
   var o = '<option value="">- keine bestimmte Einrichtung -</option>';
   for (var i = 0; i < anl.length; i++) o += '<option value="' + anl[i].id + '"' + (anl[i].id === p.aid ? ' selected' : '') + '>' + esc(anl[i].kategorie + ': ' + anlName(anl[i]) + (anl[i].standort ? ' (' + anl[i].standort + ')' : '')) + '</option>';
-  var pb = '';
+  var pb = '', sb = '';
   for (var j = 0; j < PRIOS.length; j++) pb += '<button id="mp_' + PRIOS[j].k + '" class="' + (MFORM.prio === PRIOS[j].k ? 'on' : '') + '" onclick="mPrio(\'' + PRIOS[j].k + '\')">' + PRIOS[j].l + '</button>';
-  var h = '<label>Beschreibung des Mangels *</label><textarea id="m_b">' + esc(p.beschreibung) + '</textarea>' +
-    '<label>Standort</label><input id="m_s" value="' + esc(p.standort) + '" placeholder="z. B. 1. OG Stiegenhaus">' +
-    '<label>Betroffene Einrichtung</label><select id="m_a">' + o + '</select>' +
-    '<label>Priorität</label><div class="seg">' + pb + '</div>' +
-    '<div class="two"><div><label>Festgestellt am</label><input id="m_d" type="date" value="' + esc(p.datum || todayStr()) + '"></div><div><label>Behebung bis</label><input id="m_f" type="date" value="' + esc(p.frist) + '"></div></div>' +
-    '<div class="btns"><button class="btn sm" onclick="mFrist(7)">+7 Tage</button><button class="btn sm" onclick="mFrist(14)">+14 Tage</button><button class="btn sm" onclick="mFrist(30)">+30 Tage</button></div>' +
-    '<label>Foto</label><input type="file" accept="image/*" onchange="pickFoto(this,function(d){MFORM.foto=d;mFotoPrev();})"><div id="m_prev"></div>';
-  if (m) h += '<button class="btn full" style="margin-top:18px;color:var(--red2)" onclick="delMangel(\'' + m.id + '\')">Mangel löschen</button>';
-  modal(m ? 'Mangel M' + m.nr + ' bearbeiten' : 'Mangel erfassen', h, [{ label: 'Abbrechen', fn: closeModal }, { label: 'Speichern', cls: 'pri', fn: function () { saveMangel(id); } }]);
+  for (var s = 0; s < MSTATUS.length; s++) sb += '<button id="ms_' + MSTATUS[s].k + '" class="' + (st === MSTATUS[s].k ? 'on' : '') + '" onclick="mStat(\'' + MSTATUS[s].k + '\')">' + MSTATUS[s].l + '</button>';
+  var zust = p.zustaendig !== undefined ? p.zustaendig : (DB.settings.letzteZust || 'Brandschutzbeauftragter');
+  var h = '<label>Tätigkeitsnachweis / Titel *</label><input id="m_t" value="' + esc(p.titel) + '" placeholder="z. B. Tausch BSK – Gang Kletterhalle">' +
+    '<label>Betroffene Einrichtung</label><select id="m_a" onchange="mAnlChg(this)">' + o + '</select>' +
+    '<div class="two"><div><label>Inventar Nr.</label><input id="m_inv" value="' + esc(p.inventar) + '"></div><div><label>Standort</label><input id="m_s" value="' + esc(p.standort) + '" placeholder="z. B. Gang Kletterhalle"></div></div>' +
+    '<label>Beschreibung</label><textarea id="m_b" style="min-height:110px">' + esc(p.beschreibung) + '</textarea>' +
+    '<label>Fotos</label><div id="m_prev"></div>' +
+    '<label class="btn full" style="text-align:center;color:var(--tx);margin-top:6px">+ Foto hinzufügen<input type="file" accept="image/*" multiple style="display:none" onchange="mAddFotos(this)"></label>' +
+    '<label>Maßnahme</label><textarea id="m_m" placeholder="z. B. Tausch abgeschlossen, keine weiteren Maßnahmen erforderlich.">' + esc(p.massnahme) + '</textarea>' +
+    '<label>Status</label><div class="seg">' + sb + '</div>' +
+    '<div class="two"><div><label>Frist</label><input id="m_f" type="date" value="' + esc(p.frist) + '"></div><div><label>Erstellungsdatum</label><input id="m_d" type="date" value="' + esc(p.datum || todayStr()) + '"></div></div>' +
+    '<div class="btns"><button class="btn sm" onclick="mFrist(7)">Frist +7 Tage</button><button class="btn sm" onclick="mFrist(14)">+14</button><button class="btn sm" onclick="mFrist(30)">+30</button><button class="btn sm" onclick="$(\'m_f\').value=\'\'">keine</button></div>' +
+    '<label>Zuständigkeit</label><input id="m_z" value="' + esc(zust) + '">' +
+    '<label>Arbeitszeit</label><input id="m_w" value="' + esc(p.arbeitszeit) + '" placeholder="z. B. 14.10.2026 oder 2 Std.">' +
+    '<label>Priorität (nur intern)</label><div class="seg">' + pb + '</div>';
+  if (m) h += '<button class="btn full" style="margin-top:18px;color:var(--red2)" onclick="delMangel(\'' + m.id + '\')">Eintrag löschen</button>';
+  modal(m ? 'Mangel bearbeiten' : 'Mangel erfassen', h, [{ label: 'Abbrechen', fn: closeModal }, { label: 'Speichern', cls: 'pri', fn: function () { saveMangel(id); } }], m ? null : 'Eingaben verwerfen?');
   mFotoPrev();
 }
+function mAnlChg(s) { var a = findById(DB.anlagen, s.value); if (!a) return; if (!val('m_inv') && a.nr) $('m_inv').value = a.nr; if (!val('m_s') && a.standort) $('m_s').value = a.standort; }
 function mPrio(k) { MFORM.prio = k; for (var j = 0; j < PRIOS.length; j++) $('mp_' + PRIOS[j].k).className = PRIOS[j].k === k ? 'on' : ''; }
+function mStat(k) { MFORM.status = k; for (var j = 0; j < MSTATUS.length; j++) $('ms_' + MSTATUS[j].k).className = MSTATUS[j].k === k ? 'on' : ''; }
 function mFrist(n) { $('m_f').value = addDays(val('m_d') || todayStr(), n); }
-function mFotoPrev() { var e = $('m_prev'); if (!e) return; e.innerHTML = MFORM.foto ? '<img class="foto" src="' + MFORM.foto + '"><div class="btns"><button class="btn sm" onclick="MFORM.foto=\'\';mFotoPrev()">Foto entfernen</button></div>' : ''; }
-function saveMangel(id) {
-  var b = val('m_b'); if (!b) { toast('Bitte den Mangel beschreiben'); return; }
-  var m = id ? findById(DB.maengel, id) : null, neu = !m;
-  if (neu) m = { id: uid(), gid: STATE.gid, nr: nextMangelNr(), status: 'offen', begehungId: '' };
-  m.beschreibung = b; m.standort = val('m_s'); m.aid = val('m_a'); m.prioritaet = MFORM.prio; m.datum = val('m_d') || todayStr(); m.frist = val('m_f'); m.foto = MFORM.foto;
-  if (neu) DB.maengel.push(m);
-  save('maengel'); closeModal(); render(); toast(neu ? 'Mangel M' + m.nr + ' erfasst' : 'Gespeichert');
+function mAddFotos(input) {
+  var fs = input.files, n = fs ? fs.length : 0, i = 0;
+  function next() { if (i >= n) { input.value = ''; return; } readFoto(fs[i++], function (d) { if (d) MFORM.fotos.push(d); mFotoPrev(); next(); }); }
+  next();
 }
-function delMangel(id) { ask('Diesen Mangel endgültig löschen?', function () { removeById(DB.maengel, id); save('maengel'); render(); toast('Gelöscht'); }, 'Löschen'); }
+function mFotoDel(i) { MFORM.fotos.splice(i, 1); mFotoPrev(); }
+function mFotoMove(i) { if (i <= 0) return; var t = MFORM.fotos[i - 1]; MFORM.fotos[i - 1] = MFORM.fotos[i]; MFORM.fotos[i] = t; mFotoPrev(); }
+function mFotoPrev() {
+  var e = $('m_prev'); if (!e) return;
+  if (!MFORM.fotos.length) { e.innerHTML = '<div class="small">Noch keine Fotos.</div>'; return; }
+  var h = '<div style="display:flex;flex-wrap:wrap">';
+  for (var i = 0; i < MFORM.fotos.length; i++) {
+    h += '<div style="width:31%;margin:0 2% 8px 0;position:relative"><img src="' + MFORM.fotos[i] + '" style="width:100%;height:110px;object-fit:cover;border-radius:8px;display:block">' +
+      '<div style="display:flex;margin-top:4px">' + (i ? '<button class="btn sm" style="flex:1;margin-right:4px;padding:5px" onclick="mFotoMove(' + i + ')">&larr;</button>' : '') +
+      '<button class="btn sm" style="flex:1;padding:5px;color:var(--red2)" onclick="mFotoDel(' + i + ')">&#10005;</button></div></div>';
+  }
+  e.innerHTML = h + '</div>';
+}
+function saveMangel(id) {
+  var t = val('m_t'), b = val('m_b');
+  if (!t && !b) { toast('Bitte Titel oder Beschreibung angeben'); return; }
+  var m = id ? findById(DB.maengel, id) : null, neu = !m;
+  if (neu) m = { id: uid(), gid: STATE.gid, nr: nextMangelNr(), begehungId: '' };
+  m.titel = t || b.split('\n')[0].substr(0, 80); m.beschreibung = b; m.standort = val('m_s'); m.inventar = val('m_inv'); m.aid = val('m_a');
+  m.massnahme = val('m_m'); m.frist = val('m_f'); m.datum = val('m_d') || todayStr(); m.zustaendig = val('m_z'); m.arbeitszeit = val('m_w');
+  m.prioritaet = MFORM.prio; m.fotos = MFORM.fotos.slice(0); delete m.foto; delete m.fotoBehoben;
+  var war = m.status; m.status = MFORM.status;
+  if (m.status === 'behoben' && war !== 'behoben') m.behobenAm = todayStr();
+  if (m.status !== 'behoben') m.behobenAm = '';
+  if (m.zustaendig) DB.settings.letzteZust = m.zustaendig;
+  if (neu) DB.maengel.push(m);
+  save('maengel'); save('settings'); closeModal(); render(); toast(neu ? 'Mangel erfasst' : 'Gespeichert');
+}
+function delMangel(id) { ask('Diesen Eintrag endgültig löschen?', function () { removeById(DB.maengel, id); save('maengel'); render(); toast('Gelöscht'); }, 'Löschen'); }
 function showMangel(id) {
   var m = findById(DB.maengel, id); if (!m) return;
-  var o = mangelOrt(m), pr = prioObj(m.prioritaet);
-  var h = '<p style="font-size:17px;margin:12px 0;line-height:1.4">' + esc(m.beschreibung) + '</p><table class="kv">' +
-    '<tr><td>Status</td><td>' + mangelPill(m) + '</td></tr>' +
-    (o ? '<tr><td>Ort / Einrichtung</td><td>' + esc(o) + '</td></tr>' : '') +
-    '<tr><td>Priorität</td><td><span class="dot" style="display:inline-block;background:' + pr.c + ';margin-right:6px"></span>' + pr.l + '</td></tr>' +
-    '<tr><td>Festgestellt am</td><td>' + fmtD(m.datum) + (m.quelle ? ' (' + esc(m.quelle) + ')' : '') + '</td></tr>' +
-    (m.frist ? '<tr><td>Behebung bis</td><td>' + fmtD(m.frist) + '</td></tr>' : '') +
-    (m.status === 'behoben' ? '<tr><td>Behoben am</td><td>' + fmtD(m.behobenAm) + (m.behobenVon ? ' von ' + esc(m.behobenVon) : '') + '</td></tr>' + (m.massnahme ? '<tr><td>Maßnahme</td><td>' + esc(m.massnahme) + '</td></tr>' : '') : '') +
-    '</table>';
-  if (m.foto) h += '<div class="grp">Foto (Mangel)</div><img class="foto" src="' + m.foto + '">';
-  if (m.fotoBehoben) h += '<div class="grp">Foto (behoben)</div><img class="foto" src="' + m.fotoBehoben + '">';
-  h += '<div class="btns" style="margin-top:14px"><button class="btn" onclick="editMangel(\'' + id + '\')">Bearbeiten</button>' + (m.status === 'behoben' ? '<button class="btn" onclick="reopenMangel(\'' + id + '\')">Wieder öffnen</button>' : '') + '</div>';
+  var o = mangelOrt(m), f = mFotos(m);
+  function r(l, v) { return v ? '<tr><td>' + l + '</td><td style="white-space:pre-wrap">' + esc(v) + '</td></tr>' : ''; }
+  var h = '<p style="font-size:17px;font-weight:700;margin:12px 0 6px;line-height:1.35">' + esc(mTitel(m)) + '</p><div style="margin-bottom:8px">' + mangelPill(m) + '</div><table class="kv">' +
+    r('Inventar Nr.', mInv(m)) + r('Standort', m.standort || o) + r('Beschreibung', m.beschreibung) + r('Maßnahme', m.massnahme) +
+    r('Status', mStatusText(m.status)) + r('Frist', fmtD(m.frist)) + r('Zuständigkeit', m.zustaendig) + r('Erstellungsdatum', fmtD(m.datum)) + r('Arbeitszeit', m.arbeitszeit) +
+    r('Quelle', m.quelle) + '</table>';
+  for (var i = 0; i < f.length; i++) h += '<img class="foto" src="' + f[i] + '">';
+  h += '<div class="btns" style="margin-top:14px"><button class="btn" onclick="editMangel(\'' + id + '\')">Bearbeiten</button><button class="btn" onclick="gesamtPdf([\'' + id + '\'])">Als PDF / Mail</button>' + (m.status === 'behoben' ? '<button class="btn" onclick="reopenMangel(\'' + id + '\')">Wieder öffnen</button>' : '') + '</div>';
   var btns = [{ label: 'Schließen', fn: closeModal }];
-  if (m.status !== 'behoben') btns.push({ label: 'Als behoben melden', cls: 'pri', fn: function () { behebenMangel(id); } });
-  modal('Mangel M' + (m.nr || ''), h, btns);
+  if (m.status !== 'behoben') btns.push({ label: 'Erledigt melden', cls: 'pri', fn: function () { behebenMangel(id); } });
+  modal('Mangel', h, btns);
 }
-function behebenMangel(id) {
-  var m = findById(DB.maengel, id);
-  MFORM = { foto: '' };
-  var h = '<div class="small" style="margin-top:8px">M' + m.nr + ' ' + esc(m.beschreibung) + '</div>' +
-    '<label>Behoben am</label><input id="bh_d" type="date" value="' + todayStr() + '">' +
-    '<label>Behoben von</label><input id="bh_v" value="' + esc(DB.settings.letzterPruefer || '') + '">' +
-    '<label>Durchgeführte Maßnahme</label><textarea id="bh_m" placeholder="z. B. Feuerlöscher ersetzt, Tür nachgestellt"></textarea>' +
-    '<label>Foto nachher (optional)</label><input type="file" accept="image/*" onchange="pickFoto(this,function(d){MFORM.foto=d;$(\'bh_prev\').innerHTML=d?\'<img class=foto src=\'+d+\'>\':\'\';})"><div id="bh_prev"></div>';
-  modal('Mangel behoben', h, [{ label: 'Zurück', fn: function () { showMangel(id); } }, { label: 'Speichern', cls: 'pri', fn: function () {
-    m.status = 'behoben'; m.behobenAm = val('bh_d') || todayStr(); m.behobenVon = val('bh_v'); m.massnahme = val('bh_m'); m.fotoBehoben = MFORM.foto;
-    save('maengel'); closeModal(); render(); toast('Mangel M' + m.nr + ' als behoben markiert');
-  } }]);
+function behebenMangel(id) { editMangel(id, { status: 'behoben' }); toast('Maßnahme eintragen, Fotos ergänzen, speichern'); }
+function reopenMangel(id) { var m = findById(DB.maengel, id); m.status = 'offen'; m.behobenAm = ''; save('maengel'); render(); showMangel(id); }
+function readFoto(f, cb, max) {
+  var rd = new FileReader();
+  rd.onload = function () {
+    var img = new Image();
+    img.onload = function () {
+      var mx = max || 1280, w = img.width, h = img.height;
+      if (w > h && w > mx) { h = Math.round(h * mx / w); w = mx; } else if (h >= w && h > mx) { w = Math.round(w * mx / h); h = mx; }
+      var c = document.createElement('canvas'); c.width = w; c.height = h;
+      var x = c.getContext('2d'); x.fillStyle = '#ffffff'; x.fillRect(0, 0, w, h); x.drawImage(img, 0, 0, w, h);
+      cb(c.toDataURL('image/jpeg', 0.72));
+    };
+    img.onerror = function () { toast('Foto konnte nicht gelesen werden'); cb(''); };
+    img.src = rd.result;
+  };
+  rd.onerror = function () { cb(''); };
+  rd.readAsDataURL(f);
 }
-function reopenMangel(id) { var m = findById(DB.maengel, id); m.status = 'offen'; m.behobenAm = ''; m.behobenVon = ''; m.massnahme = ''; m.fotoBehoben = ''; save('maengel'); render(); showMangel(id); }
-function pickFoto(input, cb) {
+function pickFoto(input, cb) { var f = input.files && input.files[0]; if (!f) return; readFoto(f, cb); }
+/* Foto auf festes Seitenverhältnis zuschneiden (z. B. Objektfoto im Bericht) */
+function pickFotoCrop(input, ratio, maxW, cb) {
   var f = input.files && input.files[0]; if (!f) return;
   var rd = new FileReader();
   rd.onload = function () {
     var img = new Image();
     img.onload = function () {
-      var max = 1280, w = img.width, h = img.height;
-      if (w > h && w > max) { h = Math.round(h * max / w); w = max; } else if (h >= w && h > max) { w = Math.round(w * max / h); h = max; }
+      var sw = img.width, sh = img.height, sx = 0, sy = 0;
+      if (sw / sh > ratio) { var nw = sh * ratio; sx = (sw - nw) / 2; sw = nw; } else { var nh = sw / ratio; sy = (sh - nh) / 2; sh = nh; }
+      var w = Math.min(maxW, Math.round(sw)), h = Math.round(w / ratio);
       var c = document.createElement('canvas'); c.width = w; c.height = h;
-      var x = c.getContext('2d'); x.fillStyle = '#ffffff'; x.fillRect(0, 0, w, h); x.drawImage(img, 0, 0, w, h);
-      cb(c.toDataURL('image/jpeg', 0.7));
+      var x = c.getContext('2d'); x.fillStyle = '#ffffff'; x.fillRect(0, 0, w, h); x.drawImage(img, sx, sy, sw, sh, 0, 0, w, h);
+      cb(c.toDataURL('image/jpeg', 0.8));
     };
-    img.onerror = function () { toast('Foto konnte nicht gelesen werden'); };
     img.src = rd.result;
   };
   rd.readAsDataURL(f);
@@ -811,7 +1376,18 @@ function pickFoto(input, cb) {
 /* ---------- Bericht ---------- */
 function viewBericht() {
   var y = new Date().getFullYear();
-  var h = '<h2>Bericht erstellen</h2><div class="card"><h3>Zeitraum</h3>' +
+  var g = curGeb();
+  var h = '<h2>Bericht erstellen</h2>' +
+    '<div class="card"><h3>Mängelbericht (Gesamtübersicht)</h3>' +
+    '<div class="two"><div><label>Berichtsdatum</label><input id="mb_d" type="date" value="' + todayStr() + '"></div><div></div></div>' +
+    '<label>Projektbeschreibung</label><textarea id="mb_pb" style="min-height:60px" placeholder="z. B. Tausch Brandschutzklappen 14.10.2026">' + esc(g ? g.beschreibung : '') + '</textarea>' +
+    '<label class="chk"><input type="checkbox" id="mb_pbsave">Als Standard für dieses Gebäude merken</label>' +
+    '<label>Einträge</label><div class="seg" id="mb_seg"><button onclick="STATE.mbSel=\'offen\';mbRender()">Offene</button><button onclick="STATE.mbSel=\'alle\';mbRender()">Alle</button><button onclick="STATE.mbSel=\'zeit\';mbRender()">Zeitraum</button></div>' +
+    '<div id="mb_zeit" style="display:none"><div class="two"><div><label>Von</label><input id="mb_von" type="date" value="' + todayStr() + '" onchange="mbRender()"></div><div><label>Bis</label><input id="mb_bis" type="date" value="' + todayStr() + '" onchange="mbRender()"></div></div></div>' +
+    '<div class="btns"><button class="btn sm" onclick="mbAll(true)">Alle markieren</button><button class="btn sm" onclick="mbAll(false)">Keine</button></div>' +
+    '<div id="mb_list"></div>' +
+    '<button class="btn pri full" style="margin-top:12px" onclick="mbErstellen()">Mängelbericht erstellen</button></div>' +
+    '<div class="card"><h3>Brandschutzbuch-Bericht: Zeitraum</h3>' +
     '<div class="two"><div><label>Von</label><input id="r_von" type="date" value="' + y + '-01-01"></div><div><label>Bis</label><input id="r_bis" type="date" value="' + todayStr() + '"></div></div>' +
     '<div class="btns"><button class="btn sm" onclick="rZeit(0)">Dieses Jahr</button><button class="btn sm" onclick="rZeit(1)">Letztes Jahr</button><button class="btn sm" onclick="rZeit(2)">Letzte 12 Monate</button><button class="btn sm" onclick="rZeit(3)">Alles</button></div></div>' +
     '<div class="card"><h3>Inhalt</h3>' +
@@ -823,8 +1399,7 @@ function viewBericht() {
     '<label class="chk"><input type="checkbox" id="r_mo" checked>Offene Mängel</label>' +
     '<label class="chk"><input type="checkbox" id="r_mb" checked>Behobene Mängel</label>' +
     '<label class="chk"><input type="checkbox" id="r_foto" checked>Fotos zu den Mängeln</label></div>' +
-    '<button class="btn pri full" onclick="berichtPdf()">PDF-Bericht erstellen</button>' +
-    '<button class="btn full" onclick="maengelPdf()">Nur Liste der offenen Mängel</button>';
+    '<button class="btn full" onclick="berichtPdf()">Brandschutzbuch-Bericht erstellen</button>';
   return h;
 }
 function rZeit(t) {
@@ -844,11 +1419,31 @@ function maengelPdf() {
   var doc = makeReport({ titel: 'Offene Mängel', mo: true, foto: chk('r_foto'), nurStand: true });
   if (doc) pdfReady(doc, 'Maengelliste_' + safeName(curGeb().name) + '_' + todayStr() + '.pdf');
 }
-function makeReport(o) {
-  var g = curGeb(); if (!g) return null;
+/* Sonderzeichen, die die PDF-Standardschrift nicht kann, ersetzen */
+function pdfSan(t) {
+  if (t === undefined || t === null) return t;
+  if (typeof t === 'object' && t.length !== undefined) { var r = []; for (var i = 0; i < t.length; i++) r.push(pdfSan(t[i])); return r; }
+  if (typeof t !== 'string') return t;
+  return t.replace(/[\u2013\u2014\u2212]/g, '-').replace(/[\u201e\u201c\u201d\u00ab\u00bb]/g, '"').replace(/[\u201a\u2018\u2019]/g, "'").replace(/\u2026/g, '...').replace(/[\u2022\u00b7]/g, '-').replace(/[^\u0000-\u00ff]/g, '');
+}
+function newDoc() {
   if (!window.jspdf || !window.jspdf.jsPDF) { info('PDF nicht verfügbar', '<p>Das PDF-Modul wurde noch nicht geladen. Bitte die App einmal mit Internetverbindung öffnen - danach funktioniert es auch offline.</p>'); return null; }
   var doc = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' });
   if (typeof doc.autoTable !== 'function') { info('PDF nicht verfügbar', '<p>Das Tabellen-Modul fehlt. Bitte mit Internetverbindung neu laden.</p>'); return null; }
+  var ot = doc.text, os = doc.splitTextToSize;
+  doc.text = function (t) { var a = Array.prototype.slice.call(arguments); a[0] = pdfSan(t); return ot.apply(this, a); };
+  doc.splitTextToSize = function (t) { var a = Array.prototype.slice.call(arguments); a[0] = pdfSan(t); return os.apply(this, a); };
+  return doc;
+}
+function demoMark(doc) {
+  try { doc.setGState(new doc.GState({ opacity: 0.18 })); } catch (e4) {}
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(64); doc.setTextColor(200, 30, 30);
+  doc.text('DEMOVERSION', 38, 205, { angle: 40 });
+  try { doc.setGState(new doc.GState({ opacity: 1 })); } catch (e5) {}
+}
+function makeReport(o) {
+  var g = curGeb(); if (!g) return null;
+  var doc = newDoc(); if (!doc) return null;
   var M = 14, W = 210, H = 297, y = 0, RED = [185, 28, 28];
   var von = o.von || '0000-01-01', bis = o.bis || '9999-12-31';
   function inR(d) { return !!d && d >= von && d <= bis; }
@@ -975,8 +1570,19 @@ function makeReport(o) {
     for (var b2 = 0; b2 < begs.length; b2++) {
       var BB = begs[b2], pr2 = [];
       sub(fmtD(BB.datum) + (BB.zeit ? ' ' + BB.zeit : '') + ' - ' + BB.vorlageName + ' - durchgeführt von ' + BB.pruefer);
-      for (var p2 = 0; p2 < BB.punkte.length; p2++) { var PP = BB.punkte[p2]; pr2.push([String(p2 + 1), PP.text, PP.status === 'ok' ? 'i.O.' : PP.status === 'mangel' ? 'Mangel' : 'entfällt', PP.bemerkung || '']); }
-      tbl(['Nr.', 'Prüfpunkt', 'Ergebnis', 'Bemerkung'], pr2, { didParseCell: colorCol(2), columnStyles: { 0: { cellWidth: 10 }, 2: { cellWidth: 18 }, 3: { cellWidth: 50 } } });
+      var csec = null;
+      for (var p2 = 0; p2 < BB.punkte.length; p2++) {
+        var PP = BB.punkte[p2];
+        if (PP.sec && PP.sec !== csec) { csec = PP.sec; pr2.push([{ content: PP.sec, colSpan: 5, styles: { fontStyle: 'bold', fillColor: [254, 236, 226], textColor: [160, 50, 10] } }]); }
+        var na = PP.status === 'na';
+        pr2.push([String(p2 + 1), PP.text, PP.status === 'ok' ? 'X' : (na ? '-' : ''), PP.status === 'mangel' ? 'X' : (na ? '-' : ''), na ? 'entfällt' + (PP.bemerkung ? ': ' + PP.bemerkung : '') : (PP.bemerkung || '')]);
+      }
+      tbl(['Nr.', 'Frage', 'Ja', 'Nein', 'Bemerkung'], pr2, {
+        didParseCell: function (d) {
+          if (d.section !== 'body' || d.cell.raw !== 'X') return;
+          d.cell.styles.fontStyle = 'bold'; d.cell.styles.textColor = d.column.index === 2 ? [21, 128, 61] : [200, 30, 30];
+        },
+        columnStyles: { 0: { cellWidth: 9 }, 2: { cellWidth: 11, halign: 'center' }, 3: { cellWidth: 11, halign: 'center' }, 4: { cellWidth: 48 } } });
       y -= 4;
       if (BB.bemerkung) note('Bemerkung: ' + BB.bemerkung);
       if (BB.unterschrift) {
@@ -998,13 +1604,13 @@ function makeReport(o) {
       var mr = [];
       for (var m1 = 0; m1 < mo.length; m1++) {
         var MM = mo[m1], fd = daysUntil(MM.frist);
-        mr.push(['M' + (MM.nr || ''), fmtD(MM.datum), MM.beschreibung, mangelOrt(MM), prioObj(MM.prioritaet).l, MM.status === 'behoben' ? 'behoben ' + fmtD(MM.behobenAm) : (MM.frist ? fmtD(MM.frist) + (fd < 0 ? ' (vorbei)' : '') : '-')]);
+        mr.push(['M' + (MM.nr || ''), fmtD(MM.datum), mTitel(MM) + (MM.titel && MM.beschreibung ? '\n' + MM.beschreibung : ''), mangelOrt(MM), prioObj(MM.prioritaet).l, MM.status === 'behoben' ? 'behoben ' + fmtD(MM.behobenAm) : (MM.frist ? fmtD(MM.frist) + (fd < 0 ? ' (vorbei)' : '') : '-')]);
       }
       tbl(['Nr.', 'Festgest.', 'Beschreibung', 'Ort / Einrichtung', 'Priorität', 'Frist'], mr, { didParseCell: function (d) { colorCol(4)(d); colorCol(5)(d); }, columnStyles: { 0: { cellWidth: 11 }, 1: { cellWidth: 19 }, 4: { cellWidth: 16 }, 5: { cellWidth: 22 } } });
     }
     if (o.foto) {
       var fi = [];
-      for (var m2 = 0; m2 < mo.length; m2++) if (mo[m2].foto) fi.push({ cap: 'M' + mo[m2].nr + ' ' + mo[m2].beschreibung, img: mo[m2].foto });
+      for (var m2 = 0; m2 < mo.length; m2++) { var F2 = mFotos(mo[m2]); for (var f2 = 0; f2 < F2.length; f2++) fi.push({ cap: 'M' + mo[m2].nr + ' ' + mTitel(mo[m2]), img: F2[f2] }); }
       fotos(fi);
     }
   }
@@ -1013,13 +1619,12 @@ function makeReport(o) {
     if (!mb.length) note('Im Zeitraum wurden keine Mängel als behoben gemeldet.');
     else {
       var rr = [];
-      for (var m3 = 0; m3 < mb.length; m3++) { var X = mb[m3]; rr.push(['M' + (X.nr || ''), fmtD(X.datum), X.beschreibung, fmtD(X.behobenAm), X.behobenVon || '', X.massnahme || '']); }
+      for (var m3 = 0; m3 < mb.length; m3++) { var X = mb[m3]; rr.push(['M' + (X.nr || ''), fmtD(X.datum), mTitel(X), fmtD(X.behobenAm), X.zustaendig || X.behobenVon || '', X.massnahme || '']); }
       tbl(['Nr.', 'Festgest.', 'Beschreibung', 'Behoben', 'Von', 'Maßnahme'], rr, { columnStyles: { 0: { cellWidth: 11 }, 1: { cellWidth: 19 }, 3: { cellWidth: 19 } } });
       if (o.foto) {
         var fb = [];
         for (var m4 = 0; m4 < mb.length; m4++) {
-          if (mb[m4].foto) fb.push({ cap: 'M' + mb[m4].nr + ' vorher', img: mb[m4].foto });
-          if (mb[m4].fotoBehoben) fb.push({ cap: 'M' + mb[m4].nr + ' nachher', img: mb[m4].fotoBehoben });
+          var F4 = mFotos(mb[m4]); for (var f4 = 0; f4 < F4.length; f4++) fb.push({ cap: 'M' + mb[m4].nr + ' ' + mTitel(mb[m4]), img: F4[f4] });
         }
         fotos(fb);
       }
@@ -1041,20 +1646,248 @@ function makeReport(o) {
     doc.text(doc.splitTextToSize((o.titel || 'Brandschutzbuch') + ' - ' + g.name, 140)[0], M, H - 9);
     doc.text('Seite ' + pg + ' / ' + np, W - M, H - 9, { align: 'right' });
     doc.text(FIRMA_FOOTER, W / 2, H - 5, { align: 'center' });
-    if (demo) {
-      try { doc.setGState(new doc.GState({ opacity: 0.18 })); } catch (e4) {}
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(64); doc.setTextColor(200, 30, 30);
-      doc.text('DEMOVERSION', 38, 205, { angle: 40 });
-      try { doc.setGState(new doc.GState({ opacity: 1 })); } catch (e5) {}
-    }
+    if (demo) demoMark(doc);
   }
   return doc;
 }
-function shareBlob(blob, fname, mime) {
+/* Leere Checkliste zum Ausdrucken - im Stil des gedruckten Brandschutzbuchs */
+function vorlagePdf(vid) {
+  var v = findById(DB.vorlagen, vid); if (!v) return;
+  var doc = newDoc(); if (!doc) return;
+  var g = curGeb();
+  var W = 210, H = 297, ML = 20, MR = 24, y = 18;
+  var ORANGE = [211, 84, 0];
+  function need(hh) { if (y + hh > H - 22) { doc.addPage(); y = 18; } }
+
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(0, 0, 0);
+  doc.text(v.name, ML, y + 2); y += 8;
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5);
+  if (g) { doc.text(doc.splitTextToSize('Objekt: ' + g.name + (g.adresse ? ', ' + g.adresse : ''), W - ML - MR)[0], ML, y); y += 6; }
+  doc.text('Durchgeführt von:', ML, y + 1); doc.text('Jahr / Zeitraum:', 120, y + 1);
+  doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.2);
+  doc.line(ML + 30, y + 1.5, 115, y + 1.5); doc.line(146, y + 1.5, W - MR, y + 1.5);
+  y += 9;
+
+  /* Abschnitte bilden */
+  var secs = [], cur = null;
+  for (var i = 0; i < v.punkte.length; i++) {
+    var p = v.punkte[i];
+    if (isHdr(p)) { cur = { t: hdrText(p), q: [] }; secs.push(cur); continue; }
+    if (!cur) { cur = { t: '', q: [] }; secs.push(cur); }
+    cur.q.push(p);
+  }
+  for (var s = 0; s < secs.length; s++) {
+    var S = secs[s]; if (!S.q.length) continue;
+    need(Math.min(S.q.length, 3) * 9 + 16);
+    if (S.t) { doc.setFont('helvetica', 'bold'); doc.setFontSize(10.5); doc.setTextColor(0, 0, 0); doc.text(S.t, ML, y + 2); y += 4; }
+    var body = [];
+    for (var k = 0; k < S.q.length; k++) body.push([S.q[k], '', '', '', '']);
+    doc.autoTable({
+      startY: y, head: [['Frage', 'Ja', 'Nein', 'Datum', 'Bemerkung']], body: body, theme: 'grid',
+      margin: { left: ML, right: MR, top: 18, bottom: 22 },
+      styles: { font: 'helvetica', fontSize: 9, cellPadding: 1.6, minCellHeight: 8, valign: 'middle', lineColor: [0, 0, 0], lineWidth: 0.2, textColor: [0, 0, 0] },
+      headStyles: { fillColor: [242, 242, 242], textColor: [0, 0, 0], fontStyle: 'bold', minCellHeight: 6 },
+      columnStyles: { 0: { cellWidth: 'auto' }, 1: { cellWidth: 11, halign: 'center' }, 2: { cellWidth: 11, halign: 'center' }, 3: { cellWidth: 22 }, 4: { cellWidth: 38 } },
+      didDrawCell: function (d) {
+        if (d.section !== 'body' || (d.column.index !== 1 && d.column.index !== 2)) return;
+        var b = 3.2; doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.25);
+        doc.rect(d.cell.x + (d.cell.width - b) / 2, d.cell.y + (d.cell.height - b) / 2, b, b);
+      }
+    });
+    y = doc.lastAutoTable.finalY + 8;
+  }
+  need(70);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(139, 0, 0);
+  doc.text('ANMERKUNGEN', W / 2, y + 2, { align: 'center' }); y += 5;
+  var gh = Math.max(40, Math.min(110, H - 48 - y)), gs = 5;
+  doc.setDrawColor(170, 170, 170); doc.setLineWidth(0.1);
+  for (var gx = ML; gx <= W - MR + 0.01; gx += gs) doc.line(gx, y, gx, y + gh);
+  for (var gy = y; gy <= y + gh + 0.01; gy += gs) doc.line(ML, gy, W - MR, gy);
+  doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.3); doc.rect(ML, y, W - ML - MR, gh);
+  y += gh + 6;
+  need(22); y += 8;
+  doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.2);
+  doc.line(ML, y, ML + 55, y); doc.line(ML + 65, y, ML + 105, y); doc.line(ML + 115, y, W - MR, y);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(80, 80, 80);
+  doc.text('Name', ML, y + 4); doc.text('Datum', ML + 65, y + 4); doc.text('Unterschrift', ML + 115, y + 4);
+
+  var np = doc.getNumberOfPages(), lbl = artLabel(v.art), demo = !isLicensed();
+  for (var pg = 1; pg <= np; pg++) {
+    doc.setPage(pg);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(30); doc.setTextColor(ORANGE[0], ORANGE[1], ORANGE[2]);
+    doc.text(lbl, W - 8, 14, { angle: -90 });
+    doc.setFontSize(8.5); doc.setTextColor(0, 0, 0);
+    doc.text('Janiba Brandschutztechnik', ML, H - 10);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+    doc.text('Brandschutzbuch', W / 2, H - 10, { align: 'center' });
+    doc.text('Seite ' + pg + ' von ' + np, W - MR, H - 10, { align: 'right' });
+    if (demo) demoMark(doc);
+  }
+  pdfReady(doc, 'Vorlage_' + safeName(v.name) + '.pdf');
+}
+/* ---------- Mängelbericht im Layout "Gesamtübersicht" ---------- */
+function bk() {
+  var s = DB.settings || {};
+  return {
+    z1: s.bk1 !== undefined ? s.bk1 : BK_DEFAULT.z1, z2: s.bk2 !== undefined ? s.bk2 : BK_DEFAULT.z2,
+    z3: s.bk3 !== undefined ? s.bk3 : BK_DEFAULT.z3, z4: s.bk4 !== undefined ? s.bk4 : BK_DEFAULT.z4,
+    fuss: s.bkFuss !== undefined ? s.bkFuss : BK_DEFAULT.fuss, logo: s.bkLogo === undefined ? LOGO_DEFAULT : s.bkLogo
+  };
+}
+function niceName(s) { return String(s || '').replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/Ä/g, 'Ae').replace(/Ö/g, 'Oe').replace(/Ü/g, 'Ue').replace(/ß/g, 'ss').replace(/[^A-Za-z0-9 \-_.]+/g, ' ').replace(/\s+/g, ' ').replace(/^\s+|\s+$/g, '').substr(0, 60); }
+function gesamtPdf(ids, opts) {
+  var g = curGeb(); if (!g) return;
+  opts = opts || {};
+  var list = [];
+  for (var i = 0; i < ids.length; i++) { var mm = findById(DB.maengel, ids[i]); if (mm) list.push(mm); }
+  list.sort(function (a, b) { if ((a.datum || '') !== (b.datum || '')) return (a.datum || '') < (b.datum || '') ? -1 : 1; return (a.nr || 0) - (b.nr || 0); });
+  var doc = newDoc(); if (!doc) return;
+  var B = bk(), W = 210, H = 297, ML = 15, MR = 196.4, VX = 60.5, P2 = 127, RH = 4.15, y;
+  var datum = opts.datum || todayStr();
+  var pbesch = opts.beschreibung !== undefined ? opts.beschreibung : (g.beschreibung || '');
+  function fN(sz) { doc.setFont('helvetica', 'normal'); doc.setFontSize(sz); doc.setTextColor(0, 0, 0); }
+  function fB(sz) { doc.setFont('helvetica', 'bold'); doc.setFontSize(sz); doc.setTextColor(0, 0, 0); }
+  function hline(yy) { doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.3); doc.line(ML, yy, MR, yy); }
+  var BOTTOM = H - 17;
+  function rowTxt(lbl, lines) {
+    if (!lines.length) lines = [''];
+    for (var r = 0; r < lines.length; r++) { need(RH); if (r === 0) doc.text(lbl, ML, y); if (lines[r]) doc.text(lines[r], VX, y); y += RH; }
+  }
+  function need(hh) { if (y + hh > BOTTOM) { doc.addPage(); y = 18; return true; } return false; }
+
+  /* Briefkopf */
+  fB(9); if (B.z1) doc.text(B.z1, ML, 13.4);
+  fN(7.5);
+  var by = 17.6, zs = [B.z2, B.z3, B.z4];
+  for (var z = 0; z < zs.length; z++) { if (zs[z]) doc.text(zs[z], ML, by); by += 4.1; }
+  if (B.logo) { try { doc.addImage(B.logo, 'JPEG', 162.9, 10.9, 33.5, 33.5); } catch (e) {} }
+
+  /* Titelbalken */
+  doc.setFillColor(238, 238, 238); doc.rect(ML, 46.7, MR - ML, 25.9, 'F');
+  hline(46.7); hline(72.6);
+  fB(12);
+  doc.text('Gesamtübersicht', (ML + MR) / 2, 56.1, { align: 'center' });
+  doc.text(fmtD(datum), (ML + MR) / 2, 61.9, { align: 'center' });
+  doc.text(doc.splitTextToSize(g.name, MR - ML - 10)[0], (ML + MR) / 2, 67.4, { align: 'center' });
+
+  /* Projektzeile */
+  if (g.foto) { try { doc.addImage(g.foto, 'JPEG', ML, 75, 34, 18.5); } catch (e2) {} }
+  fB(8.5); doc.text('Projektadresse:', VX, 78.5); doc.text('Projektbeschreibung:', P2, 78.5);
+  fN(7.5);
+  var adr = String(g.adresse || '').split(/\s*,\s*|\n/), ay = 82.7;
+  for (var a = 0; a < adr.length; a++) { if (adr[a]) { doc.text(adr[a], VX, ay); ay += 4.2; } }
+  var pl = pbesch ? doc.splitTextToSize(pbesch, MR - P2) : [], py = 82.7;
+  for (var q = 0; q < pl.length; q++) { doc.text(pl[q], P2, py); py += 4.2; }
+  y = Math.max(96, ay - 1.8, py - 1.8);
+  hline(y);
+  y += 4.3;
+
+  if (!list.length) {
+    fB(8.5); doc.text('Tätigkeitsnachweis:', ML, y); doc.text('Keine Einträge', VX, y);
+    y += 6; hline(y);
+  }
+
+  for (var k = 0; k < list.length; k++) {
+    var m = list[k];
+    fB(8.5); var tl = doc.splitTextToSize(mTitel(m), MR - VX);
+    fN(7.5);
+    var dl = m.beschreibung ? doc.splitTextToSize(m.beschreibung, MR - VX) : [];
+    var ml = m.massnahme ? doc.splitTextToSize(m.massnahme, MR - VX) : [];
+    var fotos = mFotos(m), fr = [];
+    /* Fotos in Reihen aufteilen */
+    var PH = 31, fx0 = VX + 11, fx = fx0, row = [];
+    for (var f = 0; f < fotos.length; f++) {
+      var ip = null; try { ip = doc.getImageProperties(fotos[f]); } catch (e3) { ip = null; }
+      if (!ip) continue;
+      var fw = PH * ip.width / ip.height; if (fw > 46) fw = 46;
+      if (row.length && fx + fw > MR) { fr.push(row); row = []; fx = fx0; }
+      row.push({ img: fotos[f], w: fw }); fx += fw + 4;
+    }
+    if (row.length) fr.push(row);
+    var blockH = RH * (tl.length + 2 + Math.max(1, dl.length) + Math.max(1, ml.length) + 5) + (fr.length ? fr.length * (PH + 3) + 2 : 2) + 6;
+    if (blockH < BOTTOM - 18) need(blockH);
+
+    fB(8.5); doc.text('Tätigkeitsnachweis:', ML, y);
+    for (var t = 0; t < tl.length; t++) { doc.text(tl[t], VX, y); y += RH; }
+    fN(7.5);
+    rowTxt('Inventar Nr:', mInv(m) ? [String(mInv(m))] : []);
+    rowTxt('Standort:', doc.splitTextToSize(m.standort || mangelOrt(m) || '', MR - VX));
+    rowTxt('Beschreibung:', dl);
+    if (fr.length) {
+      y -= 2.2;
+      for (var rr = 0; rr < fr.length; rr++) {
+        need(PH + 3);
+        var x = fx0;
+        for (var c = 0; c < fr[rr].length; c++) {
+          try { doc.addImage(fr[rr][c].img, 'JPEG', x, y, fr[rr][c].w, PH); } catch (e4) {}
+          x += fr[rr][c].w + 4;
+        }
+        y += PH + 3;
+      }
+      y += 2.6;
+    } else y += 2;
+    rowTxt('Maßnahme:', ml);
+    rowTxt('Status:', [mStatusText(m.status)]);
+    rowTxt('Frist:', m.frist ? [fmtD(m.frist)] : []);
+    rowTxt('Zuständigkeit:', m.zustaendig ? doc.splitTextToSize(m.zustaendig, MR - VX) : []);
+    rowTxt('Erstellungsdatum:', m.datum ? [fmtD(m.datum)] : []);
+    rowTxt('Arbeitszeit:', m.arbeitszeit ? [m.arbeitszeit] : []);
+    y -= 1.2; hline(y); y += 4.3;
+  }
+
+  var np = doc.getNumberOfPages(), demo = !isLicensed();
+  for (var pg = 1; pg <= np; pg++) {
+    doc.setPage(pg);
+    doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.3); doc.line(ML, H - 13, MR, H - 13);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setTextColor(0, 0, 0);
+    if (B.fuss) doc.text(B.fuss, ML, H - 9.5);
+    if (np > 1) doc.text(pg + ' / ' + np, MR, H - 9.5, { align: 'right' });
+    if (demo) demoMark(doc);
+  }
+  var fname = datum.replace(/-/g, '') + ' Gesamtuebersicht ' + niceName(g.name) + '.pdf';
+  var mail = 'Sehr geehrte Damen und Herren,\n\nanbei erhalten Sie die Gesamtübersicht (Mängelbericht) vom ' + fmtD(datum) + ' für ' + g.name + '.\n\nMit freundlichen Grüßen\n' + (B.z1 || '');
+  pdfReady(doc, fname, { subject: 'Gesamtübersicht ' + fmtD(datum) + ' - ' + g.name, text: mail });
+}
+function mbList() {
+  var all = byG(DB.maengel), r = [], s = STATE.mbSel || 'offen';
+  var von = val('mb_von'), bis = val('mb_bis');
+  for (var i = 0; i < all.length; i++) {
+    var m = all[i];
+    if (s === 'offen' && m.status === 'behoben') continue;
+    if (s === 'zeit' && ((von && (m.datum || '') < von) || (bis && (m.datum || '') > bis))) continue;
+    r.push(m);
+  }
+  r.sort(function (a, b) { if ((a.datum || '') !== (b.datum || '')) return (a.datum || '') < (b.datum || '') ? -1 : 1; return (a.nr || 0) - (b.nr || 0); });
+  return r;
+}
+function mbRender() {
+  var e = $('mb_list'); if (!e) return;
+  var s = STATE.mbSel || 'offen';
+  var bs = $('mb_seg').getElementsByTagName('button'), ks = ['offen', 'alle', 'zeit'];
+  for (var b = 0; b < bs.length; b++) bs[b].className = ks[b] === s ? 'on' : '';
+  $('mb_zeit').style.display = s === 'zeit' ? 'block' : 'none';
+  var l = mbList(), h = '';
+  if (!l.length) h = '<div class="small" style="padding:10px 0">Keine Einträge in dieser Auswahl.</div>';
+  for (var i = 0; i < l.length; i++) {
+    var f = mFotos(l[i]);
+    h += '<label class="chk" style="border-bottom:1px solid var(--bd)"><input type="checkbox" class="mbchk" value="' + l[i].id + '" checked><span style="flex:1;min-width:0"><b>' + esc(mTitel(l[i])) + '</b><br><span class="small">' + fmtD(l[i].datum) + ' - ' + mStatusText(l[i].status) + (f.length ? ' - ' + f.length + ' Foto' + (f.length > 1 ? 's' : '') : '') + '</span></span></label>';
+  }
+  e.innerHTML = h;
+}
+function mbAll(on) { var c = document.querySelectorAll('.mbchk'); for (var i = 0; i < c.length; i++) c[i].checked = on; }
+function mbErstellen() {
+  var c = document.querySelectorAll('.mbchk'), ids = [];
+  for (var i = 0; i < c.length; i++) if (c[i].checked) ids.push(c[i].value);
+  var g = curGeb(); if (g && val('mb_pb') !== (g.beschreibung || '') && $('mb_pbsave') && $('mb_pbsave').checked) { g.beschreibung = val('mb_pb'); save('gebaeude'); }
+  gesamtPdf(ids, { datum: val('mb_d') || todayStr(), beschreibung: val('mb_pb') });
+}
+function shareBlob(blob, fname, mime, mail) {
   var file = null;
   try { file = new File([blob], fname, { type: mime }); } catch (e) { file = null; }
   if (file && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-    navigator.share({ files: [file], title: fname })['catch'](function (err) { if (err && err.name !== 'AbortError') downloadBlob(blob, fname); });
+    var sd = { files: [file], title: (mail && mail.subject) || fname };
+    if (mail && mail.text) sd.text = mail.text;
+    navigator.share(sd)['catch'](function (err) { if (err && err.name !== 'AbortError') downloadBlob(blob, fname); });
     return;
   }
   downloadBlob(blob, fname);
@@ -1064,11 +1897,19 @@ function downloadBlob(blob, fname) {
   a.href = url; a.download = fname; document.body.appendChild(a); a.click();
   setTimeout(function () { document.body.removeChild(a); URL.revokeObjectURL(url); }, 5000);
 }
-function pdfReady(doc, fname) {
+function pdfReady(doc, fname, mail) {
   var blob = doc.output('blob');
   var kb = Math.round(blob.size / 1024);
-  modal('PDF ist fertig', '<p style="line-height:1.5">' + esc(fname) + '<br><span class="small">' + doc.getNumberOfPages() + ' Seite(n), ' + (kb > 1024 ? (kb / 1024).toFixed(1) + ' MB' : kb + ' KB') + '</span></p><p class="small">Über "Teilen / Sichern" können Sie das PDF per Mail senden, in Dateien sichern oder drucken.</p>',
-    [{ label: 'Schließen', fn: closeModal }, { label: 'Teilen / Sichern', cls: 'pri', fn: function () { shareBlob(blob, fname, 'application/pdf'); } }]);
+  var url = '';
+  try { url = URL.createObjectURL(blob); } catch (e) { url = ''; }
+  var h = '<p style="line-height:1.5">' + esc(fname) + '<br><span class="small">' + doc.getNumberOfPages() + ' Seite(n), ' + (kb > 1024 ? (kb / 1024).toFixed(1) + ' MB' : kb + ' KB') + '</span></p>' +
+    '<button class="btn pri full" id="pdf_mail">Per Mail senden</button>' +
+    '<button class="btn full" id="pdf_print">Drucken / In Dateien sichern</button>' +
+    (url ? '<a class="btn full" style="display:block;text-align:center;text-decoration:none;margin-top:8px" href="' + url + '" target="_blank" rel="noopener">PDF ansehen</a>' : '') +
+    '<p class="small" style="line-height:1.5;margin-top:12px">Es öffnet sich das Teilen-Menü: dort <b>Mail</b> wählen (PDF ist schon angehängt) bzw. <b>Drucken</b> oder <b>In Dateien sichern</b>.</p>';
+  modal('PDF ist fertig', h, [{ label: 'Schließen', fn: closeModal }]);
+  $('pdf_mail').onclick = function () { shareBlob(blob, fname, 'application/pdf', mail || { subject: fname.replace(/\.pdf$/, ''), text: '' }); };
+  $('pdf_print').onclick = function () { shareBlob(blob, fname, 'application/pdf'); };
 }
 
 /* ---------- Einstellungen ---------- */
@@ -1082,17 +1923,36 @@ function openSettings() {
     '<button class="btn pri full" onclick="activateLic()">Freischalten</button>';
   h += '<div class="grp">Allgemein</div><label>Geführt von (Name / Firma, erscheint im Bericht)</label><input id="s_bet" value="' + esc(s.betreiber) + '">' +
     '<button class="btn full" onclick="DB.settings.betreiber=val(\'s_bet\');save(\'settings\');toast(\'Gespeichert\')">Speichern</button>';
+  var B = bk();
+  LOGOTMP = B.logo;
+  h += '<div class="grp">Briefkopf Mängelbericht</div>' +
+    '<label>Zeile 1 (fett)</label><input id="bk1" value="' + esc(B.z1) + '">' +
+    '<label>Zeile 2</label><input id="bk2" value="' + esc(B.z2) + '">' +
+    '<label>Straße</label><input id="bk3" value="' + esc(B.z3) + '">' +
+    '<label>PLZ Ort</label><input id="bk4" value="' + esc(B.z4) + '">' +
+    '<label>Fußzeile</label><input id="bkf" value="' + esc(B.fuss) + '">' +
+    '<label>Logo</label><div id="bk_lprev">' + (B.logo ? '<img src="' + B.logo + '" style="width:90px;height:90px;object-fit:contain;display:block">' : '<span class="small">kein Logo</span>') + '</div>' +
+    '<div class="btns"><label class="btn sm" style="margin:4px 6px 0 0;color:var(--tx);font-weight:600">Logo wählen<input type="file" accept="image/*" style="display:none" onchange="pickFotoCrop(this,1,600,function(d){LOGOTMP=d;$(\'bk_lprev\').innerHTML=\'<img src=\'+d+\' style=width:90px;height:90px;display:block>\';})"></label>' +
+    '<button class="btn sm" onclick="LOGOTMP=LOGO_DEFAULT;$(\'bk_lprev\').innerHTML=\'<img src=\'+LOGO_DEFAULT+\' style=width:90px;height:90px;display:block>\'">Standard-Logo</button><button class="btn sm" onclick="LOGOTMP=\'\';$(\'bk_lprev\').innerHTML=\'<span class=small>kein Logo</span>\'">Ohne Logo</button></div>' +
+    '<button class="btn full" onclick="saveBk()">Briefkopf speichern</button>';
   h += '<div class="grp">Gebäude</div>';
   for (var i = 0; i < DB.gebaeude.length; i++) h += '<div class="row" onclick="editGebaeude(\'' + DB.gebaeude[i].id + '\')"><div class="m"><div class="t">' + esc(DB.gebaeude[i].name) + '</div><div class="s">' + esc(DB.gebaeude[i].adresse || '') + '</div></div><span class="small">Bearbeiten</span></div>';
   h += '<button class="btn full" onclick="editGebaeude()">+ Gebäude anlegen</button>';
   h += '<div class="grp">Checklisten für Begehungen</div>';
-  for (var j = 0; j < DB.vorlagen.length; j++) h += '<div class="row" onclick="editVorlage(\'' + DB.vorlagen[j].id + '\')"><div class="m"><div class="t">' + esc(DB.vorlagen[j].name) + '</div><div class="s">' + artLabel(DB.vorlagen[j].art) + ' - ' + DB.vorlagen[j].punkte.length + ' Punkte</div></div><span class="small">Bearbeiten</span></div>';
+  for (var j = 0; j < DB.vorlagen.length; j++) h += '<div class="row" onclick="editVorlage(\'' + DB.vorlagen[j].id + '\')"><div class="m"><div class="t">' + esc(DB.vorlagen[j].name) + '</div><div class="s">' + artLabel(DB.vorlagen[j].art) + ' - ' + nFragen(DB.vorlagen[j]) + ' Fragen</div></div><span class="small">Bearbeiten</span></div>';
   h += '<div class="btns"><button class="btn sm" onclick="editVorlage()">+ Neue Checkliste</button><button class="btn sm" onclick="resetVorlagen()">Standard-Checklisten hinzufügen</button></div>';
   h += '<div class="grp">Datensicherung</div><p class="small" style="line-height:1.5">Alle Daten sind nur auf diesem Gerät gespeichert. Sichern Sie regelmäßig - z. B. in iCloud Drive oder per Mail. Letzte Sicherung: ' + (s.letztesBackup ? fmtD(s.letztesBackup) : 'noch keine') + '</p>' +
     '<button class="btn pri full" onclick="exportBackup()">Daten sichern (Datei)</button>' +
     '<label>Sicherung wiederherstellen</label><input type="file" accept=".json,application/json" onchange="importBackup(this)">';
   h += '<div class="grp">Info</div><p class="small" style="line-height:1.5">Brandschutzbuch Version ' + APP_VERSION + '<br>' + esc(FIRMA_KONTAKT) + '</p>';
   modal('Einstellungen', h, [{ label: 'Schließen', fn: function () { closeModal(); render(); } }]);
+}
+function saveBk() {
+  var s = DB.settings;
+  s.bk1 = val('bk1'); s.bk2 = val('bk2'); s.bk3 = val('bk3'); s.bk4 = val('bk4'); s.bkFuss = val('bkf');
+  s.bkLogo = LOGOTMP === LOGO_DEFAULT ? undefined : LOGOTMP;
+  if (s.bkLogo === undefined) delete s.bkLogo;
+  save('settings'); toast('Briefkopf gespeichert');
 }
 function activateLic() {
   var n = val('s_ln'), c = val('s_lc').toUpperCase().replace(/\s/g, '');
@@ -1106,16 +1966,17 @@ function editVorlage(id) {
   for (var i = 0; i < ARTEN.length; i++) o += '<option value="' + ARTEN[i].k + '"' + (ARTEN[i].k === p.art ? ' selected' : '') + '>' + ARTEN[i].l + '</option>';
   var h = '<label>Name der Checkliste</label><input id="v_n" value="' + esc(p.name) + '" placeholder="z. B. Wöchentliche Kontrolle Küche">' +
     '<label>Intervall</label><select id="v_a">' + o + '</select>' +
-    '<label>Prüfpunkte (je Zeile ein Punkt)</label><textarea id="v_p" style="min-height:260px">' + esc(p.punkte.join('\n')) + '</textarea>' +
+    '<label>Fragen (je Zeile eine Frage)</label><textarea id="v_p" style="min-height:300px">' + esc(p.punkte.join('\n')) + '</textarea>' +
+    '<div class="small" style="margin-top:4px;line-height:1.45">Zeilen mit <b>#</b> am Anfang sind Überschriften, z. B. <i># Pos. 1 – Feuerwehrzufahrt</i>. Fragen so formulieren, dass <b>Ja = in Ordnung</b> bedeutet.</div>' +
     '<div class="small" style="margin-top:4px">Änderungen gelten für künftige Begehungen. Bestehende Protokolle bleiben unverändert.</div>';
-  if (v) h += '<button class="btn full" style="margin-top:18px;color:var(--red2)" onclick="delVorlage(\'' + v.id + '\')">Checkliste löschen</button>';
+  if (v) h += '<button class="btn full" style="margin-top:18px" onclick="vorlagePdf(\'' + v.id + '\')">Leere Vorlage drucken (PDF)</button><button class="btn full" style="color:var(--red2)" onclick="delVorlage(\'' + v.id + '\')">Checkliste löschen</button>';
   modal(v ? 'Checkliste bearbeiten' : 'Neue Checkliste', h, [{ label: 'Zurück', fn: openSettings }, { label: 'Speichern', cls: 'pri', fn: function () {
     var n = val('v_n'), lines = val('v_p').split(/\n/), pts = [];
     for (var k = 0; k < lines.length; k++) { var t = lines[k].replace(/^\s+|\s+$/g, ''); if (t) pts.push(t); }
     if (!n) { toast('Bitte einen Namen angeben'); return; }
-    if (!pts.length) { toast('Bitte mindestens einen Prüfpunkt angeben'); return; }
+    if (!nFragen({ punkte: pts })) { toast('Bitte mindestens eine Frage angeben'); return; }
     if (!v) { v = { id: uid() }; DB.vorlagen.push(v); }
-    v.name = n; v.art = val('v_a'); v.punkte = pts; save('vorlagen'); toast('Checkliste gespeichert'); openSettings();
+    v.name = n; v.art = val('v_a'); v.punkte = pts; v.geaendert = true; save('vorlagen'); toast('Checkliste gespeichert'); openSettings();
   } }]);
 }
 function delVorlage(id) {
@@ -1162,7 +2023,22 @@ function init() {
       if (c === 'settings') { if (!DB.settings || typeof DB.settings !== 'object' || DB.settings.length !== undefined) DB.settings = {}; }
       else if (!DB[c] || DB[c].length === undefined) DB[c] = [];
     }
-    if (!DB.vorlagen.length) { DB.vorlagen = defVorlagen(); save('vorlagen'); }
+    var mig = false;
+    for (var mi = 0; mi < DB.maengel.length; mi++) {
+      var MM = DB.maengel[mi];
+      if (!MM.fotos) { MM.fotos = []; if (MM.foto) MM.fotos.push(MM.foto); if (MM.fotoBehoben) MM.fotos.push(MM.fotoBehoben); delete MM.foto; delete MM.fotoBehoben; mig = true; }
+    }
+    if (mig) save('maengel');
+    if (!DB.vorlagen.length) { DB.vorlagen = defVorlagen(); DB.settings.vorlagenVer = VORLAGEN_VER; save('vorlagen'); save('settings'); }
+    if ((DB.settings.vorlagenVer || 1) < VORLAGEN_VER) {
+      var std = [monatsBegehung(), quartalBegehung(), jahresBegehung()];
+      for (var sv = 0; sv < std.length; sv++) {
+        var ex = null;
+        for (var vv = 0; vv < DB.vorlagen.length; vv++) if (DB.vorlagen[vv].name === std[sv].name) ex = DB.vorlagen[vv];
+        if (!ex) DB.vorlagen.push(std[sv]); else if (!ex.geaendert) ex.punkte = std[sv].punkte;
+      }
+      DB.settings.vorlagenVer = VORLAGEN_VER; save('vorlagen'); save('settings');
+    }
     var g = null; try { g = localStorage.getItem('bsb_gid'); } catch (e) {}
     STATE.gid = (g && findById(DB.gebaeude, g)) ? g : (DB.gebaeude.length ? DB.gebaeude[0].id : null);
     render();
