@@ -85,6 +85,19 @@ textarea{min-height:80px;resize:vertical}
 .grp{font-size:12px;font-weight:700;color:var(--red);margin:16px 0 0;text-transform:uppercase;letter-spacing:.04em}
 .hint{background:var(--warnbg);color:var(--warn);border-radius:10px;padding:10px 12px;font-size:14px;margin-bottom:12px}
 .lnk{color:var(--red);font-weight:600}
+@media (min-width:900px){
+  header{padding-left:calc(50% - 400px);padding-right:calc(50% - 400px)}
+  #gebSel{max-width:460px;margin-left:auto}
+  main{max-width:800px;padding-bottom:110px}
+  nav{left:calc(50% - 400px);right:calc(50% - 400px);border-left:1px solid var(--bd);border-right:1px solid var(--bd);border-radius:14px 14px 0 0}
+  nav button{font-size:13px}
+  .fab{right:calc(50% - 390px)}
+  #modalWrap{align-items:center}
+  .modal{max-width:820px;max-height:90%;border-radius:16px}
+  .stats{grid-template-columns:repeat(4,1fr)}
+  .row:hover,.stat:hover{cursor:pointer}
+  .btn:hover{filter:brightness(.95);cursor:pointer}
+}
 </style>
 </head>
 <body>
@@ -102,7 +115,7 @@ textarea{min-height:80px;resize:vertical}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 /* Brandschutzbuch - lokale Web-App (Janiba Brandschutztechnik GmbH) */
-var APP_VERSION = '1.9';
+var APP_VERSION = '2.0';
 var LIZ_SALT = 'JaNiBa-2380-BSB';
 var FIRMA_FOOTER = 'Brandschutzbuch-App | Janiba Brandschutztechnik GmbH | Tel. 0676/305 83 98 | www.brandschutztechnik-janiba.at';
 var FIRMA_KONTAKT = 'Janiba Brandschutztechnik GmbH, Ketzergasse 299, 2380 Perchtoldsdorf, Tel. 0676/305 83 98, info@loeschtechnik.at';
