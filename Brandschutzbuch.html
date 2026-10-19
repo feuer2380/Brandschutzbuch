@@ -115,8 +115,8 @@ textarea{min-height:80px;resize:vertical}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 /* Brandschutzbuch - lokale Web-App (Janiba Brandschutztechnik GmbH) */
-var APP_VERSION = '2.4';
-var APP_STAND = '19.10.2026 09:10';
+var APP_VERSION = '2.5';
+var APP_STAND = '19.10.2026 12:20';
 var UPD = null;
 function verText() { return 'Version ' + APP_VERSION + ' vom ' + APP_STAND; }
 function verFooter() {
@@ -960,7 +960,8 @@ function perStatus(vid, p) {
   if (t >= r.von) return { b: null, cls: 'p-warn', txt: 'fällig bis ' + fmtD(r.bis).substr(0, 6), k: 'faellig' };
   return { b: null, cls: 'p-mut', txt: 'geplant', k: 'zukunft' };
 }
-function begAnzahl(b) { var n = b.zusatz || 0; for (var j = 0; j < b.punkte.length; j++) if (b.punkte[j].status === 'mangel') n++; return n; }
+function ptMangel(p) { return p.mangel !== undefined ? !!p.mangel : p.status === 'mangel'; }
+function begAnzahl(b) { var n = b.zusatz || 0; for (var j = 0; j < b.punkte.length; j++) if (b.punkte[j].status && ptMangel(b.punkte[j])) n++; return n; }
 function lastBeg(vid) {
   var l = byG(DB.begehungen), last = null;
   for (var i = 0; i < l.length; i++) { if (l[i].vorlageId === vid && (!last || l[i].datum > last.datum)) last = l[i]; }
@@ -1298,12 +1299,12 @@ function startBegehung(vid, per, bid) {
   /* bisherige Antworten (beim Weiterarbeiten) nach Fragetext zuordnen */
   var alt = {};
   if (ex) for (var q = 0; q < ex.punkte.length; q++) alt[(ex.punkte[q].sec || '') + '|' + ex.punkte[q].text] = ex.punkte[q];
-  BEG = { vid: vid, st: [], alt: alt, ex: ex ? ex.id : null };
+  BEG = { vid: vid, st: [], mk: [], alt: alt, ex: ex ? ex.id : null };
   var sec0 = '';
   for (var k = 0; k < v.punkte.length; k++) {
     if (isHdr(v.punkte[k])) { BEG.st.push('hdr'); sec0 = hdrText(v.punkte[k]); continue; }
     var ap = alt[sec0 + '|' + v.punkte[k]];
-    BEG.st.push(ap && ap.status ? ap.status : '');
+    BEG.st.push(ap && ap.status ? ap.status : ''); BEG.mk[BEG.st.length - 1] = !!(ap && ap.status && ptMangel(ap));
   }
   var st0 = ex ? begStand(ex) : null;
   var h = '<div class="small" style="margin-top:8px">' + esc(curGeb().name) + ' - ' + artLabel(v.art) + ' - ' + nFragen(v) + ' Fragen</div>' +
@@ -1311,7 +1312,7 @@ function startBegehung(vid, per, bid) {
     '<div class="two"><div><label>Datum (heute erledigt)</label><input id="b_d" type="date" value="' + todayStr() + '"></div><div><label>Uhrzeit</label><input id="b_z" type="time" value="' + nowTime() + '"></div></div>' +
     perSel +
     '<label>Durchgeführt von *</label><input id="b_pr" value="' + esc(ex ? ex.pruefer : (DB.settings.letzterPruefer || '')) + '">' +
-    '<div class="small" style="margin-top:10px">Ja = in Ordnung, Nein = Mangel. Falsch getippt? Einfach nochmal auf denselben Knopf tippen, dann ist die Auswahl wieder weg. ' + (isPerArt(v.art) ? 'Sie müssen nicht alles auf einmal ausfüllen - mit „Zwischenspeichern“ bleiben offene Fragen bis zum Ende des Zeitraums offen.' : '') + '</div>' +
+    '<div class="small" style="margin-top:10px">Bei jeder Antwort können Sie eine Bemerkung schreiben und selbst entscheiden, ob es als Mangel in die Mängelliste kommt (bei Nein ist das vorausgewählt). Falsch getippt? Einfach nochmal auf denselben Knopf tippen, dann ist die Auswahl wieder weg. ' + (isPerArt(v.art) ? 'Sie müssen nicht alles auf einmal ausfüllen - mit „Zwischenspeichern“ bleiben offene Fragen bis zum Ende des Zeitraums offen.' : '') + '</div>' +
     '<div class="btns" style="margin-top:6px"><button class="btn sm" onclick="begAllOk()">Alle offenen mit Ja beantworten</button>' + (ex ? '<button class="btn sm" id="b_tgl" onclick="begToggle()">' + (ex.offen ? 'Auch beantwortete zeigen' : 'Nur offene zeigen') + '</button>' : '') + '</div>';
   var nr = 0, sec1 = '';
   for (var i = 0; i < v.punkte.length; i++) {
@@ -1320,7 +1321,8 @@ function startBegehung(vid, per, bid) {
     var a1 = alt[sec1 + '|' + v.punkte[i]];
     h += '<div class="pt" id="pt' + i + '"><div class="q">' + nr + '. ' + esc(v.punkte[i]) + (a1 && a1.status && a1.datum ? ' <span class="small">(' + fmtD(a1.datum) + ')</span>' : '') + '</div><div class="seg" id="seg' + i + '">' +
       '<button onclick="begTap(' + i + ',\'ok\')">Ja</button><button onclick="begTap(' + i + ',\'mangel\')">Nein</button><button onclick="begTap(' + i + ',\'na\')">Entfällt</button></div>' +
-      '<input id="bb' + i + '" value="' + esc(a1 ? a1.bemerkung : '') + '" placeholder="Mangel beschreiben (Ort, Art) ..." style="display:none;margin-top:8px"></div>';
+      '<div id="bx' + i + '" style="display:none;margin-top:8px"><input id="bb' + i + '" value="' + esc(a1 ? a1.bemerkung : '') + '" placeholder="Bemerkung (z. B. Deckel fehlt) ...">' +
+      '<label style="display:flex;align-items:center;gap:8px;margin:8px 0 0;font-size:14px;font-weight:600;color:var(--red2);text-transform:none;letter-spacing:0"><input type="checkbox" id="mk' + i + '" onchange="BEG.mk[' + i + ']=this.checked" style="width:22px;height:22px;margin:0;flex:none"> Als Mangel in die Mängelliste übernehmen</label></div></div>';
   }
   h += '<label>Weitere Mängel (je Zeile ein Mangel)</label><textarea id="b_zus" placeholder="z. B. Feuerlöscher 2. OG fehlt"></textarea>' +
     '<label>Bemerkung zur Begehung</label><textarea id="b_bem">' + esc(ex ? ex.bemerkung : '') + '</textarea>' +
@@ -1328,7 +1330,7 @@ function startBegehung(vid, per, bid) {
   var btns = isPerArt(v.art) ? [{ label: 'Zwischenspeichern', fn: function () { saveBegehung(true); } }] : [{ label: 'Abbrechen', fn: closeModalAsk }];
   btns.push({ label: 'Speichern', cls: 'pri', fn: function () { saveBegehung(false); } });
   modal(v.name + (cur ? ' - ' + perSide(cur) : ''), h, btns, 'Eingaben verwerfen? Nicht gespeicherte Antworten gehen verloren.');
-  for (var s = 0; s < BEG.st.length; s++) if (BEG.st[s] && BEG.st[s] !== 'hdr') begSet(s, BEG.st[s]);
+  for (var s = 0; s < BEG.st.length; s++) if (BEG.st[s] && BEG.st[s] !== 'hdr') begSet(s, BEG.st[s], true);
   SIG = initSig($('sigc'));
   if (ex && ex.offen) begNurOffen();
 }
@@ -1354,12 +1356,15 @@ function begNurOffen() {
     hs[j].style.display = any ? 'flex' : 'none';
   }
 }
-function begSet(i, s) {
+function begSet(i, s, keep) {
   if (!BEG || BEG.st[i] === 'hdr') return;
+  if (!keep && BEG.st[i] !== s) BEG.mk[i] = s === 'mangel';
   BEG.st[i] = s;
+  if ($('mk' + i)) $('mk' + i).checked = !!BEG.mk[i];
   var b = $('seg' + i).getElementsByTagName('button');
   b[0].className = s === 'ok' ? 'on-ok' : ''; b[1].className = s === 'mangel' ? 'on-err' : ''; b[2].className = s === 'na' ? 'on-na' : '';
-  $('bb' + i).style.display = s === 'mangel' ? 'block' : 'none';
+  $('bx' + i).style.display = s ? 'block' : 'none';
+  $('bb' + i).placeholder = s === 'mangel' ? 'Mangel beschreiben (Ort, Art) ...' : 'Bemerkung (z. B. vorhanden, aber Deckel fehlt) ...';
 }
 function begTap(i, s) {
   if (!BEG) return;
@@ -1392,14 +1397,15 @@ function saveBegehung(zwischen) {
   for (var j = 0; j < v.punkte.length; j++) {
     if (isHdr(v.punkte[j])) { sec = hdrText(v.punkte[j]); continue; }
     var bem = val('bb' + j), st = BEG.st[j], a = BEG.alt[sec + '|' + v.punkte[j]] || {};
-    var p = { text: v.punkte[j], status: st, bemerkung: st === 'mangel' ? bem : '', sec: sec, datum: st ? (a.status === st && a.datum ? a.datum : d) : '', mid: a.mid || '' };
-    if (a.status === 'mangel' && st !== 'mangel' && a.mid) {
+    var mk = !!(st && BEG.mk[j]), hatte = !!(a.status && ptMangel(a) && a.mid);
+    var p = { text: v.punkte[j], status: st, bemerkung: st ? bem : '', mangel: mk, sec: sec, datum: st ? (a.status === st && a.datum ? a.datum : d) : '', mid: hatte ? a.mid : '' };
+    if (hatte && !mk) {
       /* Nein wurde zurückgenommen: automatisch angelegten Mangel entfernen, solange er unbearbeitet ist */
       var am = findById(DB.maengel, a.mid);
       if (am && am.status === 'offen' && !(am.fotos && am.fotos.length) && !am.massnahme) DB.maengel.splice(DB.maengel.indexOf(am), 1);
       p.mid = '';
     }
-    if (st === 'mangel' && a.status !== 'mangel') {
+    if (mk && !hatte) {
       var mid = uid(); p.mid = mid;
       neu.push({ id: mid, t: sec || v.name, b: v.punkte[j] + (bem ? '\n' + bem : '') });
     }
@@ -1430,7 +1436,7 @@ function showBegehung(id) {
   for (var i = 0; i < b.punkte.length; i++) {
     var p = b.punkte[i];
     if (p.sec && p.sec !== sec) { sec = p.sec; h += '<div class="grp">' + esc(sec) + '</div>'; }
-    h += '<div class="row"><div class="m"><div>' + (i + 1) + '. ' + esc(p.text) + '</div>' + (p.bemerkung || p.datum ? '<div class="s">' + (p.datum ? fmtD(p.datum) : '') + (p.bemerkung ? (p.datum ? ' - ' : '') + esc(p.bemerkung) : '') + '</div>' : '') + '</div>' + (p.status === 'ok' ? pill('p-ok', 'Ja') : p.status === 'mangel' ? pill('p-err', 'Nein') : p.status === 'na' ? pill('p-mut', 'entfällt') : pill('p-warn', 'offen')) + '</div>';
+    h += '<div class="row"><div class="m"><div>' + (i + 1) + '. ' + esc(p.text) + '</div>' + (p.bemerkung || p.datum ? '<div class="s">' + (p.datum ? fmtD(p.datum) : '') + (p.bemerkung ? (p.datum ? ' - ' : '') + esc(p.bemerkung) : '') + '</div>' : '') + '</div>' + (p.status && ptMangel(p) && p.status !== 'mangel' ? pill('p-err', 'Mangel') : '') + (p.status === 'ok' ? pill('p-ok', 'Ja') : p.status === 'mangel' ? (ptMangel(p) ? pill('p-err', 'Nein - Mangel') : pill('p-mut', 'Nein - kein Mangel')) : p.status === 'na' ? pill('p-mut', 'entfällt') : pill('p-warn', 'offen')) + '</div>';
   }
   if (b.bemerkung) h += '<div class="grp">Bemerkung</div><p style="margin:6px 0">' + esc(b.bemerkung) + '</p>';
   var ms = maengelVonBeg(id);
@@ -1774,7 +1780,7 @@ function makeReport(o) {
   for (var k = 0; k < pl.length; k++) if (inR(pl[k].datum)) pru.push(pl[k]);
   pru.sort(function (a, b) { return a.datum < b.datum ? -1 : 1; });
   var over = 0; for (var q = 0; q < anl.length; q++) { var dd = daysUntil(anl[q].naechstePruefung); if (dd !== null && dd < 0) over++; }
-  function nM(b) { var n = b.zusatz || 0; for (var u = 0; u < b.punkte.length; u++) if (b.punkte[u].status === 'mangel') n++; return n; }
+  function nM(b) { return begAnzahl(b); }
 
   if (o.geb) {
     sec('Objekt');
@@ -1858,11 +1864,12 @@ function makeReport(o) {
         var PP = BB.punkte[p2];
         if (PP.sec && PP.sec !== csec) { csec = PP.sec; pr2.push([{ content: PP.sec, colSpan: 6, styles: { fontStyle: 'bold', fillColor: [254, 236, 226], textColor: [160, 50, 10] } }]); }
         var na = PP.status === 'na';
-        pr2.push([String(p2 + 1), PP.text, PP.status === 'ok' ? 'X' : (na ? '-' : ''), PP.status === 'mangel' ? 'X' : (na ? '-' : ''), PP.datum ? fmtD(PP.datum) : (PP.status ? fmtD(BB.datum) : ''), !PP.status ? 'offen' : na ? 'entfällt' + (PP.bemerkung ? ': ' + PP.bemerkung : '') : (PP.bemerkung || '')]);
+        pr2.push([String(p2 + 1), PP.text, PP.status === 'ok' ? 'X' : (na ? '-' : ''), PP.status === 'mangel' ? 'X' : (na ? '-' : ''), PP.datum ? fmtD(PP.datum) : (PP.status ? fmtD(BB.datum) : ''), !PP.status ? 'offen' : (ptMangel(PP) && PP.status !== 'mangel') ? 'MANGEL' + (PP.bemerkung ? ': ' + PP.bemerkung : '') : na ? 'entfällt' + (PP.bemerkung ? ': ' + PP.bemerkung : '') : (PP.bemerkung || '')]);
       }
       tbl(['Nr.', 'Frage', 'Ja', 'Nein', 'Datum', 'Bemerkung'], pr2, {
         didParseCell: function (d) {
           if (d.section === 'body' && d.cell.raw === 'offen') { d.cell.styles.textColor = [180, 83, 9]; d.cell.styles.fontStyle = 'bold'; return; }
+          if (d.section === 'body' && typeof d.cell.raw === 'string' && d.cell.raw.indexOf('MANGEL') === 0) { d.cell.styles.textColor = [200, 30, 30]; return; }
           if (d.section !== 'body' || d.cell.raw !== 'X') return;
           d.cell.styles.fontStyle = 'bold'; d.cell.styles.textColor = d.column.index === 2 ? [21, 128, 61] : [200, 30, 30];
         },
