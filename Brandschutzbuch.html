@@ -115,7 +115,29 @@ textarea{min-height:80px;resize:vertical}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 /* Brandschutzbuch - lokale Web-App (Janiba Brandschutztechnik GmbH) */
-var APP_VERSION = '2.2';
+var APP_VERSION = '2.3';
+var APP_STAND = '19.10.2026 09:00';
+var UPD = null;
+function verText() { return 'Version ' + APP_VERSION + ' vom ' + APP_STAND; }
+function verFooter() {
+  return '<div style="text-align:center;margin:22px 0 8px;font-size:12px;color:var(--mut)" onclick="checkUpdate(true)">App-' + esc(verText()) + ' &middot; <span class="lnk">auf Update prüfen</span></div>';
+}
+function updBanner() {
+  if (!UPD) return '';
+  return '<div class="hint" style="background:#fef3c7;border-color:#f59e0b;color:#92400e"><b>Neue Version verfügbar:</b> ' + esc(UPD.v) + ' vom ' + esc(UPD.d) + '<br>Bei Ihnen läuft noch ' + esc(verText()) + '.<br><button class="btn pri" style="margin-top:8px" onclick="doUpdate()">Jetzt aktualisieren</button></div>';
+}
+function doUpdate() { location.replace(location.pathname + '?v=' + encodeURIComponent(UPD ? UPD.v : Date.now())); }
+function checkUpdate(manual) {
+  if (!/^https?:$/.test(location.protocol) || !window.fetch) { if (manual) toast('Update-Prüfung nur online möglich'); return; }
+  if (manual) toast('Prüfe auf Update ...');
+  fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.text(); }).then(function (t) {
+    var mv = /var APP_VERSION = '([^']+)'/.exec(t), md = /var APP_STAND = '([^']+)'/.exec(t);
+    if (!mv) { if (manual) toast('Update-Prüfung nicht möglich'); return; }
+    var neu = mv[1] !== APP_VERSION || (md && md[1] !== APP_STAND);
+    UPD = neu ? { v: mv[1], d: md ? md[1] : '' } : null;
+    if (neu) render(); else if (manual) toast('Sie haben die neueste ' + verText());
+  })['catch'](function () { if (manual) toast('Keine Internetverbindung - Update-Prüfung nicht möglich'); });
+}
 var LIZ_SALT = 'JaNiBa-2380-BSB';
 var FIRMA_FOOTER = 'Brandschutzbuch-App | Janiba Brandschutztechnik GmbH | Tel. 0676/305 83 98 | www.brandschutztechnik-janiba.at';
 var FIRMA_KONTAKT = 'Janiba Brandschutztechnik GmbH, Ketzergasse 299, 2380 Perchtoldsdorf, Tel. 0676/305 83 98, info@loeschtechnik.at';
@@ -966,10 +988,10 @@ function viewHome() {
     return '<div class="hero"><img src="' + IMG_COVER + '" alt="Brandschutzbuch"></div><div class="card" style="text-align:center;padding:22px 18px"><h2>Willkommen im Brandschutzbuch</h2>' +
       '<p class="small" style="line-height:1.5">Hier dokumentieren Sie Ihre Brandschutzeinrichtungen, die regelmäßigen Begehungen und festgestellte Mängel - und erstellen jederzeit einen Bericht als PDF.</p>' +
       '<button class="btn pri full" onclick="editGebaeude()">Erstes Gebäude anlegen</button></div>' +
-      (isLicensed() ? '' : '<p class="small" style="text-align:center">Demoversion - Freischaltung unter Einstellungen.</p>');
+      (isLicensed() ? '' : '<p class="small" style="text-align:center">Demoversion - Freischaltung unter Einstellungen.</p>') + updBanner() + verFooter();
   }
   var anl = byG(DB.anlagen), mo = offeneMaengel(), fa = faelligeAnlagen(30), begs = byG(DB.begehungen);
-  var h = '';
+  var h = updBanner();
   if (!isLicensed()) h += '<div class="hint">Demoversion: 1 Gebäude, PDF mit Wasserzeichen. <span class="lnk" onclick="openSettings()">Lizenz eingeben</span></div>';
   var bk = DB.settings.letztesBackup;
   if ((anl.length || begs.length) && (!bk || -daysUntil(bk) > 30)) h += '<div class="hint">Die Daten liegen nur auf diesem Gerät. ' + (bk ? 'Letzte Sicherung: ' + fmtD(bk) + '. ' : 'Noch keine Sicherung. ') + '<span class="lnk" onclick="exportBackup()">Jetzt sichern</span></div>';
@@ -996,7 +1018,7 @@ function viewHome() {
     h += '</div>';
   }
   h += '<div class="btns"><button class="btn pri" onclick="newBegehung()">Neue Begehung</button><button class="btn" onclick="editMangel()">Mangel erfassen</button><button class="btn" onclick="goTab(\'ber\')">Bericht</button></div>';
-  return h;
+  return h + verFooter();
 }
 
 /* ---------- Gebäude ---------- */
@@ -2292,7 +2314,7 @@ function openSettings() {
   h += '<div class="grp">Datensicherung</div><p class="small" style="line-height:1.5">Alle Daten sind nur auf diesem Gerät gespeichert. Sichern Sie regelmäßig - z. B. in iCloud Drive oder per Mail. Letzte Sicherung: ' + (s.letztesBackup ? fmtD(s.letztesBackup) : 'noch keine') + '</p>' +
     '<button class="btn pri full" onclick="exportBackup()">Daten sichern (Datei)</button>' +
     '<label>Sicherung wiederherstellen</label><input type="file" accept=".json,application/json" onchange="importBackup(this)">';
-  h += '<div class="grp">Info</div><p class="small" style="line-height:1.5">Brandschutzbuch Version ' + APP_VERSION + '<br>' + esc(FIRMA_KONTAKT) + '</p>';
+  h += '<div class="grp">Info</div><p class="small" style="line-height:1.5">Brandschutzbuch ' + esc(verText()) + ' <span class="lnk" onclick="checkUpdate(true)">auf Update prüfen</span><br>' + esc(FIRMA_KONTAKT) + '</p>';
   modal('Einstellungen', h, [{ label: 'Schließen', fn: function () { closeModal(); render(); } }]);
 }
 function saveBk() {
@@ -2404,7 +2426,13 @@ function init() {
     }
     var g = null; try { g = localStorage.getItem('bsb_gid'); } catch (e) {}
     STATE.gid = (g && findById(DB.gebaeude, g)) ? g : (DB.gebaeude.length ? DB.gebaeude[0].id : null);
+    if (DB.settings.appVersion !== APP_VERSION + '|' + APP_STAND) {
+      var warAlt = DB.settings.appVersion;
+      DB.settings.appVersion = APP_VERSION + '|' + APP_STAND; save('settings');
+      if (warAlt || DB.gebaeude.length) setTimeout(function () { info('Update installiert', '<p style="line-height:1.5">Das Brandschutzbuch wurde aktualisiert auf <b>' + esc(verText()) + '</b>.</p><p class="small">Vorher: Version ' + esc((warAlt || 'älter').split('|')[0]) + ((warAlt || '').split('|')[1] ? ' vom ' + esc(warAlt.split('|')[1]) : '') + '</p>'); }, 400);
+    }
     render();
+    setTimeout(function () { checkUpdate(false); }, 1500);
   });
   try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
