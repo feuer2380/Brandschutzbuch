@@ -115,8 +115,8 @@ textarea{min-height:80px;resize:vertical}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 /* Brandschutzbuch - lokale Web-App (Janiba Brandschutztechnik GmbH) */
-var APP_VERSION = '2.5';
-var APP_STAND = '19.10.2026 12:20';
+var APP_VERSION = '2.6';
+var APP_STAND = '19.10.2026 12:50';
 var UPD = null;
 function verText() { return 'Version ' + APP_VERSION + ' vom ' + APP_STAND; }
 function verFooter() {
@@ -1312,7 +1312,7 @@ function startBegehung(vid, per, bid) {
     '<div class="two"><div><label>Datum (heute erledigt)</label><input id="b_d" type="date" value="' + todayStr() + '"></div><div><label>Uhrzeit</label><input id="b_z" type="time" value="' + nowTime() + '"></div></div>' +
     perSel +
     '<label>Durchgeführt von *</label><input id="b_pr" value="' + esc(ex ? ex.pruefer : (DB.settings.letzterPruefer || '')) + '">' +
-    '<div class="small" style="margin-top:10px">Bei jeder Antwort können Sie eine Bemerkung schreiben und selbst entscheiden, ob es als Mangel in die Mängelliste kommt (bei Nein ist das vorausgewählt). Falsch getippt? Einfach nochmal auf denselben Knopf tippen, dann ist die Auswahl wieder weg. ' + (isPerArt(v.art) ? 'Sie müssen nicht alles auf einmal ausfüllen - mit „Zwischenspeichern“ bleiben offene Fragen bis zum Ende des Zeitraums offen.' : '') + '</div>' +
+    '<div class="small" style="margin-top:10px">Bei Nein öffnet sich ein Feld für die Beschreibung. Mit dem Häkchen entscheiden Sie, ob es als Mangel in die Mängelliste kommt. Falsch getippt? Einfach nochmal auf denselben Knopf tippen, dann ist die Auswahl wieder weg. ' + (isPerArt(v.art) ? 'Sie müssen nicht alles auf einmal ausfüllen - mit „Zwischenspeichern“ bleiben offene Fragen bis zum Ende des Zeitraums offen.' : '') + '</div>' +
     '<div class="btns" style="margin-top:6px"><button class="btn sm" onclick="begAllOk()">Alle offenen mit Ja beantworten</button>' + (ex ? '<button class="btn sm" id="b_tgl" onclick="begToggle()">' + (ex.offen ? 'Auch beantwortete zeigen' : 'Nur offene zeigen') + '</button>' : '') + '</div>';
   var nr = 0, sec1 = '';
   for (var i = 0; i < v.punkte.length; i++) {
@@ -1363,7 +1363,7 @@ function begSet(i, s, keep) {
   if ($('mk' + i)) $('mk' + i).checked = !!BEG.mk[i];
   var b = $('seg' + i).getElementsByTagName('button');
   b[0].className = s === 'ok' ? 'on-ok' : ''; b[1].className = s === 'mangel' ? 'on-err' : ''; b[2].className = s === 'na' ? 'on-na' : '';
-  $('bx' + i).style.display = s ? 'block' : 'none';
+  $('bx' + i).style.display = (s === 'mangel' || (s && BEG.mk[i])) ? 'block' : 'none'; /* Feld nur bei Nein */
   $('bb' + i).placeholder = s === 'mangel' ? 'Mangel beschreiben (Ort, Art) ...' : 'Bemerkung (z. B. vorhanden, aber Deckel fehlt) ...';
 }
 function begTap(i, s) {
@@ -1398,7 +1398,7 @@ function saveBegehung(zwischen) {
     if (isHdr(v.punkte[j])) { sec = hdrText(v.punkte[j]); continue; }
     var bem = val('bb' + j), st = BEG.st[j], a = BEG.alt[sec + '|' + v.punkte[j]] || {};
     var mk = !!(st && BEG.mk[j]), hatte = !!(a.status && ptMangel(a) && a.mid);
-    var p = { text: v.punkte[j], status: st, bemerkung: st ? bem : '', mangel: mk, sec: sec, datum: st ? (a.status === st && a.datum ? a.datum : d) : '', mid: hatte ? a.mid : '' };
+    var p = { text: v.punkte[j], status: st, bemerkung: (st === 'mangel' || mk) ? bem : '', mangel: mk, sec: sec, datum: st ? (a.status === st && a.datum ? a.datum : d) : '', mid: hatte ? a.mid : '' };
     if (hatte && !mk) {
       /* Nein wurde zurückgenommen: automatisch angelegten Mangel entfernen, solange er unbearbeitet ist */
       var am = findById(DB.maengel, a.mid);
