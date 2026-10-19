@@ -115,7 +115,7 @@ textarea{min-height:80px;resize:vertical}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 /* Brandschutzbuch - lokale Web-App (Janiba Brandschutztechnik GmbH) */
-var APP_VERSION = '2.0';
+var APP_VERSION = '2.2';
 var LIZ_SALT = 'JaNiBa-2380-BSB';
 var FIRMA_FOOTER = 'Brandschutzbuch-App | Janiba Brandschutztechnik GmbH | Tel. 0676/305 83 98 | www.brandschutztechnik-janiba.at';
 var FIRMA_KONTAKT = 'Janiba Brandschutztechnik GmbH, Ketzergasse 299, 2380 Perchtoldsdorf, Tel. 0676/305 83 98, info@loeschtechnik.at';
@@ -927,6 +927,10 @@ function begFor(vid, p) {
 }
 function perStatus(vid, p) {
   var b = begFor(vid, p), r = perRange(p), t = todayStr();
+  if (b && b.offen) {
+    var sd = begStand(b), late = t > r.bis;
+    return { b: b, cls: late ? 'p-err' : 'p-warn', txt: (late ? 'unvollständig ' : 'in Arbeit ') + sd.a + '/' + sd.n, k: late ? 'unvoll' : 'arbeit', sd: sd };
+  }
   if (b) return { b: b, cls: 'p-ok', txt: 'erledigt ' + fmtD(b.datum).substr(0, 6), k: 'ok' };
   var g = curGeb(), ab = g ? (g.startDatum || g.erstellt || '') : '';
   if (ab && r.bis < ab) return { b: null, cls: 'p-mut', txt: 'vor Beginn', k: 'vorher' };
@@ -944,7 +948,7 @@ function begStatus(v) {
   var last = lastBeg(v.id), a = artObj(v.art);
   if (isPerArt(v.art)) {
     var cp = perOf(v.art, todayStr()), s = perStatus(v.id, cp);
-    return { last: last, cls: s.k === 'ok' ? 'p-ok' : 'p-warn', txt: (s.k === 'ok' ? 'erledigt' : 'fällig') + ' - ' + (cp.length === 4 ? cp : perSide(cp)), per: cp };
+    return { last: last, cls: s.k === 'ok' ? 'p-ok' : 'p-warn', txt: (s.k === 'ok' ? 'erledigt' : s.k === 'arbeit' ? 'in Arbeit ' + s.sd.a + '/' + s.sd.n : s.k === 'unvoll' ? 'unvollständig ' + s.sd.a + '/' + s.sd.n : 'fällig') + ' - ' + (cp.length === 4 ? cp : perSide(cp)), per: cp };
   }
   if (!last) return { last: null, cls: a.d ? 'p-warn' : 'p-mut', txt: 'noch keine' };
   var since = -daysUntil(last.datum);
@@ -1196,12 +1200,13 @@ function viewBegehungen() {
     h += '<div class="card"><h3>' + esc(v.name) + '</h3><div style="display:grid;grid-template-columns:repeat(' + cols + ',1fr);grid-gap:8px">';
     for (var j = 0; j < ps.length; j++) {
       var s = perStatus(v.id, ps[j]);
-      var bg = s.k === 'ok' ? 'var(--okbg)' : s.k === 'fehlt' ? 'var(--errbg)' : s.k === 'faellig' ? 'var(--warnbg)' : 'var(--bg)';
-      var fg = s.k === 'ok' ? 'var(--ok)' : s.k === 'fehlt' ? 'var(--red2)' : s.k === 'faellig' ? 'var(--warn)' : 'var(--mut)';
+      var bg = s.k === 'ok' ? 'var(--okbg)' : (s.k === 'fehlt' || s.k === 'unvoll') ? 'var(--errbg)' : (s.k === 'faellig' || s.k === 'arbeit') ? 'var(--warnbg)' : 'var(--bg)';
+      var fg = s.k === 'ok' ? 'var(--ok)' : (s.k === 'fehlt' || s.k === 'unvoll') ? 'var(--red2)' : (s.k === 'faellig' || s.k === 'arbeit') ? 'var(--warn)' : 'var(--mut)';
       var n = s.b ? begAnzahl(s.b) : 0;
+      if (s.k === 'arbeit' || s.k === 'unvoll') { var pc = Math.round(100 * s.sd.a / Math.max(1, s.sd.n)); bg = 'linear-gradient(90deg,' + (s.k === 'unvoll' ? 'var(--errbg)' : 'var(--okbg)') + ' ' + pc + '%,var(--warnbg) ' + pc + '%)'; }
       h += '<div onclick="perTap(\'' + v.id + '\',\'' + ps[j] + '\')" style="background:' + bg + ';border:1px solid var(--bd);border-radius:10px;padding:9px 8px;text-align:center">' +
         '<div style="font-weight:700;font-size:15px">' + (v.art === 'jaehrlich' ? 'Jahresbegehung ' + y : perShort(ps[j])) + '</div>' +
-        '<div style="font-size:12px;font-weight:700;color:' + fg + ';margin-top:2px">' + (s.k === 'ok' ? '&#10003; ' + fmtD(s.b.datum).substr(0, 6) : s.k === 'fehlt' ? 'fehlt' : s.k === 'faellig' ? 'jetzt fällig' : s.k === 'vorher' ? 'vor Beginn' : '&ndash;') + '</div>' +
+        '<div style="font-size:12px;font-weight:700;color:' + fg + ';margin-top:2px">' + (s.k === 'ok' ? '&#10003; ' + fmtD(s.b.datum).substr(0, 6) : s.k === 'arbeit' ? 'in Arbeit ' + s.sd.a + '/' + s.sd.n : s.k === 'unvoll' ? 'unvollständig ' + s.sd.a + '/' + s.sd.n : s.k === 'fehlt' ? 'fehlt' : s.k === 'faellig' ? 'jetzt fällig' : s.k === 'vorher' ? 'vor Beginn' : '&ndash;') + '</div>' +
         (n ? '<div style="font-size:11px;color:var(--red2);font-weight:700">' + n + (n === 1 ? ' Mangel' : ' Mängel') + '</div>' : '') + '</div>';
     }
     h += '</div></div>';
@@ -1228,7 +1233,8 @@ function viewBegehungen() {
 }
 function begRow(b) {
   var n = begAnzahl(b), p = begPer(b);
-  return '<div class="row" onclick="showBegehung(\'' + b.id + '\')"><div class="m"><div class="t">' + esc(b.vorlageName) + (p ? ' - ' + perLabel(p) : '') + '</div><div class="s">' + fmtD(b.datum) + ' - ' + esc(b.pruefer) + '</div></div>' + (n ? pill('p-err', n + (n === 1 ? ' Mangel' : ' Mängel')) : pill('p-ok', 'i.O.')) + '</div>';
+  var sd = begStand(b);
+  return '<div class="row" onclick="showBegehung(\'' + b.id + '\')"><div class="m"><div class="t">' + esc(b.vorlageName) + (p ? ' - ' + perLabel(p) : '') + '</div><div class="s">' + fmtD(b.datum) + ' - ' + esc(b.pruefer) + (n ? ' - ' + n + (n === 1 ? ' Mangel' : ' Mängel') : '') + '</div></div>' + (b.offen ? pill('p-warn', 'in Arbeit ' + sd.a + '/' + sd.n) : (n ? pill('p-err', n + (n === 1 ? ' Mangel' : ' Mängel')) : pill('p-ok', 'i.O.'))) + '</div>';
 }
 function perTap(vid, p) {
   var v = findById(DB.vorlagen, vid), s = perStatus(vid, p);
@@ -1250,35 +1256,81 @@ function newBegehung() {
   h += '<div class="small" style="margin-top:12px">Checklisten können unter Einstellungen angepasst werden.</div>';
   modal('Neue Begehung', h, [{ label: 'Abbrechen', fn: closeModal }]);
 }
-function startBegehung(vid, per) {
+function begOffenFor(vid, p) {
+  var l = byG(DB.begehungen);
+  for (var i = 0; i < l.length; i++) if (l[i].vorlageId === vid && l[i].offen && (!p || begPer(l[i]) === p)) return l[i];
+  return null;
+}
+function begStand(b) { var a = 0, n = b.punkte.length; for (var i = 0; i < n; i++) if (b.punkte[i].status) a++; return { a: a, n: n }; }
+function startBegehung(vid, per, bid) {
   var v = findById(DB.vorlagen, vid); if (!v) return;
+  var cur = isPerArt(v.art) ? (per || perOf(v.art, todayStr())) : '';
+  var ex = bid ? findById(DB.begehungen, bid) : (isPerArt(v.art) ? begOffenFor(vid, cur) : null);
+  if (ex) cur = begPer(ex) || cur;
   var perSel = '';
   if (isPerArt(v.art)) {
-    var cur = per || perOf(v.art, todayStr()), yy = +cur.substr(0, 4), opts = '', lst = perList(v.art, yy - 1).concat(perList(v.art, yy), perList(v.art, yy + 1));
-    for (var pi = 0; pi < lst.length; pi++) opts += '<option value="' + lst[pi] + '"' + (lst[pi] === cur ? ' selected' : '') + '>' + perLabel(lst[pi]) + (begFor(vid, lst[pi]) ? ' (bereits erledigt)' : '') + '</option>';
-    perSel = '<label>Begehung für</label><select id="b_per">' + opts + '</select>';
+    var yy = +cur.substr(0, 4), opts = '', lst = perList(v.art, yy - 1).concat(perList(v.art, yy), perList(v.art, yy + 1));
+    for (var pi = 0; pi < lst.length; pi++) { var bx = begFor(vid, lst[pi]); opts += '<option value="' + lst[pi] + '"' + (lst[pi] === cur ? ' selected' : '') + '>' + perLabel(lst[pi]) + (bx && bx !== ex ? (bx.offen ? ' (in Arbeit)' : ' (bereits erledigt)') : '') + '</option>'; }
+    perSel = '<label>Begehung für</label><select id="b_per"' + (ex ? ' disabled' : '') + '>' + opts + '</select>';
   }
-  BEG = { vid: vid, st: [] };
-  for (var k = 0; k < v.punkte.length; k++) BEG.st.push(isHdr(v.punkte[k]) ? 'hdr' : '');
+  /* bisherige Antworten (beim Weiterarbeiten) nach Fragetext zuordnen */
+  var alt = {};
+  if (ex) for (var q = 0; q < ex.punkte.length; q++) alt[(ex.punkte[q].sec || '') + '|' + ex.punkte[q].text] = ex.punkte[q];
+  BEG = { vid: vid, st: [], alt: alt, ex: ex ? ex.id : null };
+  var sec0 = '';
+  for (var k = 0; k < v.punkte.length; k++) {
+    if (isHdr(v.punkte[k])) { BEG.st.push('hdr'); sec0 = hdrText(v.punkte[k]); continue; }
+    var ap = alt[sec0 + '|' + v.punkte[k]];
+    BEG.st.push(ap && ap.status ? ap.status : '');
+  }
+  var st0 = ex ? begStand(ex) : null;
   var h = '<div class="small" style="margin-top:8px">' + esc(curGeb().name) + ' - ' + artLabel(v.art) + ' - ' + nFragen(v) + ' Fragen</div>' +
-    '<div class="two"><div><label>Datum</label><input id="b_d" type="date" value="' + todayStr() + '"></div><div><label>Uhrzeit</label><input id="b_z" type="time" value="' + nowTime() + '"></div></div>' +
+    (ex ? '<div class="hint" style="margin-top:10px">Weiter ausfüllen: ' + st0.a + ' von ' + st0.n + ' Fragen sind bereits beantwortet. ' + (ex.offen ? 'Es werden nur noch die offenen Fragen angezeigt.' : '') + ' Offene Fragen können Sie jetzt oder später beantworten.</div>' : '') +
+    '<div class="two"><div><label>Datum (heute erledigt)</label><input id="b_d" type="date" value="' + todayStr() + '"></div><div><label>Uhrzeit</label><input id="b_z" type="time" value="' + nowTime() + '"></div></div>' +
     perSel +
-    '<label>Durchgeführt von *</label><input id="b_pr" value="' + esc(DB.settings.letzterPruefer || '') + '">' +
-    '<div class="small" style="margin-top:10px">Ja = in Ordnung, Nein = Mangel</div>' +
-    '<div class="btns" style="margin-top:6px"><button class="btn sm" onclick="begAllOk()">Alle offenen mit Ja beantworten</button></div>';
-  var nr = 0;
+    '<label>Durchgeführt von *</label><input id="b_pr" value="' + esc(ex ? ex.pruefer : (DB.settings.letzterPruefer || '')) + '">' +
+    '<div class="small" style="margin-top:10px">Ja = in Ordnung, Nein = Mangel. ' + (isPerArt(v.art) ? 'Sie müssen nicht alles auf einmal ausfüllen - mit „Zwischenspeichern“ bleiben offene Fragen bis zum Ende des Zeitraums offen.' : '') + '</div>' +
+    '<div class="btns" style="margin-top:6px"><button class="btn sm" onclick="begAllOk()">Alle offenen mit Ja beantworten</button>' + (ex ? '<button class="btn sm" id="b_tgl" onclick="begToggle()">' + (ex.offen ? 'Auch beantwortete zeigen' : 'Nur offene zeigen') + '</button>' : '') + '</div>';
+  var nr = 0, sec1 = '';
   for (var i = 0; i < v.punkte.length; i++) {
-    if (isHdr(v.punkte[i])) { h += '<div class="grp" style="margin-top:22px;display:flex;align-items:center;justify-content:space-between"><span style="flex:1;margin-right:8px">' + esc(hdrText(v.punkte[i])) + '</span><button class="btn sm" style="text-transform:none;letter-spacing:0;font-size:12px" onclick="begSec(' + i + ',\'na\')">Entfällt</button></div>'; continue; }
+    if (isHdr(v.punkte[i])) { sec1 = hdrText(v.punkte[i]); h += '<div class="grp bsec" data-i="' + i + '" style="margin-top:22px;display:flex;align-items:center;justify-content:space-between"><span style="flex:1;margin-right:8px">' + esc(sec1) + '</span><button class="btn sm" style="text-transform:none;letter-spacing:0;font-size:12px" onclick="begSec(' + i + ',\'na\')">Entfällt</button></div>'; continue; }
     nr++;
-    h += '<div class="pt"><div class="q">' + nr + '. ' + esc(v.punkte[i]) + '</div><div class="seg" id="seg' + i + '">' +
+    var a1 = alt[sec1 + '|' + v.punkte[i]];
+    h += '<div class="pt" id="pt' + i + '"><div class="q">' + nr + '. ' + esc(v.punkte[i]) + (a1 && a1.status && a1.datum ? ' <span class="small">(' + fmtD(a1.datum) + ')</span>' : '') + '</div><div class="seg" id="seg' + i + '">' +
       '<button onclick="begSet(' + i + ',\'ok\')">Ja</button><button onclick="begSet(' + i + ',\'mangel\')">Nein</button><button onclick="begSet(' + i + ',\'na\')">Entfällt</button></div>' +
-      '<input id="bb' + i + '" placeholder="Mangel beschreiben (Ort, Art) ..." style="display:none;margin-top:8px"></div>';
+      '<input id="bb' + i + '" value="' + esc(a1 ? a1.bemerkung : '') + '" placeholder="Mangel beschreiben (Ort, Art) ..." style="display:none;margin-top:8px"></div>';
   }
   h += '<label>Weitere Mängel (je Zeile ein Mangel)</label><textarea id="b_zus" placeholder="z. B. Feuerlöscher 2. OG fehlt"></textarea>' +
-    '<label>Bemerkung zur Begehung</label><textarea id="b_bem"></textarea>' +
-    '<label>Unterschrift</label><canvas id="sigc" class="sig"></canvas><div class="btns"><button class="btn sm" onclick="if(SIG)SIG.clear()">Unterschrift löschen</button></div>';
-  modal(v.name, h, [{ label: 'Abbrechen', fn: closeModalAsk }, { label: 'Speichern', cls: 'pri', fn: saveBegehung }], 'Begehung verwerfen? Die Eingaben gehen verloren.');
+    '<label>Bemerkung zur Begehung</label><textarea id="b_bem">' + esc(ex ? ex.bemerkung : '') + '</textarea>' +
+    '<label>Unterschrift</label>' + (ex && ex.unterschrift ? '<div class="small">Bisherige Unterschrift bleibt erhalten, wenn Sie nicht neu unterschreiben.</div>' : '') + '<canvas id="sigc" class="sig"></canvas><div class="btns"><button class="btn sm" onclick="if(SIG)SIG.clear()">Unterschrift löschen</button></div>';
+  var btns = isPerArt(v.art) ? [{ label: 'Zwischenspeichern', fn: function () { saveBegehung(true); } }] : [{ label: 'Abbrechen', fn: closeModalAsk }];
+  btns.push({ label: 'Speichern', cls: 'pri', fn: function () { saveBegehung(false); } });
+  modal(v.name + (cur ? ' - ' + perSide(cur) : ''), h, btns, 'Eingaben verwerfen? Nicht gespeicherte Antworten gehen verloren.');
+  for (var s = 0; s < BEG.st.length; s++) if (BEG.st[s] && BEG.st[s] !== 'hdr') begSet(s, BEG.st[s]);
   SIG = initSig($('sigc'));
+  if (ex && ex.offen) begNurOffen();
+}
+function begToggle() {
+  if (!BEG) return;
+  if (BEG.nurOffen) begAlleZeigen(); else begNurOffen();
+}
+function begAlleZeigen() {
+  BEG.nurOffen = false;
+  for (var i = 0; i < BEG.st.length; i++) { var e = $('pt' + i); if (e) e.style.display = ''; }
+  var hs = document.querySelectorAll('.bsec'); for (var j = 0; j < hs.length; j++) hs[j].style.display = 'flex';
+  if ($('b_tgl')) $('b_tgl').textContent = 'Nur offene zeigen';
+}
+function begNurOffen() {
+  if (!BEG) return;
+  BEG.nurOffen = true;
+  if ($('b_tgl')) $('b_tgl').textContent = 'Auch beantwortete zeigen';
+  for (var i = 0; i < BEG.st.length; i++) { var e = $('pt' + i); if (e && BEG.st[i] && BEG.st[i] !== 'hdr') e.style.display = 'none'; }
+  var hs = document.querySelectorAll('.bsec');
+  for (var j = 0; j < hs.length; j++) {
+    var k = +hs[j].getAttribute('data-i') + 1, any = false;
+    for (; k < BEG.st.length && BEG.st[k] !== 'hdr'; k++) if (!BEG.st[k]) any = true;
+    hs[j].style.display = any ? 'flex' : 'none';
+  }
 }
 function begSet(i, s) {
   if (!BEG || BEG.st[i] === 'hdr') return;
@@ -1292,50 +1344,70 @@ function begSec(i, s) {
   for (var k = i + 1; k < BEG.st.length && BEG.st[k] !== 'hdr'; k++) begSet(k, s);
 }
 function begAllOk() { if (!BEG) return; for (var i = 0; i < BEG.st.length; i++) if (BEG.st[i] === '') begSet(i, 'ok'); }
-function saveBegehung() {
+function saveBegehung(zwischen) {
   if (!BEG) return;
-  var v = findById(DB.vorlagen, BEG.vid), offen = 0, first = -1;
-  for (var i = 0; i < BEG.st.length; i++) if (BEG.st[i] === '') { offen++; if (first < 0) first = i; }
-  if (offen) { toast(offen + ' Frage(n) noch nicht beantwortet'); var el = $('seg' + first); if (el && el.scrollIntoView) el.scrollIntoView({ block: 'center' }); return; }
+  var v = findById(DB.vorlagen, BEG.vid), offen = 0, first = -1, beantw = 0;
+  for (var i = 0; i < BEG.st.length; i++) { if (BEG.st[i] === '') { offen++; if (first < 0) first = i; } else if (BEG.st[i] !== 'hdr') beantw++; }
   var pr = val('b_pr'); if (!pr) { toast('Bitte angeben, wer die Begehung durchgeführt hat'); return; }
+  if (offen && !zwischen) {
+    if (!isPerArt(v.art)) { toast(offen + ' Frage(n) noch nicht beantwortet'); var el = $('seg' + first); if (el && el.scrollIntoView) el.scrollIntoView({ block: 'center' }); return; }
+    zwischen = true;
+  }
+  if (!beantw && !BEG.ex) { toast('Bitte mindestens eine Frage beantworten'); return; }
   var d = val('b_d') || todayStr();
-  var b = { id: uid(), gid: STATE.gid, vorlageId: v.id, vorlageName: v.name, art: v.art, periode: val('b_per') || perOf(v.art, d), datum: d, zeit: val('b_z'), pruefer: pr, punkte: [], bemerkung: val('b_bem'), unterschrift: SIG && !SIG.isEmpty() ? SIG.data() : '', zusatz: 0 };
-  var neu = [], nr = nextMangelNr(), sec = '';
+  var ex = BEG.ex ? findById(DB.begehungen, BEG.ex) : null;
+  var per = ex ? begPer(ex) : (val('b_per') || perOf(v.art, d));
+  var b = ex || { id: uid(), gid: STATE.gid, vorlageId: v.id, vorlageName: v.name, art: v.art, periode: per, begonnen: d, zusatz: 0 };
+  b.datum = d; b.zeit = val('b_z'); b.pruefer = pr; b.bemerkung = val('b_bem');
+  if (SIG && !SIG.isEmpty()) b.unterschrift = SIG.data(); else if (!ex) b.unterschrift = '';
+  var neu = [], nr = nextMangelNr(), sec = '', pts = [];
   for (var j = 0; j < v.punkte.length; j++) {
     if (isHdr(v.punkte[j])) { sec = hdrText(v.punkte[j]); continue; }
-    var bem = val('bb' + j);
-    b.punkte.push({ text: v.punkte[j], status: BEG.st[j], bemerkung: BEG.st[j] === 'mangel' ? bem : '', sec: sec });
-    if (BEG.st[j] === 'mangel') neu.push({ t: sec || v.name, b: v.punkte[j] + (bem ? '\n' + bem : '') });
+    var bem = val('bb' + j), st = BEG.st[j], a = BEG.alt[sec + '|' + v.punkte[j]] || {};
+    var p = { text: v.punkte[j], status: st, bemerkung: st === 'mangel' ? bem : '', sec: sec, datum: st ? (a.status === st && a.datum ? a.datum : d) : '', mid: a.mid || '' };
+    if (st === 'mangel' && a.status !== 'mangel') {
+      var mid = uid(); p.mid = mid;
+      neu.push({ id: mid, t: sec || v.name, b: v.punkte[j] + (bem ? '\n' + bem : '') });
+    }
+    pts.push(p);
   }
+  b.punkte = pts;
   var zus = val('b_zus').split(/\n/);
-  for (var z = 0; z < zus.length; z++) { var t = zus[z].replace(/^\s+|\s+$/g, ''); if (t) { neu.push({ t: t, b: '' }); b.zusatz++; } }
+  for (var z = 0; z < zus.length; z++) { var t = zus[z].replace(/^\s+|\s+$/g, ''); if (t) { neu.push({ id: uid(), t: t, b: '' }); b.zusatz = (b.zusatz || 0) + 1; } }
   for (var k = 0; k < neu.length; k++) {
-    DB.maengel.push({ id: uid(), gid: STATE.gid, nr: nr++, begehungId: b.id, aid: '', datum: d, titel: neu[k].t, beschreibung: neu[k].b, standort: '', inventar: '', massnahme: '', prioritaet: 'mittel', frist: '', status: 'offen', zustaendig: DB.settings.letzteZust || 'Brandschutzbeauftragter', arbeitszeit: '', quelle: v.name + (val('b_per') ? ' ' + perLabel(val('b_per')) : '') + ' vom ' + fmtD(d), fotos: [] });
+    DB.maengel.push({ id: neu[k].id, gid: STATE.gid, nr: nr++, begehungId: b.id, aid: '', datum: d, titel: neu[k].t, beschreibung: neu[k].b, standort: '', inventar: '', massnahme: '', prioritaet: 'mittel', frist: '', status: 'offen', typ: 'mangel', zustaendig: DB.settings.letzteZust || 'Brandschutzbeauftragter', arbeitszeit: '', quelle: v.name + (per ? ' ' + perLabel(per) : '') + ' vom ' + fmtD(d), fotos: [] });
   }
-  DB.begehungen.push(b);
+  b.offen = offen > 0;
+  if (!ex) DB.begehungen.push(b);
   DB.settings.letzterPruefer = pr;
   save('begehungen'); save('maengel'); save('settings');
-  closeModal(); STATE.tab = 'beg'; STATE.begJahr = +(b.periode || d).substr(0, 4); render();
-  if (neu.length) {
-    info('Begehung gespeichert', '<p style="line-height:1.5">' + neu.length + (neu.length === 1 ? ' Mangel wurde' : ' Mängel wurden') + ' automatisch in die Mängelliste übernommen. Dort können Sie Fotos, Priorität und Frist ergänzen.</p>');
-  } else toast('Begehung gespeichert - alles in Ordnung');
+  closeModal(); STATE.tab = 'beg'; STATE.begJahr = +(per || d).substr(0, 4); render();
+  var msg = b.offen ? 'Zwischengespeichert: ' + (pts.length - offen) + ' von ' + pts.length + ' Fragen beantwortet, ' + offen + ' noch offen' + (per ? ' bis ' + fmtD(perRange(per).bis) : '') + '.' : 'Begehung vollständig abgeschlossen.';
+  if (neu.length) info(b.offen ? 'Zwischengespeichert' : 'Begehung gespeichert', '<p style="line-height:1.5">' + esc(msg) + '</p><p style="line-height:1.5">' + neu.length + (neu.length === 1 ? ' Mangel wurde' : ' Mängel wurden') + ' in die Mängelliste übernommen.</p>');
+  else toast(msg);
 }
 function showBegehung(id) {
   var b = findById(DB.begehungen, id); if (!b) return;
-  var h = '<table class="kv"><tr><td>Datum</td><td>' + fmtD(b.datum) + (b.zeit ? ', ' + esc(b.zeit) : '') + '</td></tr><tr><td>Checkliste</td><td>' + esc(b.vorlageName) + ' (' + artLabel(b.art) + ')</td></tr>' + (begPer(b) ? '<tr><td>Begehung für</td><td>' + perLabel(begPer(b)) + '</td></tr>' : '') + '<tr><td>Durchgeführt von</td><td>' + esc(b.pruefer) + '</td></tr></table>';
+  var sd = begStand(b);
+  var h = (b.offen ? '<div class="hint" style="margin-top:10px">In Arbeit: ' + sd.a + ' von ' + sd.n + ' Fragen beantwortet, ' + (sd.n - sd.a) + ' noch offen' + (begPer(b) ? ' (bis ' + fmtD(perRange(begPer(b)).bis) + ')' : '') + '.</div>' : '') +
+    '<table class="kv"><tr><td>' + (b.offen ? 'Zuletzt bearbeitet' : 'Datum') + '</td><td>' + fmtD(b.datum) + (b.zeit ? ', ' + esc(b.zeit) : '') + '</td></tr>' + (b.begonnen && b.begonnen !== b.datum ? '<tr><td>Begonnen</td><td>' + fmtD(b.begonnen) + '</td></tr>' : '') + '<tr><td>Checkliste</td><td>' + esc(b.vorlageName) + ' (' + artLabel(b.art) + ')</td></tr>' + (begPer(b) ? '<tr><td>Begehung für</td><td>' + perLabel(begPer(b)) + '</td></tr>' : '') + '<tr><td>Durchgeführt von</td><td>' + esc(b.pruefer) + '</td></tr></table>';
   var sec = null;
   if (!b.punkte.length || !b.punkte[0].sec) h += '<div class="grp">Fragen</div>';
   for (var i = 0; i < b.punkte.length; i++) {
     var p = b.punkte[i];
     if (p.sec && p.sec !== sec) { sec = p.sec; h += '<div class="grp">' + esc(sec) + '</div>'; }
-    h += '<div class="row"><div class="m"><div>' + (i + 1) + '. ' + esc(p.text) + '</div>' + (p.bemerkung ? '<div class="s">' + esc(p.bemerkung) + '</div>' : '') + '</div>' + (p.status === 'ok' ? pill('p-ok', 'Ja') : p.status === 'mangel' ? pill('p-err', 'Nein') : pill('p-mut', 'entfällt')) + '</div>';
+    h += '<div class="row"><div class="m"><div>' + (i + 1) + '. ' + esc(p.text) + '</div>' + (p.bemerkung || p.datum ? '<div class="s">' + (p.datum ? fmtD(p.datum) : '') + (p.bemerkung ? (p.datum ? ' - ' : '') + esc(p.bemerkung) : '') + '</div>' : '') + '</div>' + (p.status === 'ok' ? pill('p-ok', 'Ja') : p.status === 'mangel' ? pill('p-err', 'Nein') : p.status === 'na' ? pill('p-mut', 'entfällt') : pill('p-warn', 'offen')) + '</div>';
   }
   if (b.bemerkung) h += '<div class="grp">Bemerkung</div><p style="margin:6px 0">' + esc(b.bemerkung) + '</p>';
   var ms = maengelVonBeg(id);
   if (ms.length) { h += '<div class="grp">Daraus erfasste Mängel</div>'; for (var j = 0; j < ms.length; j++) h += mangelRow(ms[j]); }
   if (b.unterschrift) h += '<div class="grp">Unterschrift</div><img src="' + b.unterschrift + '" style="max-width:260px;width:100%;background:#fff;border-radius:8px;margin-top:6px">';
-  h += '<button class="btn full" style="margin-top:18px;color:var(--red2)" onclick="delBegehung(\'' + id + '\')">Protokoll löschen</button>';
-  modal('Begehung ' + fmtD(b.datum), h, [{ label: 'Schließen', fn: closeModal }, { label: 'Als PDF', cls: 'pri', fn: function () { var doc = makeReport({ titel: 'Begehungsprotokoll', single: b, begd: true }); if (doc) pdfReady(doc, 'Begehung_' + safeName(curGeb().name) + '_' + b.datum + '.pdf'); } }]);
+  h += '<button class="btn full" style="margin-top:18px" onclick="startBegehung(\'' + b.vorlageId + '\',\'' + begPer(b) + '\',\'' + id + '\')">' + (b.offen ? 'Weiter ausfüllen' : 'Antworten bearbeiten') + '</button>';
+  h += '<button class="btn full" style="margin-top:8px;color:var(--red2)" onclick="delBegehung(\'' + id + '\')">Protokoll löschen</button>';
+  var btns = [{ label: 'Schließen', fn: closeModal }];
+  if (b.offen) btns.push({ label: 'Weiter ausfüllen', cls: 'pri', fn: function () { startBegehung(b.vorlageId, begPer(b), id); } });
+  btns.push({ label: 'Als PDF', cls: b.offen ? '' : 'pri', fn: function () { var doc = makeReport({ titel: 'Begehungsprotokoll', single: b, begd: true }); if (doc) pdfReady(doc, 'Begehung_' + safeName(curGeb().name) + '_' + b.datum + '.pdf'); } });
+  modal(b.vorlageName + (begPer(b) ? ' - ' + perSide(begPer(b)) : ''), h, btns);
 }
 function delBegehung(id) { ask('Dieses Begehungsprotokoll löschen? Bereits erfasste Mängel bleiben erhalten.', function () { removeById(DB.begehungen, id); save('begehungen'); render(); toast('Protokoll gelöscht'); }, 'Löschen'); }
 
@@ -1721,7 +1793,7 @@ function makeReport(o) {
         var jps = perList(JV.art, jy);
         for (var jp = 0; jp < jps.length; jp++) {
           var JS = perStatus(JV.id, jps[jp]);
-          jr.push([JV.name, perLabel(jps[jp]), JS.b ? 'durchgeführt' : (JS.k === 'fehlt' ? 'nicht durchgeführt' : (JS.k === 'faellig' ? 'fällig' : (JS.k === 'vorher' ? '-' : 'geplant'))), JS.b ? fmtD(JS.b.datum) : '', JS.b ? JS.b.pruefer : '', JS.b ? (nM(JS.b) ? nM(JS.b) + (nM(JS.b) === 1 ? ' Mangel' : ' Mängel') : 'i.O.') : '']);
+          jr.push([JV.name, perLabel(jps[jp]), JS.k === 'arbeit' ? 'in Arbeit (' + JS.sd.a + '/' + JS.sd.n + ')' : JS.k === 'unvoll' ? 'unvollständig (' + JS.sd.a + '/' + JS.sd.n + ')' : JS.b ? 'durchgeführt' : (JS.k === 'fehlt' ? 'nicht durchgeführt' : (JS.k === 'faellig' ? 'fällig' : (JS.k === 'vorher' ? '-' : 'geplant'))), JS.b ? fmtD(JS.b.datum) : '', JS.b ? JS.b.pruefer : '', JS.b ? (nM(JS.b) ? nM(JS.b) + (nM(JS.b) === 1 ? ' Mangel' : ' Mängel') : 'i.O.') : '']);
         }
       }
       if (jr.length) {
@@ -1729,7 +1801,7 @@ function makeReport(o) {
         tbl(['Checkliste', 'Zeitraum', 'Status', 'Datum', 'Durchgeführt von', 'Ergebnis'], jr, { didParseCell: function (d) {
           if (d.section !== 'body' || d.column.index !== 2) return;
           var t = String(d.cell.raw);
-          if (t === 'durchgeführt') d.cell.styles.textColor = [21, 128, 61]; else if (t === 'nicht durchgeführt') { d.cell.styles.textColor = [200, 30, 30]; d.cell.styles.fontStyle = 'bold'; } else if (t === 'fällig') d.cell.styles.textColor = [180, 83, 9]; else d.cell.styles.textColor = [130, 130, 130];
+          if (t === 'durchgeführt') d.cell.styles.textColor = [21, 128, 61]; else if (t === 'nicht durchgeführt' || t.indexOf('unvollständig') === 0) { d.cell.styles.textColor = [200, 30, 30]; d.cell.styles.fontStyle = 'bold'; } else if (t.indexOf('in Arbeit') === 0) d.cell.styles.textColor = [180, 83, 9]; else if (t === 'fällig') d.cell.styles.textColor = [180, 83, 9]; else d.cell.styles.textColor = [130, 130, 130];
         }, columnStyles: { 3: { cellWidth: 20 }, 5: { cellWidth: 20 } } });
       }
     }
@@ -1737,7 +1809,7 @@ function makeReport(o) {
     if (!begs.length) note('Im Zeitraum keine Begehungen protokolliert.');
     else {
       var br = [];
-      for (var b1 = 0; b1 < begs.length; b1++) { var B = begs[b1], n = nM(B); br.push([fmtD(B.datum) + (B.zeit ? ' ' + B.zeit : ''), B.vorlageName, begPer(B) ? perLabel(begPer(B)) : artLabel(B.art), B.pruefer, n ? n + (n === 1 ? ' Mangel' : ' Mängel') : 'i.O.', B.bemerkung || '']); }
+      for (var b1 = 0; b1 < begs.length; b1++) { var B = begs[b1], n = nM(B); var sB = begStand(B); br.push([fmtD(B.datum) + (B.zeit ? ' ' + B.zeit : ''), B.vorlageName, begPer(B) ? perLabel(begPer(B)) : artLabel(B.art), B.pruefer, B.offen ? 'in Arbeit ' + sB.a + '/' + sB.n + (n ? ', ' + n + ' M.' : '') : (n ? n + (n === 1 ? ' Mangel' : ' Mängel') : 'i.O.'), B.bemerkung || '']); }
       tbl(['Datum', 'Checkliste', 'Zeitraum', 'Durchgeführt von', 'Ergebnis', 'Bemerkung'], br, { didParseCell: colorCol(4), columnStyles: { 0: { cellWidth: 26 }, 4: { cellWidth: 20 } } });
     }
   }
@@ -1745,20 +1817,22 @@ function makeReport(o) {
     if (!o.single) sec('Begehungsprotokolle');
     for (var b2 = 0; b2 < begs.length; b2++) {
       var BB = begs[b2], pr2 = [];
-      sub(fmtD(BB.datum) + (BB.zeit ? ' ' + BB.zeit : '') + ' - ' + BB.vorlageName + ' - durchgeführt von ' + BB.pruefer);
+      var sBB = begStand(BB);
+      sub(fmtD(BB.datum) + (BB.zeit ? ' ' + BB.zeit : '') + ' - ' + BB.vorlageName + (begPer(BB) ? ' ' + perLabel(begPer(BB)) : '') + ' - durchgeführt von ' + BB.pruefer + (BB.offen ? ' - IN ARBEIT (' + sBB.a + '/' + sBB.n + ' beantwortet)' : ''));
       var csec = null;
       for (var p2 = 0; p2 < BB.punkte.length; p2++) {
         var PP = BB.punkte[p2];
-        if (PP.sec && PP.sec !== csec) { csec = PP.sec; pr2.push([{ content: PP.sec, colSpan: 5, styles: { fontStyle: 'bold', fillColor: [254, 236, 226], textColor: [160, 50, 10] } }]); }
+        if (PP.sec && PP.sec !== csec) { csec = PP.sec; pr2.push([{ content: PP.sec, colSpan: 6, styles: { fontStyle: 'bold', fillColor: [254, 236, 226], textColor: [160, 50, 10] } }]); }
         var na = PP.status === 'na';
-        pr2.push([String(p2 + 1), PP.text, PP.status === 'ok' ? 'X' : (na ? '-' : ''), PP.status === 'mangel' ? 'X' : (na ? '-' : ''), na ? 'entfällt' + (PP.bemerkung ? ': ' + PP.bemerkung : '') : (PP.bemerkung || '')]);
+        pr2.push([String(p2 + 1), PP.text, PP.status === 'ok' ? 'X' : (na ? '-' : ''), PP.status === 'mangel' ? 'X' : (na ? '-' : ''), PP.datum ? fmtD(PP.datum) : (PP.status ? fmtD(BB.datum) : ''), !PP.status ? 'offen' : na ? 'entfällt' + (PP.bemerkung ? ': ' + PP.bemerkung : '') : (PP.bemerkung || '')]);
       }
-      tbl(['Nr.', 'Frage', 'Ja', 'Nein', 'Bemerkung'], pr2, {
+      tbl(['Nr.', 'Frage', 'Ja', 'Nein', 'Datum', 'Bemerkung'], pr2, {
         didParseCell: function (d) {
+          if (d.section === 'body' && d.cell.raw === 'offen') { d.cell.styles.textColor = [180, 83, 9]; d.cell.styles.fontStyle = 'bold'; return; }
           if (d.section !== 'body' || d.cell.raw !== 'X') return;
           d.cell.styles.fontStyle = 'bold'; d.cell.styles.textColor = d.column.index === 2 ? [21, 128, 61] : [200, 30, 30];
         },
-        columnStyles: { 0: { cellWidth: 9 }, 2: { cellWidth: 11, halign: 'center' }, 3: { cellWidth: 11, halign: 'center' }, 4: { cellWidth: 48 } } });
+        columnStyles: { 0: { cellWidth: 9 }, 2: { cellWidth: 11, halign: 'center' }, 3: { cellWidth: 11, halign: 'center' }, 4: { cellWidth: 19 }, 5: { cellWidth: 42 } } });
       y -= 4;
       if (BB.bemerkung) note('Bemerkung: ' + BB.bemerkung);
       if (BB.unterschrift) {
