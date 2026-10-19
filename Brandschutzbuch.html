@@ -115,8 +115,8 @@ textarea{min-height:80px;resize:vertical}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 /* Brandschutzbuch - lokale Web-App (Janiba Brandschutztechnik GmbH) */
-var APP_VERSION = '2.3';
-var APP_STAND = '19.10.2026 09:00';
+var APP_VERSION = '2.4';
+var APP_STAND = '19.10.2026 09:10';
 var UPD = null;
 function verText() { return 'Version ' + APP_VERSION + ' vom ' + APP_STAND; }
 function verFooter() {
@@ -1311,7 +1311,7 @@ function startBegehung(vid, per, bid) {
     '<div class="two"><div><label>Datum (heute erledigt)</label><input id="b_d" type="date" value="' + todayStr() + '"></div><div><label>Uhrzeit</label><input id="b_z" type="time" value="' + nowTime() + '"></div></div>' +
     perSel +
     '<label>Durchgeführt von *</label><input id="b_pr" value="' + esc(ex ? ex.pruefer : (DB.settings.letzterPruefer || '')) + '">' +
-    '<div class="small" style="margin-top:10px">Ja = in Ordnung, Nein = Mangel. ' + (isPerArt(v.art) ? 'Sie müssen nicht alles auf einmal ausfüllen - mit „Zwischenspeichern“ bleiben offene Fragen bis zum Ende des Zeitraums offen.' : '') + '</div>' +
+    '<div class="small" style="margin-top:10px">Ja = in Ordnung, Nein = Mangel. Falsch getippt? Einfach nochmal auf denselben Knopf tippen, dann ist die Auswahl wieder weg. ' + (isPerArt(v.art) ? 'Sie müssen nicht alles auf einmal ausfüllen - mit „Zwischenspeichern“ bleiben offene Fragen bis zum Ende des Zeitraums offen.' : '') + '</div>' +
     '<div class="btns" style="margin-top:6px"><button class="btn sm" onclick="begAllOk()">Alle offenen mit Ja beantworten</button>' + (ex ? '<button class="btn sm" id="b_tgl" onclick="begToggle()">' + (ex.offen ? 'Auch beantwortete zeigen' : 'Nur offene zeigen') + '</button>' : '') + '</div>';
   var nr = 0, sec1 = '';
   for (var i = 0; i < v.punkte.length; i++) {
@@ -1319,7 +1319,7 @@ function startBegehung(vid, per, bid) {
     nr++;
     var a1 = alt[sec1 + '|' + v.punkte[i]];
     h += '<div class="pt" id="pt' + i + '"><div class="q">' + nr + '. ' + esc(v.punkte[i]) + (a1 && a1.status && a1.datum ? ' <span class="small">(' + fmtD(a1.datum) + ')</span>' : '') + '</div><div class="seg" id="seg' + i + '">' +
-      '<button onclick="begSet(' + i + ',\'ok\')">Ja</button><button onclick="begSet(' + i + ',\'mangel\')">Nein</button><button onclick="begSet(' + i + ',\'na\')">Entfällt</button></div>' +
+      '<button onclick="begTap(' + i + ',\'ok\')">Ja</button><button onclick="begTap(' + i + ',\'mangel\')">Nein</button><button onclick="begTap(' + i + ',\'na\')">Entfällt</button></div>' +
       '<input id="bb' + i + '" value="' + esc(a1 ? a1.bemerkung : '') + '" placeholder="Mangel beschreiben (Ort, Art) ..." style="display:none;margin-top:8px"></div>';
   }
   h += '<label>Weitere Mängel (je Zeile ein Mangel)</label><textarea id="b_zus" placeholder="z. B. Feuerlöscher 2. OG fehlt"></textarea>' +
@@ -1361,9 +1361,15 @@ function begSet(i, s) {
   b[0].className = s === 'ok' ? 'on-ok' : ''; b[1].className = s === 'mangel' ? 'on-err' : ''; b[2].className = s === 'na' ? 'on-na' : '';
   $('bb' + i).style.display = s === 'mangel' ? 'block' : 'none';
 }
+function begTap(i, s) {
+  if (!BEG) return;
+  begSet(i, BEG.st[i] === s ? '' : s); /* nochmal tippen = Auswahl wieder weg */
+}
 function begSec(i, s) {
   if (!BEG) return;
-  for (var k = i + 1; k < BEG.st.length && BEG.st[k] !== 'hdr'; k++) begSet(k, s);
+  var alle = true, k;
+  for (k = i + 1; k < BEG.st.length && BEG.st[k] !== 'hdr'; k++) if (BEG.st[k] !== s) alle = false;
+  for (k = i + 1; k < BEG.st.length && BEG.st[k] !== 'hdr'; k++) begSet(k, alle ? '' : s);
 }
 function begAllOk() { if (!BEG) return; for (var i = 0; i < BEG.st.length; i++) if (BEG.st[i] === '') begSet(i, 'ok'); }
 function saveBegehung(zwischen) {
@@ -1387,6 +1393,12 @@ function saveBegehung(zwischen) {
     if (isHdr(v.punkte[j])) { sec = hdrText(v.punkte[j]); continue; }
     var bem = val('bb' + j), st = BEG.st[j], a = BEG.alt[sec + '|' + v.punkte[j]] || {};
     var p = { text: v.punkte[j], status: st, bemerkung: st === 'mangel' ? bem : '', sec: sec, datum: st ? (a.status === st && a.datum ? a.datum : d) : '', mid: a.mid || '' };
+    if (a.status === 'mangel' && st !== 'mangel' && a.mid) {
+      /* Nein wurde zurückgenommen: automatisch angelegten Mangel entfernen, solange er unbearbeitet ist */
+      var am = findById(DB.maengel, a.mid);
+      if (am && am.status === 'offen' && !(am.fotos && am.fotos.length) && !am.massnahme) DB.maengel.splice(DB.maengel.indexOf(am), 1);
+      p.mid = '';
+    }
     if (st === 'mangel' && a.status !== 'mangel') {
       var mid = uid(); p.mid = mid;
       neu.push({ id: mid, t: sec || v.name, b: v.punkte[j] + (bem ? '\n' + bem : '') });
