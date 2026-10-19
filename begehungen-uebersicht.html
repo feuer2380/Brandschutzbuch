@@ -1,0 +1,489 @@
+<title>Objektbegehungen Janiba</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+/* Layout: one narrow column like a field clipboard; status first, then the visit, then history */
+:root{
+  --bg:#f3f4f2; --surface:#ffffff; --line:#d9ddd8; --fg:#1d2420; --muted:#5d6862;
+  --accent:#1f4a3d; --accent-ink:#ffffff; --accent-soft:#e3ece8;
+  --ok:#2f7a45; --ok-bg:#e4f2e8; --warn:#9a6200; --warn-bg:#fbf0d9; --bad:#b3261e; --bad-bg:#fbe5e3;
+  --display:"Barlow Semi Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#141917; --surface:#1c2320; --line:#2f3934; --fg:#e7ece9; --muted:#9aa8a1;
+  --accent:#7cc4a8; --accent-ink:#0f1f19; --accent-soft:#22332c;
+  --ok:#7fd396; --ok-bg:#1c3324; --warn:#f0c065; --warn-bg:#3a2e14; --bad:#ff8f86; --bad-bg:#3d1d1b; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141917; --surface:#1c2320; --line:#2f3934; --fg:#e7ece9; --muted:#9aa8a1;
+  --accent:#7cc4a8; --accent-ink:#0f1f19; --accent-soft:#22332c;
+  --ok:#7fd396; --ok-bg:#1c3324; --warn:#f0c065; --warn-bg:#3a2e14; --bad:#ff8f86; --bad-bg:#3d1d1b; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;letter-spacing:.01em}
+h1{font-size:1.65rem;font-weight:700}
+h2{font-size:1.2rem;font-weight:600}
+h3{font-size:1rem;font-weight:600}
+.eyebrow{font-size:.72rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600}
+.muted{color:var(--muted)}
+.small{font-size:.88rem}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.between{justify-content:space-between}
+.grow{flex:1;min-width:0}
+select,input,textarea{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;width:100%}
+textarea{min-height:64px;resize:vertical}
+label{display:flex;flex-direction:column;gap:4px;font-size:.88rem;color:var(--muted);font-weight:500}
+button{font:inherit;font-weight:600;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--fg);padding:10px 14px;cursor:pointer}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button.ghost{background:transparent;border-color:transparent;color:var(--accent);padding:6px 8px}
+button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.pill{display:inline-block;font-size:.78rem;font-weight:600;padding:3px 9px;border-radius:999px;white-space:nowrap;font-family:var(--display);letter-spacing:.03em}
+.ok{background:var(--ok-bg);color:var(--ok)}
+.warn{background:var(--warn-bg);color:var(--warn)}
+.bad{background:var(--bad-bg);color:var(--bad)}
+.neutral{background:var(--accent-soft);color:var(--accent)}
+.alert{border-left:4px solid var(--bad);background:var(--bad-bg);color:var(--fg);border-radius:6px;padding:10px 12px;display:flex;flex-direction:column;gap:4px}
+.alert b{color:var(--bad)}
+.list{display:flex;flex-direction:column}
+.item{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;padding:10px 0;border-top:1px solid var(--line)}
+.item:first-child{border-top:0;padding-top:0}
+.item .grow{display:flex;flex-direction:column;gap:2px}
+.num{font-variant-numeric:tabular-nums}
+.big{font-family:var(--display);font-size:1.5rem;font-weight:700;font-variant-numeric:tabular-nums}
+.stat{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.yn{display:flex;gap:6px;flex-shrink:0}
+.yn button{padding:8px 12px;min-width:56px}
+.yn button.on-ja{background:var(--ok-bg);color:var(--ok);border-color:var(--ok)}
+.yn button.on-nein{background:var(--bad-bg);color:var(--bad);border-color:var(--bad)}
+.group-h{padding-top:6px}
+.note{font-size:.8rem;color:var(--muted);border:1px dashed var(--line);border-radius:8px;padding:8px 10px}
+.qtag{font-family:var(--display);font-weight:700;font-size:.8rem;color:var(--muted);min-width:28px}
+details summary{cursor:pointer;list-style:none}
+details summary::-webkit-details-marker{display:none}
+.check{color:var(--ok);font-weight:700}
+.cross{color:var(--bad);font-weight:700}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:8px;font-weight:600}
+@media (prefers-reduced-motion:no-preference){.card{transition:border-color .15s}}
+</style>
+
+<div class="wrap" id="app"></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+var KEY = 'bsv_begehung_vorschau_v2';
+var HEUTE = new Date(); HEUTE.setHours(0,0,0,0);
+var MITARBEITER = ['Wolfgang Janiba','Wolfgang Janiba sen.','Tobias Prominzer','Tobias Mayerhofer'];
+
+var NACHWEISE = [
+  {key:'raeumung', name:'Räumungsübung'},
+  {key:'schulung', name:'Löschschulung'},
+  {key:'bso', name:'Brandschutzordnung unterschrieben'}
+];
+
+var LAUFEND = [
+  'Eigenkontrollen (täglich/monatlich) wurden vom Objekt eingetragen',
+  'Flucht- und Rettungswege sind frei',
+  'Notausgänge sind frei und leicht zu öffnen',
+  'Feuerlöscher vorhanden, zugänglich, Plombe intakt',
+  'Brandschutztüren schließen selbsttätig und sind nicht verkeilt',
+  'Fluchtwegkennzeichnung gut sichtbar',
+  'Keine unzulässigen Lagerungen oder Brandlasten'
+];
+var VIERTEL = [
+  'Feststellanlagen lösen aus (Sichtprüfung/Test)',
+  'Sicherheitsbeleuchtung Kurztest in Ordnung',
+  'Wandhydranten und Zufahrten für die Feuerwehr frei'
+];
+var JAHR_STANDARD = [
+  {text:'Brandschutztüren und Feststellanlagen: Wartungsnachweis vorhanden', q:1},
+  {text:'Flucht- und Rettungspläne aktuell', q:1},
+  {text:'Sicherheitsbeleuchtung: Jahresprüfung nachgewiesen', q:2},
+  {text:'Brandschutzklappen: Prüfnachweis vorhanden', q:2},
+  {text:'Brandmeldeanlage: Wartungsnachweis vorhanden', q:3},
+  {text:'Wandhydranten/Steigleitungen: Prüfnachweis vorhanden', q:3},
+  {text:'Feuerlöscher: Überprüfung durchgeführt', q:4},
+  {text:'Brandschutzordnung inhaltlich aktuell', q:4}
+];
+
+function uid(){ return 'x' + Math.random().toString(36).slice(2,10); }
+function pd(s){ var p = s.split('-'); return new Date(+p[0], +p[1]-1, +p[2]); }
+function iso(d){ var m = d.getMonth()+1, t = d.getDate(); return d.getFullYear() + '-' + (m<10?'0':'') + m + '-' + (t<10?'0':'') + t; }
+function fmt(s){ if(!s){ return '–'; } var p = s.split('-'); return p[2] + '.' + p[1] + '.' + p[0]; }
+function addM(d,n){ var r = new Date(d.getFullYear(), d.getMonth()+n, d.getDate()); if(r.getDate() !== d.getDate()){ r.setDate(0); } return r; }
+function quartal(d){ return Math.floor(d.getMonth()/3) + 1; }
+function tage(a,b){ return Math.round((b - a) / 86400000); }
+function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function jahrespunkte(){ var r = []; for(var i=0;i<JAHR_STANDARD.length;i++){ r.push({id:uid(), text:JAHR_STANDARD[i].text, q:JAHR_STANDARD[i].q}); } return r; }
+
+function beispiel(){
+  var a = {id:uid(), name:'Kindergarten Sonnenweg (Beispiel)', adresse:'Sonnenweg 4, 2380 Perchtoldsdorf', rhythmus:'q',
+    nachweise:{
+      raeumung:{intervall:12, eintraege:[{datum:'2026-05-20', text:'Alle Gruppen, 4:10 min bis Sammelplatz'}]},
+      schulung:{intervall:12, eintraege:[]},
+      bso:{intervall:12, eintraege:[{datum:'2025-09-01', text:'An 14 Mitarbeiterinnen ausgegeben, Unterschriftenliste im Ordner'}]}
+    }, jahr:jahrespunkte(), begehungen:[]};
+  var b = {id:uid(), name:'Pflegeheim Am Hang (Beispiel)', adresse:'Hangstraße 12, 1230 Wien', rhythmus:'m',
+    nachweise:{
+      raeumung:{intervall:12, eintraege:[{datum:'2026-03-11', text:'Tag- und Nachtszenario'}]},
+      schulung:{intervall:12, eintraege:[{datum:'2026-06-02', text:'18 Teilnehmer, praktisch mit CO2 und Schaum'}]},
+      bso:{intervall:12, eintraege:[{datum:'2026-01-15', text:'Neue Fassung, von allen unterschrieben'}]}
+    }, jahr:jahrespunkte(), begehungen:[]};
+  a.begehungen.push(protokollBeispiel(a, '2026-07-14', 'Tobias Prominzer', 3, 'Tür Bewegungsraum war verkeilt, vor Ort behoben'));
+  a.begehungen.push(protokollBeispiel(a, '2026-04-09', 'Wolfgang Janiba', 2, ''));
+  a.begehungen.push(protokollBeispiel(a, '2026-01-13', 'Tobias Mayerhofer', 1, ''));
+  b.begehungen.push(protokollBeispiel(b, '2026-09-22', 'Wolfgang Janiba sen.', 3, ''));
+  b.begehungen.push(protokollBeispiel(b, '2026-08-25', 'Tobias Prominzer', 3, ''));
+  var c = {id:uid(), name:'B\u00fcrohaus Wiener Gasse (Beispiel)', adresse:'Wiener Gasse 20, 2380 Perchtoldsdorf', rhythmus:'m',
+    nachweise:{raeumung:{intervall:12, eintraege:[]}, schulung:{intervall:12, eintraege:[{datum:'2026-02-18', text:'9 Teilnehmer'}]}, bso:{intervall:12, eintraege:[{datum:'2026-02-18', text:'Ausgegeben bei der Schulung'}]}},
+    jahr:jahrespunkte(), begehungen:[]};
+  c.begehungen.push(protokollBeispiel(c, '2026-08-19', 'Tobias Mayerhofer', 3, ''));
+  var d = {id:uid(), name:'Volksschule Hochstra\u00dfe (Beispiel)', adresse:'Hochstra\u00dfe 3, 2380 Perchtoldsdorf', rhythmus:'q',
+    nachweise:{raeumung:{intervall:12, eintraege:[{datum:'2026-09-30', text:'Ganze Schule, 3:40 min'}]}, schulung:{intervall:12, eintraege:[{datum:'2025-10-08', text:'Lehrk\u00f6rper'}]}, bso:{intervall:12, eintraege:[]}},
+    jahr:jahrespunkte(), begehungen:[]};
+  d.begehungen.push(protokollBeispiel(d, '2026-10-06', 'Tobias Prominzer', 4, ''));
+  d.begehungen.push(protokollBeispiel(d, '2026-07-07', 'Wolfgang Janiba', 3, ''));
+  return {objekte:[a,b,c,d], aktiv:a.id};
+}
+function protokollBeispiel(o, datum, ma, q, mangel){
+  var e = [], i;
+  for(i=0;i<LAUFEND.length;i++){ e.push({text:LAUFEND[i], art:'laufend', ok: !(mangel && i===4), bem: (mangel && i===4) ? mangel : ''}); }
+  for(i=0;i<VIERTEL.length;i++){ e.push({text:VIERTEL[i], art:'viertel', ok:true, bem:''}); }
+  for(i=0;i<o.jahr.length;i++){ if(o.jahr[i].q === q){ e.push({text:o.jahr[i].text, art:'jahr', jid:o.jahr[i].id, ok:true, bem:''}); } }
+  return {id:uid(), datum:datum, ma:ma, eintraege:e, bem:''};
+}
+
+var KURZ = {raeumung:'R\u00e4umung', schulung:'Schulung', bso:'BSO'};
+var D, view = {name:'uebersicht'}, draft = null;
+function laden(){ try{ var s = localStorage.getItem(KEY); if(s){ D = JSON.parse(s); return; } }catch(e){} D = beispiel(); }
+function speichern(){ try{ localStorage.setItem(KEY, JSON.stringify(D)); }catch(e){} }
+function aktiv(){ for(var i=0;i<D.objekte.length;i++){ if(D.objekte[i].id === D.aktiv){ return D.objekte[i]; } } return D.objekte[0]; }
+function toast(t){ var el = document.getElementById('toast'); el.textContent = t; el.hidden = false; setTimeout(function(){ el.hidden = true; }, 1800); }
+
+function letzteBegehung(o){ var l = null; for(var i=0;i<o.begehungen.length;i++){ if(!l || o.begehungen[i].datum > l.datum){ l = o.begehungen[i]; } } return l; }
+function naechste(o){ var l = letzteBegehung(o); if(!l){ return null; } return addM(pd(l.datum), o.rhythmus === 'q' ? 3 : 1); }
+
+function nwStatus(n){
+  if(!n.eintraege.length){ return {cls:'bad', txt:'fehlt', next:null}; }
+  var last = n.eintraege[0].datum;
+  for(var i=1;i<n.eintraege.length;i++){ if(n.eintraege[i].datum > last){ last = n.eintraege[i].datum; } }
+  var next = addM(pd(last), n.intervall), t = tage(HEUTE, next);
+  if(t < 0){ return {cls:'bad', txt:'überfällig', last:last, next:next}; }
+  if(t <= 30){ return {cls:'warn', txt:'bald fällig', last:last, next:next}; }
+  return {cls:'ok', txt:'in Ordnung', last:last, next:next};
+}
+
+function jahrStatus(o, jp, jahr){
+  for(var i=0;i<o.begehungen.length;i++){
+    var b = o.begehungen[i];
+    if(pd(b.datum).getFullYear() !== jahr){ continue; }
+    for(var k=0;k<b.eintraege.length;k++){ var e = b.eintraege[k]; if(e.jid === jp.id && e.ok){ return {done:b.datum}; } }
+  }
+  return {done:null};
+}
+function viertelErledigt(o, text, d){
+  var q = quartal(d), y = d.getFullYear();
+  for(var i=0;i<o.begehungen.length;i++){
+    var bd = pd(o.begehungen[i].datum);
+    if(bd.getFullYear() !== y || quartal(bd) !== q){ continue; }
+    var ee = o.begehungen[i].eintraege;
+    for(var k=0;k<ee.length;k++){ if(ee[k].art === 'viertel' && ee[k].text === text && ee[k].ok){ return true; } }
+  }
+  return false;
+}
+
+/* ---------- Ansichten ---------- */
+function rhName(r){ return r === 'q' ? 'vierteljährlich' : 'monatlich'; }
+function objStatus(o){
+  var nx = naechste(o), t = nx ? tage(HEUTE, nx) : -1, fehlt = 0;
+  for(var i=0;i<NACHWEISE.length;i++){ if(nwStatus(o.nachweise[NACHWEISE[i].key]).cls === 'bad'){ fehlt++; } }
+  var cls = 'ok', txt = 'in ' + t + ' Tagen';
+  if(!nx){ cls = 'bad'; txt = 'noch keine Begehung'; }
+  else if(t < 0){ cls = 'bad'; txt = 'überfällig seit ' + (-t) + ' Tagen'; }
+  else if(t <= 7){ cls = 'warn'; txt = 'fällig in ' + t + ' Tagen'; }
+  return {nx:nx, t:t, cls:cls, txt:txt, fehlt:fehlt, rang:(cls === 'bad' ? 0 : (cls === 'warn' ? 1 : 2))};
+}
+function kopfNav(akt){
+  return '<div class="row between"><span class="eyebrow">Wolfgang Janiba Brandschutztechnik &middot; Begehungen</span><button class="ghost small" data-act="neu">+ Gebäude</button></div>' +
+    '<div class="row"><button class="grow' + (akt === 'uebersicht' ? ' primary' : '') + '" data-act="uebersicht">Gebäude</button><button class="grow' + (akt === 'gesamt' ? ' primary' : '') + '" data-act="gesamt">Was wurde gemacht</button></div>';
+}
+function vUebersicht(){
+  var h = kopfNav('uebersicht'), liste = [], i, k, ueber = 0, mangelN = 0;
+  for(i=0;i<D.objekte.length;i++){ var st = objStatus(D.objekte[i]); liste.push({o:D.objekte[i], st:st}); if(st.cls === 'bad'){ ueber++; } if(st.fehlt){ mangelN++; } }
+  liste.sort(function(a,b){ if(a.st.rang !== b.st.rang){ return a.st.rang - b.st.rang; } var ax = a.st.nx ? a.st.nx.getTime() : 0, bx = b.st.nx ? b.st.nx.getTime() : 0; return ax - bx; });
+  h += '<div class="card"><div class="stat" style="grid-template-columns:repeat(3,1fr)"><div><div class="eyebrow">Gebäude</div><div class="big">' + D.objekte.length + '</div></div>' +
+       '<div><div class="eyebrow">Begehung fällig / überfällig</div><div class="big" style="color:var(' + (ueber ? '--bad' : '--ok') + ')">' + ueber + '</div></div>' +
+       '<div><div class="eyebrow">Mit fehlenden Nachweisen</div><div class="big" style="color:var(' + (mangelN ? '--bad' : '--ok') + ')">' + mangelN + '</div></div></div></div>';
+  h += '<div class="card"><h2>Alle Gebäude</h2><span class="muted small">Rhythmus direkt hier umstellen. Tippen auf den Namen öffnet das Gebäude.</span><div class="list">';
+  for(i=0;i<liste.length;i++){
+    var o = liste[i].o, s = liste[i].st, lb = letzteBegehung(o), nw = '';
+    for(k=0;k<NACHWEISE.length;k++){ var ns = nwStatus(o.nachweise[NACHWEISE[k].key]); nw += '<span class="pill ' + ns.cls + '" title="' + NACHWEISE[k].name + '">' + KURZ[NACHWEISE[k].key] + (ns.cls === 'bad' ? ' fehlt' : '') + '</span>'; }
+    h += '<div class="item" style="flex-wrap:wrap"><div class="grow" style="flex-basis:220px"><button class="ghost" style="padding:0;text-align:left;font-size:1.02rem" data-act="oeffnen" data-id="' + o.id + '">' + esc(o.name) + '</button>' +
+      '<span class="muted small num">Zuletzt: ' + (lb ? fmt(lb.datum) + ' &middot; ' + esc(lb.ma) : '–') + ' &middot; Nächste: ' + (s.nx ? fmt(iso(s.nx)) : 'sofort') + '</span>' +
+      '<div class="row" style="gap:4px;padding-top:4px">' + nw + '</div></div>' +
+      '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;flex-basis:100%"><span class="pill ' + s.cls + '">' + s.txt + '</span>' +
+      '<select id="rh_' + o.id + '" data-act="rh" data-id="' + o.id + '" style="width:auto;padding:6px 8px" aria-label="Rhythmus"><option value="m"' + (o.rhythmus === 'm' ? ' selected' : '') + '>monatlich</option><option value="q"' + (o.rhythmus === 'q' ? ' selected' : '') + '>vierteljährlich</option></select></div></div>';
+  }
+  h += '</div></div>';
+  h += '<div class="note">Vorschau zum Anschauen: Die Beispielgebäude sind erfunden, Eingaben bleiben nur in diesem Browser. <button class="ghost small" data-act="reset">Beispiele zurücksetzen</button></div>';
+  return h;
+}
+function imZeitraum(d, f){
+  var x = pd(d);
+  if(f === 'alle'){ return true; }
+  if(x.getFullYear() !== HEUTE.getFullYear()){ return false; }
+  if(f === 'jahr'){ return true; }
+  if(f === 'quartal'){ return quartal(x) === quartal(HEUTE); }
+  return x.getMonth() === HEUTE.getMonth();
+}
+function vGesamt(){
+  var f = view.f || 'jahr', h = kopfNav('gesamt'), z = [], i, k;
+  for(i=0;i<D.objekte.length;i++){
+    var o = D.objekte[i];
+    for(k=0;k<o.begehungen.length;k++){ var b = o.begehungen[k], m = 0; for(var j=0;j<b.eintraege.length;j++){ if(b.eintraege[j].ok === false){ m++; } } if(imZeitraum(b.datum, f)){ z.push({datum:b.datum, obj:o.name, was:'Begehung', wer:b.ma, info: m ? m + (m > 1 ? ' Mängel' : ' Mangel') : 'ohne Mängel', cls: m ? 'bad' : 'ok'}); } }
+    for(k=0;k<NACHWEISE.length;k++){ var ee = o.nachweise[NACHWEISE[k].key].eintraege; for(var e=0;e<ee.length;e++){ if(imZeitraum(ee[e].datum, f)){ z.push({datum:ee[e].datum, obj:o.name, was:NACHWEISE[k].name, wer:'', info:ee[e].text || '', cls:'neutral'}); } } }
+  }
+  z.sort(function(a,b){ return a.datum < b.datum ? 1 : -1; });
+  var mo = ['Jänner','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+  var opt = [['monat', mo[HEUTE.getMonth()] + ' ' + HEUTE.getFullYear()], ['quartal', 'Q' + quartal(HEUTE) + ' ' + HEUTE.getFullYear()], ['jahr', 'Jahr ' + HEUTE.getFullYear()], ['alle', 'Alles']], os = '';
+  for(i=0;i<opt.length;i++){ os += '<option value="' + opt[i][0] + '"' + (f === opt[i][0] ? ' selected' : '') + '>' + opt[i][1] + '</option>'; }
+  h += '<div class="card"><div class="row between"><h2>Was wann wo gemacht wurde</h2><span class="pill neutral">' + z.length + ' Einträge</span></div>' +
+       '<label for="gfilter">Zeitraum<select id="gfilter" data-act="gfilter">' + os + '</select></label><div class="list">';
+  if(!z.length){ h += '<span class="muted">In diesem Zeitraum wurde nichts eingetragen.</span>'; }
+  for(i=0;i<z.length;i++){
+    h += '<div class="item"><b class="num" style="min-width:86px">' + fmt(z[i].datum) + '</b><div class="grow small"><b>' + esc(z[i].obj) + '</b><span>' + esc(z[i].was) + (z[i].wer ? ' &middot; ' + esc(z[i].wer) : '') + '</span>' +
+      (z[i].cls === 'neutral' && z[i].info ? '<span class="muted">' + esc(z[i].info) + '</span>' : '') + '</div>' + (z[i].cls !== 'neutral' ? '<span class="pill ' + z[i].cls + '">' + z[i].info + '</span>' : '') + '</div>';
+  }
+  return h + '</div></div>';
+}
+
+
+function render(){
+  var h = '';
+  if(view.name === 'uebersicht'){ h = vUebersicht(); }
+  else if(view.name === 'gesamt'){ h = vGesamt(); }
+  else if(view.name === 'objekt'){ h = vObjekt(); }
+  else if(view.name === 'begehung'){ h = vBegehung(); }
+  else if(view.name === 'nachweis'){ h = vNachweis(); }
+  else if(view.name === 'neu'){ h = vNeu(); }
+  else if(view.name === 'punkte'){ h = vPunkte(); }
+  document.getElementById('app').innerHTML = h;
+}
+
+function kopf(o){
+  var opts = '';
+  for(var i=0;i<D.objekte.length;i++){ opts += '<option value="' + D.objekte[i].id + '"' + (D.objekte[i].id === o.id ? ' selected' : '') + '>' + esc(D.objekte[i].name) + '</option>'; }
+  return '<div class="row between"><button class="ghost" data-act="uebersicht">&larr; Alle Geb\u00e4ude</button>' +
+    '<button class="ghost small" data-act="neu">+ Geb\u00e4ude</button></div>' +
+    '<label for="objwahl">Geb\u00e4ude<select id="objwahl" data-act="wahl">' + opts + '</select></label>';
+}
+
+function vObjekt(){
+  var o = aktiv(), h = kopf(o), i;
+  var lb = letzteBegehung(o), nx = naechste(o);
+  var bstat = {cls:'neutral', txt:'noch keine'};
+  if(nx){ var t = tage(HEUTE, nx); bstat = t < 0 ? {cls:'bad', txt:'überfällig seit ' + (-t) + ' Tagen'} : (t <= 7 ? {cls:'warn', txt:'fällig in ' + t + ' Tagen'} : {cls:'ok', txt:'in ' + t + ' Tagen'}); }
+
+  var warn = [];
+  if(nx && tage(HEUTE, nx) < 0){ warn.push('Begehung ist seit ' + fmt(iso(nx)) + ' fällig'); }
+  for(i=0;i<NACHWEISE.length;i++){
+    var s = nwStatus(o.nachweise[NACHWEISE[i].key]);
+    if(s.txt === 'fehlt'){ warn.push(NACHWEISE[i].name + ' fehlt'); }
+    else if(s.cls === 'bad'){ warn.push(NACHWEISE[i].name + ' ist abgelaufen (fällig seit ' + fmt(iso(s.next)) + ')'); }
+  }
+  var y = HEUTE.getFullYear(), qn = quartal(HEUTE), versaeumt = 0;
+  for(i=0;i<o.jahr.length;i++){ if(o.jahr[i].q < qn && !jahrStatus(o, o.jahr[i], y).done){ versaeumt++; } }
+  if(versaeumt){ warn.push(versaeumt + ' Jahrespunkt' + (versaeumt>1?'e':'') + ' aus früheren Quartalen noch offen'); }
+
+  h += '<div class="card"><div class="row between"><div class="grow"><h1>' + esc(o.name) + '</h1><span class="muted small">' + esc(o.adresse) + '</span></div></div>';
+  if(warn.length){ h += '<div class="alert"><b>Offen</b>'; for(i=0;i<warn.length;i++){ h += '<span class="small">' + esc(warn[i]) + '</span>'; } h += '</div>'; }
+  h += '<label for="rhythmus">Begehungsrhythmus<select id="rhythmus" data-act="rhythmus"><option value="m"' + (o.rhythmus==='m'?' selected':'') + '>monatlich</option><option value="q"' + (o.rhythmus==='q'?' selected':'') + '>vierteljährlich (alle 3 Monate)</option></select></label>';
+  h += '<div class="stat"><div><div class="eyebrow">Letzte Begehung</div><div class="big">' + (lb ? fmt(lb.datum) : '–') + '</div><div class="muted small">' + (lb ? esc(lb.ma) : '') + '</div></div>' +
+       '<div><div class="eyebrow">Nächste</div><div class="big">' + (nx ? fmt(iso(nx)) : 'jetzt') + '</div><span class="pill ' + bstat.cls + '">' + bstat.txt + '</span></div></div>';
+  h += '<button class="primary" data-act="begehung">Begehung durchführen</button></div>';
+
+  h += '<div class="card"><div class="row between"><h2>Nachweise</h2><span class="muted small">Intervall je Objekt änderbar</span></div><div class="list">';
+  for(i=0;i<NACHWEISE.length;i++){
+    var n = o.nachweise[NACHWEISE[i].key], st = nwStatus(n);
+    h += '<div class="item"><div class="grow"><b>' + NACHWEISE[i].name + '</b><span class="muted small num">' +
+      (st.last ? 'zuletzt ' + fmt(st.last) + ' &middot; nächste bis ' + fmt(iso(st.next)) : 'noch nicht eingetragen') + ' &middot; alle ' + n.intervall + ' Monate</span></div>' +
+      '<div class="row" style="flex-shrink:0;gap:6px"><span class="pill ' + st.cls + '">' + st.txt + '</span><button class="small" data-act="nachweis" data-key="' + NACHWEISE[i].key + '">Eintragen</button></div></div>';
+  }
+  h += '</div></div>';
+
+  h += '<div class="card"><div class="row between"><h2>Jahrespunkte ' + y + '</h2><button class="ghost small" data-act="punkte">Bearbeiten</button></div>' +
+       '<span class="muted small">Die jährlichen Prüfungen sind auf die 4 Quartale verteilt und erscheinen bei der Begehung im jeweiligen Quartal.</span><div class="list">';
+  for(var q=1;q<=4;q++){
+    for(i=0;i<o.jahr.length;i++){
+      var jp = o.jahr[i]; if(jp.q !== q){ continue; }
+      var js = jahrStatus(o, jp, y), pill;
+      if(js.done){ pill = '<span class="pill ok">erledigt ' + fmt(js.done) + '</span>'; }
+      else if(q < qn){ pill = '<span class="pill bad">offen</span>'; }
+      else if(q === qn){ pill = '<span class="pill warn">dieses Quartal</span>'; }
+      else { pill = '<span class="pill neutral">geplant</span>'; }
+      h += '<div class="item"><span class="qtag">Q' + q + '</span><div class="grow small">' + esc(jp.text) + '</div>' + pill + '</div>';
+    }
+  }
+  h += '</div></div>';
+
+  var bs = o.begehungen.slice().sort(function(a,b){ return a.datum < b.datum ? 1 : -1; });
+  h += '<div class="card"><h2>Protokoll</h2>';
+  if(!bs.length){ h += '<span class="muted">Noch keine Begehung eingetragen.</span>'; }
+  h += '<div class="list">';
+  for(i=0;i<bs.length;i++){
+    var b = bs[i], m = 0, k;
+    for(k=0;k<b.eintraege.length;k++){ if(b.eintraege[k].ok === false){ m++; } }
+    h += '<details class="item" style="display:block"><summary class="row between"><div class="grow"><b class="num">' + fmt(b.datum) + '</b> <span class="muted small">Q' + quartal(pd(b.datum)) + ' &middot; ' + esc(b.ma) + '</span></div>' +
+      (m ? '<span class="pill bad">' + m + (m>1 ? ' Mängel' : ' Mangel') + '</span>' : '<span class="pill ok">ohne Mängel</span>') + '</summary><div class="list" style="padding-top:10px">';
+    for(k=0;k<b.eintraege.length;k++){
+      var e = b.eintraege[k];
+      h += '<div class="item small"><span class="' + (e.ok ? 'check' : (e.ok === false ? 'cross' : 'muted')) + '">' + (e.ok ? '&#10003;' : (e.ok === false ? '&#10007;' : '&ndash;')) + '</span><div class="grow"><span>' + esc(e.text) + '</span>' + (e.bem ? '<span class="muted">' + esc(e.bem) + '</span>' : '') + '</div></div>';
+    }
+    if(b.bem){ h += '<div class="note">' + esc(b.bem) + '</div>'; }
+    h += '</div></details>';
+  }
+  h += '</div></div>';
+  h += '<div class="note">Vorschau zum Anschauen: Die Beispielobjekte sind erfunden, Eingaben bleiben nur in diesem Browser. <button class="ghost small" data-act="reset">Beispiele zurücksetzen</button></div>';
+  return h;
+}
+
+function neuerDraft(o){
+  var d = iso(HEUTE), dd = HEUTE, e = [], i;
+  for(i=0;i<LAUFEND.length;i++){ e.push({text:LAUFEND[i], art:'laufend', ok:null, bem:''}); }
+  for(i=0;i<VIERTEL.length;i++){ if(!viertelErledigt(o, VIERTEL[i], dd)){ e.push({text:VIERTEL[i], art:'viertel', ok:null, bem:''}); } }
+  var q = quartal(dd), y = dd.getFullYear();
+  for(i=0;i<o.jahr.length;i++){ var jp = o.jahr[i]; if(jp.q <= q && !jahrStatus(o, jp, y).done){ e.push({text:jp.text, art:'jahr', jid:jp.id, q:jp.q, ok:null, bem:''}); } }
+  return {datum:d, ma:MITARBEITER[0], eintraege:e, bem:''};
+}
+
+function vBegehung(){
+  var o = aktiv(), h = '', i, opts = '';
+  for(i=0;i<MITARBEITER.length;i++){ opts += '<option' + (draft.ma === MITARBEITER[i] ? ' selected' : '') + '>' + esc(MITARBEITER[i]) + '</option>'; }
+  h += '<div class="row between"><button class="ghost" data-act="zurueck">&larr; Zurück</button><span class="eyebrow">Q' + quartal(pd(draft.datum)) + ' ' + pd(draft.datum).getFullYear() + '</span></div>';
+  h += '<div class="card"><h1>Begehung</h1><span class="muted">' + esc(o.name) + '</span><div class="row"><label class="grow" for="bdatum">Datum<input type="date" id="bdatum" value="' + draft.datum + '" data-act="bdatum"></label>' +
+       '<label class="grow" for="bma">Mitarbeiter<select id="bma" data-act="bma">' + opts + '</select></label></div>' +
+       '<span class="muted small">Ja heißt in Ordnung. Bei Nein bitte kurz den Mangel beschreiben.</span></div>';
+  var gruppen = [['laufend','Bei jeder Begehung'],['viertel','Vierteljährlich'],['jahr','Jährlich (dieses und offene Quartale)']];
+  for(var g=0;g<gruppen.length;g++){
+    var any = false, part = '';
+    for(i=0;i<draft.eintraege.length;i++){
+      var e = draft.eintraege[i]; if(e.art !== gruppen[g][0]){ continue; } any = true;
+      part += '<div class="item"><div class="grow"><span>' + (e.q ? '<span class="qtag">Q' + e.q + '</span> ' : '') + esc(e.text) + '</span>' +
+        (e.ok === false ? '<input type="text" id="bem' + i + '" placeholder="Mangel beschreiben" value="' + esc(e.bem) + '" data-act="bem" data-i="' + i + '">' : '') + '</div>' +
+        '<div class="yn"><button class="' + (e.ok === true ? 'on-ja' : '') + '" data-act="ja" data-i="' + i + '">Ja</button><button class="' + (e.ok === false ? 'on-nein' : '') + '" data-act="nein" data-i="' + i + '">Nein</button></div></div>';
+    }
+    if(any){ h += '<div class="card"><h2>' + gruppen[g][1] + '</h2><div class="list">' + part + '</div></div>'; }
+  }
+  h += '<div class="card"><label for="bbem">Bemerkung zur Begehung<textarea id="bbem" data-act="bbem">' + esc(draft.bem) + '</textarea></label>' +
+       '<button class="primary" data-act="speichern">Begehung speichern</button></div>';
+  return h;
+}
+
+function vNachweis(){
+  var o = aktiv(), def = null, i;
+  for(i=0;i<NACHWEISE.length;i++){ if(NACHWEISE[i].key === view.key){ def = NACHWEISE[i]; } }
+  var n = o.nachweise[view.key];
+  var ph = view.key === 'raeumung' ? 'z. B. alle Gruppen, Zeit bis Sammelplatz, Auffälligkeiten' : (view.key === 'schulung' ? 'z. B. Anzahl Teilnehmer, Unterschriftenliste vorhanden' : 'z. B. an wen ausgegeben, Unterschriftenliste im Ordner');
+  var h = '<div class="row"><button class="ghost" data-act="zurueck">&larr; Zurück</button></div>';
+  h += '<div class="card"><h1>' + def.name + '</h1><span class="muted">' + esc(o.name) + '</span>' +
+    '<label for="ndatum">' + (view.key === 'bso' ? 'Unterschrieben am' : 'Durchgeführt am') + '<input type="date" id="ndatum" value="' + iso(HEUTE) + '"></label>' +
+    '<label for="ntext">Bemerkung / Teilnehmer<textarea id="ntext" placeholder="' + ph + '"></textarea></label>' +
+    '<label for="nint">Wiederholen alle (Monate)<input type="number" id="nint" min="1" max="60" value="' + n.intervall + '"></label>' +
+    '<button class="primary" data-act="nwspeichern">Eintragen</button></div>';
+  var ee = n.eintraege.slice().sort(function(a,b){ return a.datum < b.datum ? 1 : -1; });
+  h += '<div class="card"><h2>Bisherige Einträge</h2>';
+  if(!ee.length){ h += '<span class="muted">Noch nichts eingetragen.</span>'; }
+  h += '<div class="list">';
+  for(i=0;i<ee.length;i++){ h += '<div class="item"><b class="num">' + fmt(ee[i].datum) + '</b><div class="grow small">' + esc(ee[i].text) + '</div></div>'; }
+  return h + '</div></div>';
+}
+
+function vNeu(){
+  return '<div class="row"><button class="ghost" data-act="zurueck">&larr; Zurück</button></div>' +
+    '<div class="card"><h1>Neues Objekt</h1><label for="oname">Name<input type="text" id="oname"></label>' +
+    '<label for="oadr">Adresse<input type="text" id="oadr"></label>' +
+    '<label for="orh">Begehungsrhythmus<select id="orh"><option value="m">monatlich</option><option value="q" selected>viertelj\u00e4hrlich</option></select></label>' +
+    '<button class="primary" data-act="neuspeichern">Objekt anlegen</button></div>';
+}
+
+function vPunkte(){
+  var o = aktiv(), h = '<div class="row"><button class="ghost" data-act="zurueck">&larr; Fertig</button></div>';
+  h += '<div class="card"><h1>Jahrespunkte</h1><span class="muted small">Quartal festlegen, in dem der Punkt geprüft wird.</span><div class="list">';
+  for(var i=0;i<o.jahr.length;i++){
+    var sel = ''; for(var q=1;q<=4;q++){ sel += '<option value="' + q + '"' + (o.jahr[i].q === q ? ' selected' : '') + '>Q' + q + '</option>'; }
+    h += '<div class="item"><div class="grow small">' + esc(o.jahr[i].text) + '</div><select style="width:74px" id="jq' + i + '" data-act="jq" data-i="' + i + '">' + sel + '</select><button class="ghost" data-act="jdel" data-i="' + i + '" aria-label="Entfernen">&times;</button></div>';
+  }
+  h += '</div><div class="row"><input type="text" class="grow" id="jneu" placeholder="Neuer Prüfpunkt" style="flex:1"><select id="jneuq" style="width:74px"><option>1</option><option>2</option><option>3</option><option>4</option></select></div>' +
+    '<button data-act="jadd">Punkt hinzufügen</button></div>';
+  return h;
+}
+
+/* ---------- Aktionen ---------- */
+function val(id){ var el = document.getElementById(id); return el ? el.value : ''; }
+
+document.addEventListener('click', function(ev){
+  var t = ev.target.closest ? ev.target.closest('[data-act]') : null; if(!t || t.tagName === 'SELECT' || t.tagName === 'INPUT' || t.tagName === 'TEXTAREA'){ return; }
+  var a = t.getAttribute('data-act'), o = aktiv(), i = +t.getAttribute('data-i');
+  if(a === 'begehung'){ draft = neuerDraft(o); view = {name:'begehung'}; }
+  else if(a === 'zurueck'){ view = {name:'objekt'}; }
+  else if(a === 'uebersicht'){ view = {name:'uebersicht'}; }
+  else if(a === 'gesamt'){ view = {name:'gesamt', f:'jahr'}; }
+  else if(a === 'oeffnen'){ D.aktiv = t.getAttribute('data-id'); speichern(); view = {name:'objekt'}; render(); window.scrollTo(0,0); return; }
+  else if(a === 'nachweis'){ view = {name:'nachweis', key:t.getAttribute('data-key')}; }
+  else if(a === 'neu'){ view = {name:'neu'}; }
+  else if(a === 'punkte'){ view = {name:'punkte'}; }
+  else if(a === 'ja'){ draft.eintraege[i].ok = draft.eintraege[i].ok === true ? null : true; }
+  else if(a === 'nein'){ draft.eintraege[i].ok = draft.eintraege[i].ok === false ? null : false; }
+  else if(a === 'speichern'){
+    var offen = 0; for(var k=0;k<draft.eintraege.length;k++){ if(draft.eintraege[k].ok === null){ offen++; } }
+    o.begehungen.push({id:uid(), datum:draft.datum, ma:draft.ma, eintraege:draft.eintraege, bem:draft.bem});
+    speichern(); view = {name:'objekt'}; render(); window.scrollTo(0,0);
+    toast(offen ? 'Gespeichert, ' + offen + ' Punkte nicht geprüft' : 'Begehung gespeichert'); return;
+  }
+  else if(a === 'nwspeichern'){
+    var d = val('ndatum'); if(!d){ toast('Bitte ein Datum eingeben'); return; }
+    var n = o.nachweise[view.key]; n.eintraege.push({datum:d, text:val('ntext')});
+    var iv = parseInt(val('nint'), 10); if(iv > 0){ n.intervall = iv; }
+    speichern(); view = {name:'objekt'}; render(); toast('Eingetragen'); return;
+  }
+  else if(a === 'neuspeichern'){
+    var nm = val('oname'); if(!nm){ toast('Bitte einen Namen eingeben'); return; }
+    var no = {id:uid(), name:nm, adresse:val('oadr'), rhythmus:val('orh'), nachweise:{raeumung:{intervall:12,eintraege:[]}, schulung:{intervall:12,eintraege:[]}, bso:{intervall:12,eintraege:[]}}, jahr:jahrespunkte(), begehungen:[]};
+    D.objekte.push(no); D.aktiv = no.id; speichern(); view = {name:'objekt'}; render(); toast('Objekt angelegt'); return;
+  }
+  else if(a === 'jdel'){ o.jahr.splice(i,1); speichern(); }
+  else if(a === 'jadd'){ var tx = val('jneu'); if(!tx){ return; } o.jahr.push({id:uid(), text:tx, q:parseInt(val('jneuq'),10)}); speichern(); }
+  else if(a === 'reset'){ D = beispiel(); speichern(); view = {name:'uebersicht'}; toast('Beispiele wiederhergestellt'); }
+  else { return; }
+  render();
+});
+
+document.addEventListener('change', function(ev){
+  var t = ev.target, a = t.getAttribute('data-act'), o = aktiv();
+  if(a === 'wahl'){ D.aktiv = t.value; speichern(); render(); }
+  else if(a === 'rh'){ for(var r=0;r<D.objekte.length;r++){ if(D.objekte[r].id === t.getAttribute('data-id')){ D.objekte[r].rhythmus = t.value; } } speichern(); render(); toast('Rhythmus gespeichert'); }
+  else if(a === 'gfilter'){ view.f = t.value; render(); }
+  else if(a === 'rhythmus'){ o.rhythmus = t.value; speichern(); render(); }
+  else if(a === 'bdatum'){ if(t.value){ var keep = draft.ma; draft = neuerDraft(o); draft.datum = t.value; draft.ma = keep; rebuildForDate(o); render(); } }
+  else if(a === 'bma'){ draft.ma = t.value; }
+  else if(a === 'jq'){ o.jahr[+t.getAttribute('data-i')].q = parseInt(t.value,10); speichern(); }
+});
+document.addEventListener('input', function(ev){
+  var t = ev.target, a = t.getAttribute('data-act');
+  if(a === 'bem'){ draft.eintraege[+t.getAttribute('data-i')].bem = t.value; }
+  else if(a === 'bbem'){ draft.bem = t.value; }
+});
+
+function rebuildForDate(o){
+  var dd = pd(draft.datum), e = [], i, q = quartal(dd), y = dd.getFullYear();
+  for(i=0;i<LAUFEND.length;i++){ e.push({text:LAUFEND[i], art:'laufend', ok:null, bem:''}); }
+  for(i=0;i<VIERTEL.length;i++){ if(!viertelErledigt(o, VIERTEL[i], dd)){ e.push({text:VIERTEL[i], art:'viertel', ok:null, bem:''}); } }
+  for(i=0;i<o.jahr.length;i++){ var jp = o.jahr[i]; if(jp.q <= q && !jahrStatus(o, jp, y).done){ e.push({text:jp.text, art:'jahr', jid:jp.id, q:jp.q, ok:null, bem:''}); } }
+  draft.eintraege = e;
+}
+
+laden(); render();
+</script>
