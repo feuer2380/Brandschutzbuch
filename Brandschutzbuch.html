@@ -1797,7 +1797,8 @@ function absPdf(art) {
     for (var i = 0; i < ms.length; i++) {
       var m = ms[i]; if (m.datum && m.datum > st) continue;
       var ortm = mangelOrt(m);
-      rows.push({ t: mTitel(m) + (ortm ? '\nOrt: ' + ortm : '') + (m.status === 'arbeit' ? '\n(in Bearbeitung)' : ''), fest: fmtD(m.datum), gem: fmtD(absGemeldet(m.id)) });
+      var mBesch = (m.titel && m.beschreibung) ? String(m.beschreibung).replace(/\s*\n\s*/g, ' - ') : ''; if (mBesch.length > 170) mBesch = mBesch.substr(0, 167) + '...';
+      rows.push({ t: mTitel(m) + (mBesch ? '\n' + mBesch : '') + (ortm ? '\nOrt: ' + ortm : '') + (m.status === 'arbeit' ? '\n(in Bearbeitung)' : ''), fest: fmtD(m.datum), gem: fmtD(absGemeldet(m.id)) });
     }
     if (mitPf) {
       var al = byG(DB.anlagen);
