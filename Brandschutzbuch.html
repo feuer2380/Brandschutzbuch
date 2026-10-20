@@ -115,8 +115,8 @@ textarea{min-height:80px;resize:vertical}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 /* Brandschutzbuch - lokale Web-App (Janiba Brandschutztechnik GmbH) */
-var APP_VERSION = '2.7';
-var APP_STAND = '19.10.2026 20:55';
+var APP_VERSION = '2.9';
+var APP_STAND = '20.10.2026 22:15';
 var UPD = null;
 function verText() { return 'Version ' + APP_VERSION + ' vom ' + APP_STAND; }
 function verFooter() {
@@ -970,13 +970,18 @@ function lastBeg(vid) {
 function begStatus(v) {
   var last = lastBeg(v.id), a = artObj(v.art);
   if (isPerArt(v.art)) {
-    var cp = perOf(v.art, todayStr()), s = perStatus(v.id, cp);
-    return { last: last, cls: s.k === 'ok' ? 'p-ok' : 'p-warn', txt: (s.k === 'ok' ? 'erledigt' : s.k === 'arbeit' ? 'in Arbeit ' + s.sd.a + '/' + s.sd.n : s.k === 'unvoll' ? 'unvollständig ' + s.sd.a + '/' + s.sd.n : 'fällig') + ' - ' + (cp.length === 4 ? cp : perSide(cp)), per: cp };
+    var cp = perOf(v.art, todayStr()), s = perStatus(v.id, cp), pn = cp.length === 4 ? 'Jahr ' + cp : perSide(cp);
+    if (s.k === 'ok') return { last: last, cls: 'p-ok', txt: pn + ' erledigt' };
+    if (s.k === 'arbeit') return { last: last, cls: 'p-warn', txt: pn + ': ' + s.sd.a + ' von ' + s.sd.n };
+    if (s.k === 'unvoll') return { last: last, cls: 'p-err', txt: pn + ' unvollständig' };
+    return { last: last, cls: 'p-warn', txt: pn + ' offen' };
   }
   if (!last) return { last: null, cls: a.d ? 'p-warn' : 'p-mut', txt: 'noch keine' };
   var since = -daysUntil(last.datum);
+  if (since <= 0) return { last: last, cls: 'p-ok', txt: 'heute erledigt' };
+  if (a.d === 1) return since === 1 ? { last: last, cls: 'p-warn', txt: 'heute offen' } : { last: last, cls: 'p-err', txt: 'seit ' + since + ' Tagen offen' };
   if (a.d && since >= a.d) return { last: last, cls: 'p-err', txt: 'fällig' };
-  return { last: last, cls: 'p-ok', txt: since === 0 ? 'heute erledigt' : 'erledigt' };
+  return { last: last, cls: 'p-ok', txt: 'erledigt' };
 }
 function maengelVonBeg(bid) { var r = [], l = DB.maengel; for (var i = 0; i < l.length; i++) if (l[i].begehungId === bid) r.push(l[i]); return r; }
 function nextMangelNr() { var l = byG(DB.maengel), m = 0; for (var i = 0; i < l.length; i++) if ((l[i].nr || 0) > m) m = l[i].nr; return m + 1; }
@@ -998,16 +1003,16 @@ function viewHome() {
   if ((anl.length || begs.length) && (!bk || -daysUntil(bk) > 30)) h += '<div class="hint">Die Daten liegen nur auf diesem Gerät. ' + (bk ? 'Letzte Sicherung: ' + fmtD(bk) + '. ' : 'Noch keine Sicherung. ') + '<span class="lnk" onclick="exportBackup()">Jetzt sichern</span></div>';
   h += '<div class="banner"><img src="' + IMG_COVER + '" alt=""></div>';
   h += '<div class="card"><div style="font-size:19px;font-weight:700">' + esc(g.name) + '</div>' + (g.adresse ? '<div class="small">' + esc(g.adresse) + '</div>' : '') + (g.bsb ? '<div class="small">Brandschutzbeauftragte/r: ' + esc(g.bsb) + '</div>' : '') + '<div class="btns"><button class="btn sm" onclick="editGebaeude(\'' + g.id + '\')">Gebäudedaten</button></div></div>';
-  h += '<div class="stats">' + stat(anl.length, 'Prüffristen', 'anl', false) + stat(mo.length, 'Offene Mängel', 'mae', mo.length > 0) + stat(fa.length, 'Prüfungen fällig (30 Tage)', 'anl', fa.length > 0) + stat(begs.length, 'Begehungen gesamt', 'beg', false) + '</div>';
+  h += '<div class="stats">' + stat(anl.length, 'Prüffristen gesamt', 'anl', false) + stat(mo.length, 'Offene Mängel', 'mae', mo.length > 0) + stat(fa.length, 'Prüffristen fällig in 30 Tagen', 'anl', fa.length > 0) + stat(begs.length, 'Begehungen gesamt', 'beg', false) + '</div>';
   h += '<div class="card"><h3>Begehungen</h3>';
   for (var i = 0; i < DB.vorlagen.length; i++) {
     var v = DB.vorlagen[i], s = begStatus(v);
-    h += '<div class="row" onclick="startBegehung(\'' + v.id + '\')"><div class="m"><div class="t">' + esc(v.name) + '</div><div class="s">' + artLabel(v.art) + ' - zuletzt: ' + (s.last ? fmtD(s.last.datum) + ' (' + esc(s.last.pruefer) + ')' : 'noch nie') + '</div></div>' + pill(s.cls, s.txt) + '</div>';
+    h += '<div class="row" onclick="startBegehung(\'' + v.id + '\')"><div class="m"><div class="t">' + esc(v.name) + '</div><div class="s">' + artLabel(v.art) + (s.last ? ', zuletzt am ' + fmtD(s.last.datum) + ' (' + esc(s.last.pruefer) + ')' : ', noch nie durchgeführt') + '</div></div>' + pill(s.cls, s.txt) + '</div>';
   }
   h += '</div>';
   if (fa.length) {
     h += '<div class="card"><h3>Fällige Prüfungen</h3>';
-    for (var j = 0; j < fa.length && j < 6; j++) h += '<div class="row" onclick="showAnlage(\'' + fa[j].id + '\')"><div class="m"><div class="t">' + esc(anlName(fa[j])) + '</div><div class="s">zuletzt: ' + (fmtD(fa[j].letztePruefung) || '-') + '</div></div>' + anlStatus(fa[j]) + '</div>';
+    for (var j = 0; j < fa.length && j < 6; j++) h += '<div class="row" onclick="showAnlage(\'' + fa[j].id + '\')"><div class="m"><div class="t">' + esc(anlName(fa[j])) + '</div><div class="s">Zuletzt geprüft: ' + (fmtD(fa[j].letztePruefung) || 'nicht eingetragen') + '</div></div>' + anlStatus(fa[j]) + '</div>';
     if (fa.length > 6) h += '<div class="small" style="padding-top:8px">... und ' + (fa.length - 6) + ' weitere</div>';
     h += '</div>';
   }
@@ -1084,7 +1089,7 @@ function anlListHtml() {
   for (var j = 0; j < l.length; j++) {
     var b = l[j];
     h += '<div class="row" onclick="showAnlage(\'' + b.id + '\')"><div class="m"><div class="t">' + esc(anlName(b)) + '</div><div class="s">' +
-      (b.intervall ? 'alle ' + intvText(b.intervall) : 'kein Intervall') + ' - zuletzt: ' + (fmtD(b.letztePruefung) || 'nicht eingetragen') + (b.standort ? ' - ' + esc(b.standort) : '') + '</div></div>' + anlStatus(b) + '</div>';
+      (b.intervall ? 'Alle ' + intvText(b.intervall) : 'Kein Intervall') + ', zuletzt geprüft: ' + (fmtD(b.letztePruefung) || 'nicht eingetragen') + (b.standort ? ', ' + esc(b.standort) : '') + '</div></div>' + anlStatus(b) + '</div>';
   }
   return h + '</div>';
 }
@@ -1218,6 +1223,14 @@ function viewBegehungen() {
   var pv = [], sonst = [];
   for (var i = 0; i < DB.vorlagen.length; i++) { if (isPerArt(DB.vorlagen[i].art)) pv.push(DB.vorlagen[i]); else sonst.push(DB.vorlagen[i]); }
   pv.sort(function (a, b) { return ord[a.art] - ord[b.art]; });
+  for (var q = 0; q < sonst.length; q++) {
+    var w = sonst[q], bl = [], all = byG(DB.begehungen);
+    for (var z = 0; z < all.length; z++) if (all[z].vorlageId === w.id && all[z].datum.substr(0, 4) === String(y)) bl.push(all[z]);
+    bl.sort(function (a, b) { return a.datum < b.datum ? 1 : -1; });
+    h += '<div class="card"><h3>' + esc(w.name) + '</h3><div class="small" style="margin-bottom:6px">' + bl.length + (bl.length === 1 ? ' Kontrolle' : ' Kontrollen') + ' im Jahr ' + y + '</div>';
+    for (var x = 0; x < bl.length && x < 5; x++) h += begRow(bl[x]);
+    h += '<button class="btn full" onclick="startBegehung(\'' + w.id + '\')">' + esc(w.name) + ' jetzt durchführen</button></div>';
+  }
   for (var k = 0; k < pv.length; k++) {
     var v = pv[k], ps = perList(v.art, y), cols = v.art === 'monatlich' ? 3 : (v.art === 'jaehrlich' ? 1 : 2);
     h += '<div class="card"><h3>' + esc(v.name) + '</h3><div style="display:grid;grid-template-columns:repeat(' + cols + ',1fr);grid-gap:8px">';
@@ -1234,14 +1247,6 @@ function viewBegehungen() {
     }
     h += '</div></div>';
   }
-  for (var q = 0; q < sonst.length; q++) {
-    var w = sonst[q], bl = [], all = byG(DB.begehungen);
-    for (var z = 0; z < all.length; z++) if (all[z].vorlageId === w.id && all[z].datum.substr(0, 4) === String(y)) bl.push(all[z]);
-    bl.sort(function (a, b) { return a.datum < b.datum ? 1 : -1; });
-    h += '<div class="card"><h3>' + esc(w.name) + '</h3><div class="small" style="margin-bottom:6px">' + bl.length + ' Kontrolle(n) in ' + y + '</div>';
-    for (var x = 0; x < bl.length && x < 5; x++) h += begRow(bl[x]);
-    h += '<button class="btn full" onclick="startBegehung(\'' + w.id + '\')">' + esc(w.name) + ' jetzt durchführen</button></div>';
-  }
   var l = byG(DB.begehungen), ly = [];
   for (var r = 0; r < l.length; r++) if (begPer(l[r]).substr(0, 4) === String(y) || l[r].datum.substr(0, 4) === String(y)) ly.push(l[r]);
   ly.sort(function (a, b) { var x1 = a.datum + (a.zeit || ''), y1 = b.datum + (b.zeit || ''); return x1 < y1 ? 1 : -1; });
@@ -1257,7 +1262,7 @@ function viewBegehungen() {
 function begRow(b) {
   var n = begAnzahl(b), p = begPer(b);
   var sd = begStand(b);
-  return '<div class="row" onclick="showBegehung(\'' + b.id + '\')"><div class="m"><div class="t">' + esc(b.vorlageName) + (p ? ' - ' + perLabel(p) : '') + '</div><div class="s">' + fmtD(b.datum) + ' - ' + esc(b.pruefer) + (n ? ' - ' + n + (n === 1 ? ' Mangel' : ' Mängel') : '') + '</div></div>' + (b.offen ? pill('p-warn', 'in Arbeit ' + sd.a + '/' + sd.n) : (n ? pill('p-err', n + (n === 1 ? ' Mangel' : ' Mängel')) : pill('p-ok', 'i.O.'))) + '</div>';
+  return '<div class="row" onclick="showBegehung(\'' + b.id + '\')"><div class="m"><div class="t">' + esc(b.vorlageName) + (p ? ' - ' + perLabel(p) : '') + '</div><div class="s">' + fmtD(b.datum) + ', ' + esc(b.pruefer) + (n ? ' - ' + n + (n === 1 ? ' Mangel' : ' Mängel') : '') + '</div></div>' + (b.offen ? pill('p-warn', 'in Arbeit ' + sd.a + '/' + sd.n) : (n ? pill('p-err', n + (n === 1 ? ' Mangel' : ' Mängel')) : pill('p-ok', 'i.O.'))) + '</div>';
 }
 function perTap(vid, p) {
   var v = findById(DB.vorlagen, vid), s = perStatus(vid, p);
@@ -1651,7 +1656,7 @@ function viewBericht() {
   var y = new Date().getFullYear();
   var g = curGeb();
   var h = '<h2>Bericht erstellen</h2>' +
-    rptCardHtml() +
+    rptCardHtml() + absCardHtml() +
     '<div class="card"><h3>Brandschutzbuch-Bericht: Zeitraum</h3>' +
     '<div class="two"><div><label>Von</label><input id="r_von" type="date" value="' + y + '-01-01"></div><div><label>Bis</label><input id="r_bis" type="date" value="' + todayStr() + '"></div></div>' +
     '<div class="btns"><button class="btn sm" onclick="rZeit(0)">Dieses Jahr</button><button class="btn sm" onclick="rZeit(1)">Letztes Jahr</button><button class="btn sm" onclick="rZeit(2)">Letzte 12 Monate</button><button class="btn sm" onclick="rZeit(3)">Alles</button></div></div>' +
@@ -1699,6 +1704,202 @@ function newDoc() {
   doc.text = function (t) { var a = Array.prototype.slice.call(arguments); a[0] = pdfSan(t); return ot.apply(this, a); };
   doc.splitTextToSize = function (t) { var a = Array.prototype.slice.call(arguments); a[0] = pdfSan(t); return os.apply(this, a); };
   return doc;
+}
+/* ---------- Jahresabschluss / Quartals-Mängelmeldung (Kenntnisnahme durch den Betreiber) ---------- */
+function absCardHtml() {
+  var y = new Date().getFullYear(), q = Math.ceil((new Date().getMonth() + 1) / 3);
+  return '<div class="card"><h3>Jahresabschluss &amp; Mängelmeldung</h3>' +
+    '<p class="small" style="margin-top:0;line-height:1.45">Offene Mängel dem Betreiber zur Kenntnis bringen und unterschreiben lassen: vierteljährlich (TRVB 120 O) und zum Jahresende mit Bestätigung zur Einsichtnahme des Brandschutzbuchs.</p>' +
+    '<button class="btn pri full" onclick="absDialog(\'jahr\')">Jahresabschluss ' + y + '</button>' +
+    '<button class="btn full" onclick="absDialog(\'quartal\')">Mängelmeldung ' + q + '. Quartal ' + y + '</button></div>';
+}
+function absDialog(art) {
+  var g = curGeb(); if (!g) { editGebaeude(); return; }
+  var d = new Date(), y = d.getFullYear(), q = Math.ceil((d.getMonth() + 1) / 3);
+  var stich = art === 'jahr' ? (todayStr() < y + '-12-15' ? y + '-12-15' : todayStr()) : todayStr();
+  var B = bk(), ort = DB.settings.absOrt || String(B.z4 || '').replace(/^\d+\s*/, '');
+  var qo = ''; for (var k = 1; k <= 4; k++) qo += '<option value="' + k + '"' + (k === q ? ' selected' : '') + '>' + k + '. Quartal</option>';
+  var h = (art === 'quartal' ? '<div class="two"><div><label>Quartal</label><select id="a_q">' + qo + '</select></div><div><label>Jahr</label><input id="a_y" type="number" value="' + y + '"></div></div>'
+      : '<label>Kalenderjahr (Prüfperiode)</label><input id="a_y" type="number" value="' + y + '">') +
+    '<label>Stichtag der Mängelübersicht</label><input id="a_st" type="date" value="' + stich + '">' +
+    '<label>Brandschutzbeauftragte/r</label><input id="a_bsb" value="' + esc(g.bsb || B.z2 || '') + '">' +
+    '<label>Betreiber / Eigentümer / Arbeitgeber (bzw. Gemeindevertretung)</label><input id="a_bet" value="' + esc(g.verantwortlich || '') + '">' +
+    '<label>Ort (für die Unterschrift)</label><input id="a_ort" value="' + esc(ort) + '">' +
+    '<label class="chk"><input type="checkbox" id="a_pf" checked>Überfällige Prüffristen mit aufnehmen</label>' +
+    '<label class="chk"><input type="checkbox" id="a_bg" checked>Fehlende / unvollständige Begehungen mit aufnehmen</label>' +
+    '<label class="chk"><input type="checkbox" id="a_leer">Nur leere Vorlage zum Ausfüllen (ohne Daten)</label>' +
+    '<p class="small" style="line-height:1.45">Die Entscheidung (beheben bis 31.12. oder ins Folgejahr übertragen), Begründung und Ersatzmaßnahme trägt der Betreiber auf dem Ausdruck ein und unterschreibt.</p>';
+  modal(art === 'jahr' ? 'Jahresabschluss' : 'Mängelmeldung an den Betreiber', h, [{ label: 'Abbrechen', fn: closeModal }, { label: 'PDF erstellen', cls: 'pri', fn: function () { absPdf(art); } }]);
+}
+function absGemeldet(mid) {
+  var l = byG(DB.berichte), d = '';
+  for (var i = 0; i < l.length; i++) if (l[i].eintraege && l[i].eintraege.indexOf(mid) >= 0 && (!d || l[i].datum < d)) d = l[i].datum;
+  return d;
+}
+function absPdf(art) {
+  var g = curGeb(); if (!g) return;
+  var y = +val('a_y') || new Date().getFullYear(), q = art === 'quartal' ? +val('a_q') : 4;
+  var st = val('a_st') || todayStr(), bsb = val('a_bsb'), bet = val('a_bet'), ort = val('a_ort'), leer = chk('a_leer');
+  var mitPf = chk('a_pf'), mitBg = chk('a_bg');
+  DB.settings.absOrt = ort; save('settings');
+  var doc = newDoc(); if (!doc) return;
+  var B = bk(), W = 210, H = 297, ML = 15, MR = 195, CW = MR - ML, yy;
+  function fN(sz) { doc.setFont('helvetica', 'normal'); doc.setFontSize(sz); doc.setTextColor(0, 0, 0); }
+  function fB(sz) { doc.setFont('helvetica', 'bold'); doc.setFontSize(sz); doc.setTextColor(0, 0, 0); }
+  function hl(a) { doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.3); doc.line(ML, a, MR, a); }
+  function box(x, b) { doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.25); doc.rect(x, b - 2.9, 3.2, 3.2); }
+  function kreuz(x, b) { doc.setLineWidth(0.4); doc.line(x + 0.6, b - 2.3, x + 2.6, b - 0.3); doc.line(x + 2.6, b - 2.3, x + 0.6, b - 0.3); }
+  function need(hh) { if (yy + hh > H - 18) { doc.addPage(); yy = 20; } }
+  function para(t, sz, ind) {
+    fN(sz || 9); var ls = doc.splitTextToSize(t, CW - (ind || 0));
+    for (var i = 0; i < ls.length; i++) { need(4.6); doc.text(ls[i], ML + (ind || 0), yy); yy += 4.4; }
+  }
+  function kopf(t1, t2) {
+    fB(9); if (B.z1) doc.text(B.z1, ML, 13.8);
+    fN(7.8); var by = 18, zs = [B.z2, B.z3, B.z4];
+    for (var z = 0; z < zs.length; z++) { if (zs[z]) { doc.text(zs[z], ML, by); by += 4.2; } }
+    if (B.logo) { try { doc.addImage(B.logo, 'JPEG', 162.7, 11.1, 32.3, 32.3); } catch (e) {} }
+    doc.setFillColor(238, 238, 238); doc.rect(ML, 46.8, CW, 20, 'F'); hl(46.8); hl(66.8);
+    fB(13); doc.text(t1, W / 2, 55, { align: 'center' });
+    fB(10); doc.text(t2, W / 2, 61.8, { align: 'center' });
+    yy = 73;
+  }
+  function felder(rows) {
+    for (var i = 0; i < rows.length; i++) {
+      fB(8.5); doc.text(rows[i][0], ML, yy);
+      fN(9); var v = rows[i][1];
+      if (v) doc.text(doc.splitTextToSize(v, CW - 58)[0], ML + 58, yy);
+      else { doc.setDrawColor(120, 120, 120); doc.setLineWidth(0.2); doc.line(ML + 58, yy + 0.8, MR, yy + 0.8); }
+      yy += 6.2;
+    }
+  }
+  function unterschriften(lbl1, n1, lbl2, n2) {
+    need(48);
+    yy += 6; fN(9);
+    doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.3);
+    doc.line(ML, yy, ML + 60, yy); doc.line(ML + 75, yy, ML + 115, yy);
+    if (ort) doc.text(ort, ML + 1, yy - 1.5);
+    fN(7.5); doc.text('(Ort)', ML, yy + 3.5); doc.text('(Datum)', ML + 75, yy + 3.5);
+    yy += 22;
+    doc.setLineWidth(0.3); doc.line(ML, yy, ML + 80, yy); doc.line(MR - 80, yy, MR, yy);
+    fN(7.5);
+    doc.text(lbl1, ML, yy + 3.8); doc.text(lbl2, MR - 80, yy + 3.8);
+    doc.text(n1 ? '(' + n1 + ')' : '(Name in Blockschrift: ____________________)', ML, yy + 7.6);
+    doc.text(n2 ? '(' + n2 + ')' : '(Name in Blockschrift: ____________________)', MR - 80, yy + 7.6);
+    yy += 15;
+  }
+
+  /* ---- Zeilen für Teil A sammeln ---- */
+  var rows = [];
+  if (!leer) {
+    var ms = offeneMaengel();
+    ms.sort(function (a, b) { return (a.datum || '') < (b.datum || '') ? -1 : 1; });
+    for (var i = 0; i < ms.length; i++) {
+      var m = ms[i]; if (m.datum && m.datum > st) continue;
+      var ortm = mangelOrt(m);
+      rows.push({ t: mTitel(m) + (ortm ? '\nOrt: ' + ortm : '') + (m.status === 'arbeit' ? '\n(in Bearbeitung)' : ''), fest: fmtD(m.datum), gem: fmtD(absGemeldet(m.id)) });
+    }
+    if (mitPf) {
+      var al = byG(DB.anlagen);
+      for (var a = 0; a < al.length; a++) if (al[a].naechstePruefung && al[a].naechstePruefung <= st) rows.push({ t: 'Prüffrist überschritten: ' + anlName(al[a]) + (al[a].standort ? '\nOrt: ' + al[a].standort : ''), fest: fmtD(al[a].naechstePruefung), gem: '' });
+    }
+    if (mitBg) {
+      for (var v = 0; v < DB.vorlagen.length; v++) {
+        var vo = DB.vorlagen[v]; if (!isPerArt(vo.art)) continue;
+        var ps = perList(vo.art, y);
+        for (var p = 0; p < ps.length; p++) {
+          var r = perRange(ps[p]); if (r.von > st) continue;
+          var s = perStatus(vo.id, ps[p]);
+          if (s.k === 'fehlt' || s.k === 'unvoll' || s.k === 'arbeit' || (s.k === 'faellig' && art === 'jahr'))
+            rows.push({ t: vo.name + ' ' + perLabel(ps[p]) + ': ' + (s.k === 'arbeit' || s.k === 'unvoll' ? 'unvollständig (' + s.sd.a + ' von ' + s.sd.n + ' Fragen)' : 'nicht durchgeführt'), fest: fmtD(r.bis), gem: '' });
+        }
+      }
+    }
+  }
+  var nDaten = rows.length;
+  var leerZ = leer ? 6 : (rows.length ? 1 : 4);
+  for (var e = 0; e < leerZ; e++) rows.push({ t: '', fest: '', gem: '', leer: true });
+
+  var titelA = art === 'jahr' ? 'Mängelübersicht zum Jahresende' : 'Mängelmeldung an den Betreiber';
+  var unterA = (art === 'jahr' ? 'Prüfperiode 01.01.' + y + ' - 31.12.' + y : q + '. Quartal ' + y) + '  |  Stichtag ' + fmtD(st);
+  kopf(titelA, unterA);
+  felder([['Objekt / Liegenschaft:', g.name], ['Anschrift:', g.adresse || ''], ['Brandschutzbeauftragte/r:', bsb], ['Betreiber / Verantwortliche/r:', bet]]);
+  yy += 1;
+  fB(10); doc.text(art === 'jahr' ? 'Teil A - Offene Mängel, Prüffristen und Begehungen' : 'Offene Mängel, Prüffristen und Begehungen', ML, yy); yy += 2;
+
+  var body = [], DEC_J = 'Behebung bis 31.12.' + y + '\n\nÜbertrag ins Folgejahr,\nbehoben bis: ________', DEC_Q = 'Behebung bis: ________\n\nÜbertrag, behoben bis:\n________';
+  for (var b = 0; b < rows.length; b++) body.push([rows[b].leer ? '' : String(b + 1), rows[b].t, rows[b].fest, rows[b].gem, art === 'jahr' ? DEC_J : DEC_Q, '', '']);
+  doc.autoTable({
+    startY: yy, margin: { left: ML, right: W - MR }, theme: 'grid',
+    head: [['Nr.', 'Mangel / Ort', 'festgestellt am', 'gemeldet am', 'Entscheidung des Betreibers', 'Begründung (z. B. Kosten, Lieferzeit)', 'Ersatzmaßnahme bis zur Behebung']],
+    body: body,
+    styles: { font: 'helvetica', fontSize: 7.5, cellPadding: 1.6, lineColor: [0, 0, 0], lineWidth: 0.2, textColor: [0, 0, 0], valign: 'top', minCellHeight: 17 },
+    headStyles: { fillColor: [238, 238, 238], fontStyle: 'bold', fontSize: 7.3, valign: 'middle', minCellHeight: 8 },
+    columnStyles: { 0: { cellWidth: 8, halign: 'center' }, 1: { cellWidth: 50 }, 2: { cellWidth: 17 }, 3: { cellWidth: 17 }, 4: { cellWidth: 37, cellPadding: { top: 1.6, bottom: 1.6, left: 5.6, right: 1.2 } }, 5: { cellWidth: 26 }, 6: { cellWidth: 25 } },
+    didParseCell: function (d) { if (d.section === 'body' && d.column.index === 4) d.cell.styles.fontSize = 7; },
+    didDrawCell: function (d) {
+      if (d.section !== 'body' || d.column.index !== 4) return;
+      var lh = 7 * 1.15 * 25.4 / 72, b1 = d.cell.y + 1.6 + lh * 0.82;
+      box(d.cell.x + 1.3, b1 + 0.2); box(d.cell.x + 1.3, b1 + 2 * lh + 0.2);
+    }
+  });
+  yy = doc.lastAutoTable.finalY + 6;
+  if (!leer && !nDaten) { need(6); fB(9); doc.text('Zum Stichtag sind in der App keine offenen Mängel, Prüffristen oder Begehungen vermerkt.', ML, yy); yy += 6; }
+  doc.setFont('helvetica', 'italic'); doc.setFontSize(8.5);
+  var hin = doc.splitTextToSize((art === 'jahr' ? 'Die Entscheidung, Mängel nicht im laufenden Jahr zu beheben, trifft der Betreiber in eigener Verantwortung. ' : 'Die angeführten Mängel wurden dem Betreiber gemäß TRVB 120 O zur Kenntnis gebracht. Die Entscheidung über Zeitpunkt und Art der Behebung trifft der Betreiber in eigener Verantwortung. ') + 'Für sicherheitsrelevante Mängel sind bis zur Behebung geeignete Ersatzmaßnahmen festzulegen.', CW);
+  for (var hi = 0; hi < hin.length; hi++) { need(4.4); doc.text(hin[hi], ML, yy); yy += 4.2; }
+  if (art === 'jahr') {
+    need(26); yy += 13; fN(9);
+    doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.3); doc.line(ML, yy, ML + 70, yy); doc.line(MR - 80, yy, MR, yy);
+    if (ort) doc.text(ort + ', am', ML + 1, yy - 1.5);
+    fN(7.5); doc.text('(Ort, Datum)', ML, yy + 3.8); doc.text('Entscheidungen getroffen - Unterschrift Betreiber / Gemeindevertretung', MR - 80, yy + 3.8);
+    if (bet) doc.text('(' + bet + ')', MR - 80, yy + 7.6);
+    yy += 10;
+  }
+  if (art === 'quartal') {
+    yy += 2; para('Mit seiner Unterschrift bestätigt der Betreiber, die oben angeführten Mängel und offenen Punkte zur Kenntnis genommen zu haben.', 9);
+    unterschriften('Unterschrift Brandschutzbeauftragte/r', bsb, 'Unterschrift Betreiber / Gemeindevertretung', bet);
+  } else {
+    /* ---- Teil B ---- */
+    doc.addPage();
+    kopf('Jahresbericht und Bestätigung', 'zur Einsichtnahme des Brandschutzbuchs - Teil B');
+    felder([['Objekt / Liegenschaft:', g.name], ['Anschrift:', g.adresse || ''], ['Prüfperiode / Kalenderjahr:', '01.01.' + y + ' - 31.12.' + y], ['Brandschutzbeauftragte/r:', bsb], ['Betreiber / Eigentümer / Arbeitgeber:', bet]]);
+    yy += 2;
+    fB(10); doc.text('1. Bericht und Status des Brandschutzes', ML, yy); hl(yy + 1.5); yy += 6.5;
+    var rb = [], bl = byG(DB.berichte);
+    for (var x = 0; x < bl.length; x++) if (bl[x].datum && bl[x].datum.substr(0, 4) === String(y)) rb.push(fmtD(bl[x].datum));
+    rb.sort();
+    para('Der Brandschutzbeauftragte hat die Eigenkontrollen im Rahmen seiner Bestellung durchgeführt und festgestellte Mängel, fällige Prüfungen und Empfehlungen dem Betreiber nachweislich gemeldet' +
+      (leer ? ' (Mängelberichte vom ____________________, Quartalsmeldungen vom ____________________).' : (rb.length ? ' (Mängelberichte / Gesamtübersichten vom ' + rb.join(', ') + ').' : '.')), 9);
+    yy += 2; fB(9); doc.text('Zusammenfassung:', ML, yy); yy += 6;
+    fN(9);
+    box(ML + 2, yy); if (!leer && !nDaten) kreuz(ML + 2, yy); doc.text('Keine offenen Mängel festgestellt.', ML + 8, yy); yy += 6;
+    box(ML + 2, yy); if (!leer && nDaten) kreuz(ML + 2, yy);
+    var zl = doc.splitTextToSize('Die in der Mängelübersicht (Teil A) angeführten ' + (!leer && nDaten ? nDaten + ' Punkte (Mängel, Fristen bzw. Überprüfungen)' : 'Mängel, Fristen bzw. Überprüfungen') + ' sind im Brandschutzbuch vermerkt und bedürfen der Veranlassung durch den Betreiber.', CW - 8);
+    for (var zi = 0; zi < zl.length; zi++) { doc.text(zl[zi], ML + 8, yy); yy += 4.4; }
+    yy += 4;
+    fB(10); doc.text('2. Bestätigung und Einsichtnahme durch den Betreiber / die Gemeinde', ML, yy); hl(yy + 1.5); yy += 6.5;
+    para('Mit seiner Unterschrift bestätigt der Betreiber bzw. die vertretungsbefugte Person:', 9);
+    var pk = ['Das Brandschutzbuch für den genannten Zeitabschnitt inklusive aller Mängelberichte, Revisionsbefunde und Protokolle eingesehen zu haben.',
+      'Die im Brandschutzbuch sowie in diesem Bericht aufgezeigten Mängel, offenen Prüffristen und Handlungsempfehlungen zur Kenntnis genommen zu haben.',
+      'Die Veranlassung zur Behebung der Mängel sowie die Wahrnehmung der Betreiberpflichten gemäß den geltenden Bestimmungen (u. a. ASchG, AStV, TRVB 119 O und TRVB 120 O sowie behördliche Vorschreibungen) in eigener Verantwortung zu übernehmen.',
+      'Die Mängelübersicht zum Jahresende (Teil A) erhalten zu haben. Für Mängel, die ins Folgejahr übertragen werden, trägt der Betreiber die Verantwortung für Frist und Ersatzmaßnahmen.'];
+    for (var pi = 0; pi < pk.length; pi++) { need(9); fN(9); doc.text((pi + 1) + '.', ML + 2, yy); para(pk[pi], 9, 8); yy += 1; }
+    yy += 2;
+    para('Der Brandschutzbeauftragte hat mit der Übergabe dieses Berichts seine Informations- und Meldepflicht gegenüber dem Betreiber für die Prüfperiode erfüllt.', 9);
+    unterschriften('Unterschrift Brandschutzbeauftragte/r', bsb, 'Unterschrift Betreiber / Gemeindevertretung', bet);
+    need(8); fN(9); doc.text('Ausfertigung erhalten:', ML, yy); box(ML + 38, yy); doc.text('Betreiber', ML + 43, yy); box(ML + 66, yy); doc.text('Brandschutzbeauftragte/r', ML + 71, yy);
+  }
+  var np = doc.getNumberOfPages(), demo = !isLicensed();
+  for (var pg = 1; pg <= np; pg++) {
+    doc.setPage(pg); doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setTextColor(0, 0, 0);
+    doc.text(g.name + ' - ' + (art === 'jahr' ? 'Jahresabschluss ' + y : 'Mängelmeldung ' + q + '. Quartal ' + y), ML, H - 9.5);
+    doc.text('Seite ' + pg + ' / ' + np, MR, H - 9.5, { align: 'right' });
+    if (demo) demoMark(doc);
+  }
+  var fname = (art === 'jahr' ? 'Jahresabschluss ' + y : 'Maengelmeldung Q' + q + ' ' + y) + ' ' + niceName(g.name) + (leer ? ' Vorlage' : '') + '.pdf';
+  var mail = 'Sehr geehrte Damen und Herren,\n\nanbei erhalten Sie ' + (art === 'jahr' ? 'den Jahresabschluss ' + y + ' (Mängelübersicht und Bestätigung zur Einsichtnahme des Brandschutzbuchs)' : 'die Mängelmeldung für das ' + q + '. Quartal ' + y) + ' für ' + g.name + ' mit der Bitte um Kenntnisnahme und Unterschrift.\n\nMit freundlichen Grüßen\n' + (bsb || B.z1 || '');
+  pdfReady(doc, fname, { subject: (art === 'jahr' ? 'Jahresabschluss ' + y : 'Mängelmeldung ' + q + '. Quartal ' + y) + ' - ' + g.name, text: mail });
 }
 function demoMark(doc) {
   try { doc.setGState(new doc.GState({ opacity: 0.18 })); } catch (e4) {}
