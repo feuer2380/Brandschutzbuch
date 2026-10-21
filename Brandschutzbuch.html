@@ -115,8 +115,8 @@ textarea{min-height:80px;resize:vertical}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 /* Brandschutzbuch - lokale Web-App (Janiba Brandschutztechnik GmbH) */
-var APP_VERSION = '2.19';
-var APP_STAND = '21.10.2026 16:50';
+var APP_VERSION = '2.21';
+var APP_STAND = '21.10.2026 21:45';
 var UPD = null;
 function verText() { return 'Version ' + APP_VERSION + ' vom ' + APP_STAND; }
 function verFooter() {
@@ -827,7 +827,7 @@ function modal(title, body, buttons, guard) {
   $('modalWrap').className = '';
   $('mBody').scrollTop = 0;
 }
-function closeModal() { $('modalWrap').className = 'hidden'; MODAL_GUARD = null; BEG = null; SIG = null; }
+function closeModal() { if (DIKT) { try { var dk = DIKT; DIKT = null; dk.stop(); } catch (e) {} } $('modalWrap').className = 'hidden'; MODAL_GUARD = null; BEG = null; SIG = null; }
 function closeModalAsk() { if (MODAL_GUARD) { var g = MODAL_GUARD; MODAL_GUARD = null; ask(g, function () { closeModal(); }); return; } closeModal(); }
 function ask(text, fn, okLabel) {
   modal('Bitte bestätigen', '<p style="margin:14px 0">' + esc(text) + '</p>', [
@@ -1547,6 +1547,41 @@ function viewMaengel() {
   return h + '<button class="fab" onclick="editMangel()">+ Mangel</button>';
 }
 var MRET = null;
+/* ---------- Diktieren (Spracheingabe) ---------- */
+var DIKT = null;
+function micAttach(ids) {
+  for (var i = 0; i < ids.length; i++) {
+    var el = $(ids[i]); if (!el || !el.parentNode) continue;
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'btn sm mic'; b.innerHTML = '&#127908; Diktieren';
+    b.style.cssText = 'margin-top:6px;display:inline-block';
+    (function (id, bt) { bt.onclick = function () { diktat(id, bt); }; })(ids[i], b);
+    el.parentNode.insertBefore(b, el.nextSibling);
+  }
+}
+function diktat(id, btn) {
+  var el = $(id), SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (DIKT) { var alt = DIKT; DIKT = null; try { alt.stop(); } catch (e) {} return; }
+  if (!SR) { el.focus(); toast('Bitte die Mikrofon-Taste auf der Tastatur antippen (unten rechts)'); return; }
+  var r; try { r = new SR(); } catch (e2) { el.focus(); toast('Bitte die Mikrofon-Taste auf der Tastatur antippen'); return; }
+  r.lang = 'de-AT'; r.continuous = true; r.interimResults = true;
+  var basis = el.value, fertig = '';
+  function setText(t) { var sep = basis && !/\s$/.test(basis) ? ' ' : ''; el.value = basis + (t ? sep + t : ''); }
+  r.onresult = function (ev) {
+    var zwi = '';
+    for (var i = ev.resultIndex; i < ev.results.length; i++) { if (ev.results[i].isFinal) fertig += (fertig ? ' ' : '') + ev.results[i][0].transcript.replace(/^\s+/, ''); else zwi += ev.results[i][0].transcript; }
+    var t = fertig + (zwi ? (fertig ? ' ' : '') + zwi.replace(/^\s+/, '') : '');
+    if (t) t = t.charAt(0).toUpperCase() + t.substr(1);
+    setText(t);
+  };
+  r.onerror = function (ev) {
+    if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') info('Mikrofon nicht erlaubt', '<p style="line-height:1.5">Bitte dem Brandschutzbuch den Zugriff auf das Mikrofon erlauben (iPhone: Einstellungen &gt; Safari &gt; Mikrofon) oder die Mikrofon-Taste auf der Tastatur verwenden.</p>');
+    else if (ev.error !== 'no-speech' && ev.error !== 'aborted') toast('Diktieren nicht möglich - bitte Mikrofon-Taste der Tastatur verwenden');
+  };
+  r.onend = function () { DIKT = null; btn.innerHTML = '&#127908; Diktieren'; btn.style.background = ''; btn.style.color = ''; };
+  try { r.start(); } catch (e3) { el.focus(); toast('Bitte die Mikrofon-Taste auf der Tastatur antippen'); return; }
+  DIKT = r; btn.innerHTML = '&#9679; Ich höre zu ... (tippen = fertig)'; btn.style.background = 'var(--red2)'; btn.style.color = '#fff';
+}
 function editMangel(id, preset, ret) {
   if (!curGeb()) { editGebaeude(); return; }
   MRET = ret || null;
@@ -1578,6 +1613,7 @@ function editMangel(id, preset, ret) {
   if (m) h += '<button class="btn full" style="margin-top:18px;color:var(--red2)" onclick="delMangel(\'' + m.id + '\')">Eintrag löschen</button>';
   var cancel = MRET ? function () { var r = MRET; MRET = null; r(null); } : closeModal;
   modal(m ? 'Eintrag bearbeiten' : (typ === 'taetigkeit' ? 'Tätigkeitsnachweis' : 'Mangel erfassen'), h, [{ label: MRET ? 'Zurück' : 'Abbrechen', fn: cancel }, { label: 'Speichern', cls: 'pri', fn: function () { saveMangel(id); } }], m || MRET ? null : 'Eingaben verwerfen?');
+  micAttach(['m_t', 'm_s', 'm_b', 'm_m']);
   mFotoPrev();
 }
 function mAnlChg(s) { var a = findById(DB.anlagen, s.value); if (!a) return; if (!val('m_inv') && a.nr) $('m_inv').value = a.nr; if (!val('m_s') && a.standort) $('m_s').value = a.standort; }
@@ -1642,11 +1678,11 @@ function readFoto(f, cb, max) {
   rd.onload = function () {
     var img = new Image();
     img.onload = function () {
-      var mx = max || 1280, w = img.width, h = img.height;
+      var mx = max || 1024, w = img.width, h = img.height;
       if (w > h && w > mx) { h = Math.round(h * mx / w); w = mx; } else if (h >= w && h > mx) { w = Math.round(w * mx / h); h = mx; }
       var c = document.createElement('canvas'); c.width = w; c.height = h;
       var x = c.getContext('2d'); x.fillStyle = '#ffffff'; x.fillRect(0, 0, w, h); x.drawImage(img, 0, 0, w, h);
-      cb(c.toDataURL('image/jpeg', 0.72));
+      cb(c.toDataURL('image/jpeg', 0.65));
     };
     img.onerror = function () { toast('Foto konnte nicht gelesen werden'); cb(''); };
     img.src = rd.result;
@@ -2558,8 +2594,11 @@ function openSettings() {
   for (var j = 0; j < DB.vorlagen.length; j++) h += '<div class="row" onclick="editVorlage(\'' + DB.vorlagen[j].id + '\')"><div class="m"><div class="t">' + esc(DB.vorlagen[j].name) + '</div><div class="s">' + artLabel(DB.vorlagen[j].art) + ' - ' + nFragen(DB.vorlagen[j]) + ' Fragen</div></div><span class="small">Bearbeiten</span></div>';
   h += '<div class="btns"><button class="btn sm" onclick="editVorlage()">+ Neue Checkliste</button><button class="btn sm" onclick="buchVorlagen()">Auf Buch-Standard zurücksetzen</button></div>';
   h += '<div class="grp">Datensicherung</div><p class="small" style="line-height:1.5">Alle Daten sind nur auf diesem Gerät gespeichert. Sichern Sie regelmäßig - z. B. in iCloud Drive oder per Mail. Letzte Sicherung: ' + (s.letztesBackup ? fmtD(s.letztesBackup) : 'noch keine') + '</p>' +
-    '<button class="btn pri full" onclick="exportBackup()">Daten sichern (Datei)</button>' +
-    '<label>Sicherung wiederherstellen</label><input type="file" accept=".json,application/json" onchange="importBackup(this)">';
+    '<button class="btn pri full" onclick="exportBackup()">Daten sichern (Datei / Mail)</button>' +
+    '<label>Sicherung per Mail senden an (z. B. Ihr Betreuer)</label><div style="display:flex;gap:8px"><input id="s_bm" type="email" value="' + esc(s.backupMail || '') + '" placeholder="name@firma.at" style="flex:1"><button class="btn sm" onclick="saveBackupMail()">OK</button></div>' +
+    '<label>Sicherung dazuladen (zusammenführen)</label><div class="small" style="margin-bottom:6px;line-height:1.45">Vorhandene Daten bleiben erhalten, Neues aus der Sicherung kommt dazu - z. B. Daten vom PC aufs Handy.</div><input type="file" accept=".json,application/json" onchange="mergeBackup(this)">' +
+    '<label>Sicherung wiederherstellen (ersetzt alles)</label><div class="small" style="margin-bottom:6px;line-height:1.45">Achtung: alle Daten auf diesem Gerät werden durch die Sicherung ersetzt.</div><input type="file" accept=".json,application/json" onchange="importBackup(this)">' +
+    '<button class="btn full" style="margin-top:14px" onclick="speicherTest()">Speicher-Selbsttest</button>';
   h += '<div class="grp">Info</div><p class="small" style="line-height:1.5">Brandschutzbuch ' + esc(verText()) + ' <span class="lnk" onclick="checkUpdate(true)">auf Update prüfen</span><br>' + esc(FIRMA_KONTAKT) + '</p>';
   modal('Einstellungen', h, [{ label: 'Schließen', fn: function () { closeModal(); render(); } }]);
 }
@@ -2621,12 +2660,184 @@ function resetVorlagen() {
   }
   save('vorlagen'); toast(add ? add + ' Standard-Checkliste(n) hinzugefügt' : 'Alle Standard-Checklisten sind bereits vorhanden'); openSettings();
 }
+/* ---------- Datensicherung: Erinnerung, Senden, Dazuladen, Speicher-Selbsttest ---------- */
+function fmtGr(b) { return b > 1048576 ? (b / 1048576).toFixed(1).replace('.', ',') + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB'; }
+function backupBlob() { return new Blob([JSON.stringify({ app: 'brandschutzbuch', version: 1, exportiert: new Date().toISOString(), db: DB })], { type: 'application/json' }); }
 function exportBackup() {
-  var data = { app: 'brandschutzbuch', version: 1, exportiert: new Date().toISOString(), db: DB };
-  var blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+  var blob = backupBlob(), s = DB.settings, g = curGeb();
   DB.settings.letztesBackup = todayStr(); save('settings');
-  shareBlob(blob, 'Brandschutzbuch-Sicherung_' + todayStr() + '.json', 'application/json');
+  var txt = 'Datensicherung Brandschutzbuch vom ' + fmtD(todayStr()) + (s.lizenzName ? ' - ' + s.lizenzName : '') + '.\nWiederherstellen: Brandschutzbuch öffnen > Zahnrad > Datensicherung > Sicherung wiederherstellen.';
+  shareBlob(blob, 'Brandschutzbuch-Sicherung_' + todayStr() + '.json', 'application/json', { subject: 'Brandschutzbuch Datensicherung ' + fmtD(todayStr()), text: (s.backupMail ? 'An: ' + s.backupMail + '\n' : '') + txt });
   render();
+  if (s.backupMail) toast('Im Teilen-Menü Mail wählen und an ' + s.backupMail + ' senden');
+}
+function backupFaellig() { var bk = DB.settings.letztesBackup; return !bk || -daysUntil(bk) >= 30; }
+function backupErinnerung() {
+  if (!DB.gebaeude.length || !backupFaellig()) return;
+  if (DB.settings.backupGefragt === todayStr()) return; /* höchstens einmal am Tag fragen */
+  DB.settings.backupGefragt = todayStr(); save('settings');
+  var bk = DB.settings.letztesBackup;
+  modal('Datensicherung fällig', '<p style="line-height:1.5"><b>' + (bk ? 'Ihre letzte Sicherung ist vom ' + fmtD(bk) + '.' : 'Sie haben noch keine Datensicherung gemacht.') + '</b></p>' +
+    '<p style="line-height:1.5">Alle Daten liegen nur auf diesem Gerät. Geht das Gerät verloren oder wird die App gelöscht, sind Begehungen, Mängel und Fotos weg.</p>' +
+    '<p class="small" style="line-height:1.5">Größe der Sicherung: ca. ' + fmtGr(backupBlob().size) + '. Im Teilen-Menü <b>Mail</b> wählen' + (DB.settings.backupMail ? ' (an ' + esc(DB.settings.backupMail) + ')' : '') + ' oder <b>In Dateien sichern</b> (iCloud Drive).</p>',
+    [{ label: 'Später', fn: closeModal }, { label: 'Jetzt sichern', cls: 'pri', fn: function () { closeModal(); exportBackup(); } }]);
+}
+function saveBackupMail() { DB.settings.backupMail = val('s_bm'); save('settings'); toast('Gespeichert'); }
+
+/* Sicherung dazuladen: vorhandene Daten bleiben, Neues kommt dazu, gleiche Einträge werden sinnvoll zusammengeführt */
+function mergeBackup(input) {
+  var f = input.files && input.files[0]; if (!f) return;
+  var rd = new FileReader();
+  rd.onload = function () {
+    var data;
+    try { data = JSON.parse(rd.result); } catch (e) { toast('Datei ist keine gültige Sicherung'); return; }
+    if (!data || data.app !== 'brandschutzbuch' || !data.db) { toast('Datei ist keine Brandschutzbuch-Sicherung'); return; }
+    ask('Sicherung vom ' + fmtD(String(data.exportiert || '').substr(0, 10)) + ' dazuladen? Ihre vorhandenen Daten bleiben erhalten, Neues aus der Sicherung wird ergänzt.', function () {
+      var r = mergeData(data.db);
+      var cs = ['gebaeude', 'anlagen', 'pruefungen', 'begehungen', 'maengel', 'vorlagen', 'berichte', 'settings'];
+      for (var i = 0; i < cs.length; i++) save(cs[i]);
+      if (!STATE.gid && DB.gebaeude.length) STATE.gid = DB.gebaeude[0].id;
+      render();
+      info('Sicherung dazugeladen', '<p style="line-height:1.5"><b>' + r.neu + '</b> Einträge neu hinzugefügt, <b>' + r.akt + '</b> vorhandene Einträge aktualisiert, ' + r.gleich + ' waren schon gleich vorhanden.</p>' +
+        (r.det.length ? '<p class="small" style="line-height:1.5">' + r.det.join('<br>') + '</p>' : ''));
+    }, 'Dazuladen');
+  };
+  rd.readAsText(f);
+}
+function mergeData(src) {
+  var r = { neu: 0, akt: 0, gleich: 0, det: [] };
+  var NAMEN = { gebaeude: 'Gebäude', anlagen: 'Prüffristen', pruefungen: 'Prüfungen', begehungen: 'Begehungen', maengel: 'Mängel', vorlagen: 'Checklisten', berichte: 'Berichte' };
+  var STR = { offen: 0, arbeit: 1, behoben: 2 };
+  function besser(c, a, b) { /* true, wenn b (aus Sicherung) den vorhandenen Eintrag a ersetzen soll */
+    if (c === 'begehungen') {
+      var sa = begStand(a).a, sb = begStand(b).a;
+      if (sb !== sa) return sb > sa;
+      return (b.datum || '') + (b.zeit || '') > (a.datum || '') + (a.zeit || '');
+    }
+    if (c === 'maengel') {
+      var x = STR[a.status] || 0, y = STR[b.status] || 0;
+      if (x !== y) return y > x;
+      return mFotos(b).length > mFotos(a).length || String(b.massnahme || '').length > String(a.massnahme || '').length;
+    }
+    if (c === 'anlagen') return (b.letztePruefung || '') > (a.letztePruefung || '');
+    return false;
+  }
+  for (var c in NAMEN) {
+    var L = src[c]; if (!L || L.length === undefined) continue;
+    var n0 = 0, a0 = 0;
+    for (var i = 0; i < L.length; i++) {
+      var b = L[i]; if (!b || !b.id) continue;
+      var a = findById(DB[c], b.id);
+      if (!a && c === 'vorlagen') { for (var v = 0; v < DB.vorlagen.length; v++) if (normTxt(DB.vorlagen[v].name) === normTxt(b.name)) a = DB.vorlagen[v]; if (a) { r.gleich++; continue; } if (istTaeglich(b)) continue; }
+      if (!a) { DB[c].push(b); r.neu++; n0++; continue; }
+      if (JSON.stringify(a) === JSON.stringify(b)) { r.gleich++; continue; }
+      if (c === 'berichte') { /* Einträge beider Stände zusammenführen */
+        var ein = (a.eintraege || []).slice(0), add = 0;
+        for (var e = 0; e < (b.eintraege || []).length; e++) if (ein.indexOf(b.eintraege[e]) < 0) { ein.push(b.eintraege[e]); add++; }
+        a.eintraege = ein; if (!a.foto && b.foto) a.foto = b.foto;
+        if (add) { r.akt++; a0++; } else r.gleich++;
+        continue;
+      }
+      if (besser(c, a, b)) { DB[c][DB[c].indexOf(a)] = b; r.akt++; a0++; } else r.gleich++;
+    }
+    if (n0 || a0) r.det.push(NAMEN[c] + ': ' + (n0 ? n0 + ' neu' : '') + (n0 && a0 ? ', ' : '') + (a0 ? a0 + ' aktualisiert' : ''));
+  }
+  var s = src.settings || {};
+  if (!isLicensed() && s.lizenzName && s.lizenzCode) { DB.settings.lizenzName = s.lizenzName; DB.settings.lizenzCode = s.lizenzCode; r.det.push('Lizenz übernommen'); }
+  return r;
+}
+
+/* Speicher-Selbsttest: schreibt, liest zurück und vergleicht alle Daten */
+function speicherTest() {
+  var h = '<p id="st_out" style="line-height:1.55">Test läuft ...</p>';
+  modal('Speicher-Selbsttest', h, [{ label: 'Schließen', fn: function () { openSettings(); } }]);
+  var out = [], fehler = 0;
+  function zeile(ok, t) { out.push((ok ? '<span style="color:var(--ok);font-weight:700">&#10003;</span> ' : '<span style="color:var(--red2);font-weight:700">&#10007;</span> ') + t); if (!ok) fehler++; }
+  function fertig() {
+    var groesse = 0, fotos = 0;
+    for (var i = 0; i < COLLS.length; i++) groesse += JSON.stringify(DB[COLLS[i]] || '').length;
+    for (var m = 0; m < DB.maengel.length; m++) fotos += mFotos(DB.maengel[m]).length;
+    out.push('<br><b>Datenmenge:</b> ' + fmtGr(groesse) + ' (' + DB.gebaeude.length + ' Gebäude, ' + DB.begehungen.length + ' Begehungen, ' + DB.maengel.length + ' Mängel/Tätigkeiten, ' + fotos + ' Fotos)');
+    var fin = function (extra) {
+      $('st_out').innerHTML = out.join('<br>') + (extra || '') +
+        (fehler ? '<br><br><b style="color:var(--red2)">Es gibt ein Problem mit dem Speicher.</b> Bitte sofort eine Datensicherung machen und sich beim Hersteller melden.' : '<br><br><b style="color:var(--ok)">Alles in Ordnung.</b>') +
+        '<button class="btn full" style="margin-top:14px" onclick="alleNeuSpeichern()">Alle Daten neu speichern</button>' +
+        '<button class="btn full" style="margin-top:8px" onclick="fotosVerkleinern()">Vorhandene Fotos verkleinern (Speicher sparen)</button>';
+    };
+    if (navigator.storage && navigator.storage.estimate) {
+      navigator.storage.estimate().then(function (e) {
+        var p = '';
+        if (e && e.usage !== undefined) p = '<br><b>Belegt:</b> ' + fmtGr(e.usage) + (e.quota ? ' von ca. ' + fmtGr(e.quota) + ' verfügbar' : '');
+        if (navigator.storage.persisted) navigator.storage.persisted().then(function (pe) { fin(p + '<br><b>Dauerhafter Speicher:</b> ' + (pe ? 'ja' : 'nein (das Gerät darf Daten bei Platzmangel löschen - regelmäßig sichern!)')); }, function () { fin(p); });
+        else fin(p);
+      }, function () { fin(''); });
+    } else fin('');
+  }
+  zeile(!!idb, idb ? 'Datenbank (IndexedDB) geöffnet' : 'Datenbank nicht verfügbar - Notspeicher (localStorage) wird verwendet, nur wenig Platz');
+  if (!idb) { fertig(); return; }
+  var key = '__test', wert = 'T' + Date.now();
+  try {
+    var tx = idb.transaction('kv', 'readwrite'); tx.objectStore('kv').put({ k: key, v: wert });
+    tx.oncomplete = function () {
+      var t2 = idb.transaction('kv', 'readonly'), rq = t2.objectStore('kv').get(key);
+      rq.onsuccess = function () {
+        zeile(rq.result && rq.result.v === wert, 'Schreiben und Lesen');
+        /* gespeicherte Daten mit den Daten im Programm vergleichen */
+        var t3 = idb.transaction('kv', 'readonly'), cur = t3.objectStore('kv').openCursor(), gesp = {};
+        cur.onsuccess = function (ev) {
+          var c = ev.target.result;
+          if (c) { gesp[c.value.k] = c.value.v; c['continue'](); return; }
+          var abw = [];
+          for (var i = 0; i < COLLS.length; i++) { var k = COLLS[i]; if (k === 'settings') continue; if (JSON.stringify(gesp[k] || []) !== JSON.stringify(DB[k] || [])) abw.push(k); }
+          zeile(!abw.length, abw.length ? 'Gespeicherter Stand weicht ab bei: ' + abw.join(', ') + ' (bitte „Alle Daten neu speichern“)' : 'Gespeicherter Stand stimmt mit den angezeigten Daten überein');
+          try { var t4 = idb.transaction('kv', 'readwrite'); t4.objectStore('kv')['delete'](key); } catch (e4) {}
+          fertig();
+        };
+        cur.onerror = function () { zeile(false, 'Daten konnten nicht gelesen werden'); fertig(); };
+      };
+      rq.onerror = function () { zeile(false, 'Lesen fehlgeschlagen'); fertig(); };
+    };
+    tx.onerror = function () { zeile(false, 'Schreiben fehlgeschlagen: ' + (tx.error ? tx.error.name : '')); fertig(); };
+  } catch (e) { zeile(false, 'Schreiben nicht möglich: ' + e.message); fertig(); }
+}
+function alleNeuSpeichern() {
+  var n = COLLS.length, f = [];
+  for (var i = 0; i < COLLS.length; i++) (function (c) { save(c, function (er) { if (er) f.push(c + ': ' + er); if (--n === 0) { if (f.length) info('Speichern fehlgeschlagen', '<p class="small">' + esc(f.join(', ')) + '</p>'); else { toast('Alle Daten gespeichert'); speicherTest(); } } }); })(COLLS[i]);
+}
+/* vorhandene große Fotos nachträglich verkleinern */
+function fotoKlein(d, mx, cb) {
+  var img = new Image();
+  img.onload = function () {
+    var w = img.width, h = img.height;
+    if (Math.max(w, h) <= mx && d.length < 220000) { cb(d); return; }
+    if (w > h && w > mx) { h = Math.round(h * mx / w); w = mx; } else if (h >= w && h > mx) { w = Math.round(w * mx / h); h = mx; }
+    var c = document.createElement('canvas'); c.width = w; c.height = h;
+    var x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, w, h); x.drawImage(img, 0, 0, w, h);
+    var n = c.toDataURL('image/jpeg', 0.65); cb(n.length < d.length ? n : d);
+  };
+  img.onerror = function () { cb(d); };
+  img.src = d;
+}
+function fotosVerkleinern() {
+  var jobs = [];
+  for (var m = 0; m < DB.maengel.length; m++) for (var f = 0; f < mFotos(DB.maengel[m]).length; f++) jobs.push({ o: DB.maengel[m].fotos, i: f });
+  for (var g = 0; g < DB.gebaeude.length; g++) if (DB.gebaeude[g].foto) jobs.push({ o: DB.gebaeude[g], i: 'foto' });
+  for (var b = 0; b < DB.berichte.length; b++) if (DB.berichte[b].foto) jobs.push({ o: DB.berichte[b], i: 'foto' });
+  if (!jobs.length) { toast('Keine Fotos vorhanden'); return; }
+  var vor = 0, nach = 0, k = 0;
+  $('st_out').innerHTML = 'Fotos werden verkleinert ... 0 / ' + jobs.length;
+  function next() {
+    if (k >= jobs.length) {
+      save('maengel'); save('gebaeude'); save('berichte', function () {
+        $('st_out').innerHTML = jobs.length + ' Fotos geprüft. Vorher ' + fmtGr(vor * 0.75) + ', jetzt ' + fmtGr(nach * 0.75) + ' (' + Math.round(100 - 100 * nach / Math.max(1, vor)) + ' % gespart).' +
+          '<button class="btn full" style="margin-top:14px" onclick="speicherTest()">Selbsttest wiederholen</button>';
+      });
+      return;
+    }
+    var j = jobs[k++], d = j.o[j.i]; vor += d.length;
+    fotoKlein(d, 1024, function (n) { j.o[j.i] = n; nach += n.length; $('st_out').innerHTML = 'Fotos werden verkleinert ... ' + k + ' / ' + jobs.length; setTimeout(next, 0); });
+  }
+  next();
 }
 function importBackup(input) {
   var f = input.files && input.files[0]; if (!f) return;
@@ -2636,8 +2847,9 @@ function importBackup(input) {
     try { data = JSON.parse(rd.result); } catch (e) { toast('Datei ist keine gültige Sicherung'); return; }
     if (!data || data.app !== 'brandschutzbuch' || !data.db) { toast('Datei ist keine Brandschutzbuch-Sicherung'); return; }
     ask('Alle aktuellen Daten durch die Sicherung vom ' + String(data.exportiert || '').substr(0, 10) + ' ersetzen?', function () {
-      for (var i = 0; i < COLLS.length; i++) { var c = COLLS[i]; DB[c] = data.db[c] || (c === 'settings' ? {} : []); save(c); }
+      var offen = COLLS.length;
       STATE.gid = DB.gebaeude.length ? DB.gebaeude[0].id : null;
+      for (var i = 0; i < COLLS.length; i++) { var c = COLLS[i]; DB[c] = data.db[c] || (c === 'settings' ? {} : []); save(c, function () { if (--offen === 0) location.reload(); }); }
       render(); toast('Sicherung wiederhergestellt');
     }, 'Ersetzen');
   };
@@ -2695,6 +2907,7 @@ function init() {
     }
     render();
     setTimeout(function () { checkUpdate(false); }, 1500);
+    setTimeout(function () { if ($('modalWrap').className === 'hidden') backupErinnerung(); }, 2500);
     /* App war im Hintergrund (Homescreen): beim Zurückkommen auf neue Version prüfen */
     try { document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') checkUpdate(false); }); } catch (e) {}
   });
