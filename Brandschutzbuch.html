@@ -115,8 +115,8 @@ textarea{min-height:80px;resize:vertical}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 /* Brandschutzbuch - lokale Web-App (Janiba Brandschutztechnik GmbH) */
-var APP_VERSION = '2.9';
-var APP_STAND = '20.10.2026 22:15';
+var APP_VERSION = '2.10';
+var APP_STAND = '21.10.2026 06:30';
 var UPD = null;
 function verText() { return 'Version ' + APP_VERSION + ' vom ' + APP_STAND; }
 function verFooter() {
@@ -1797,8 +1797,7 @@ function absPdf(art) {
     for (var i = 0; i < ms.length; i++) {
       var m = ms[i]; if (m.datum && m.datum > st) continue;
       var ortm = mangelOrt(m);
-      var mBesch = (m.titel && m.beschreibung) ? String(m.beschreibung).replace(/\s*\n\s*/g, ' - ') : ''; if (mBesch.length > 170) mBesch = mBesch.substr(0, 167) + '...';
-      rows.push({ t: mTitel(m) + (mBesch ? '\n' + mBesch : '') + (ortm ? '\nOrt: ' + ortm : '') + (m.status === 'arbeit' ? '\n(in Bearbeitung)' : ''), fest: fmtD(m.datum), gem: fmtD(absGemeldet(m.id)) });
+      rows.push({ t: mTitel(m) + (ortm ? '\nOrt: ' + ortm : '') + (m.status === 'arbeit' ? '\n(in Bearbeitung)' : ''), fest: fmtD(m.datum), gem: fmtD(absGemeldet(m.id)) });
     }
     if (mitPf) {
       var al = byG(DB.anlagen);
@@ -2398,7 +2397,7 @@ function rptOpen(id) {
       '<button class="btn sm" style="padding:6px 9px;color:var(--red2)" onclick="rptRaus(\'' + m.id + '\')">&#10005;</button></div>';
   }
   if (keep.length !== r.eintraege.length) { r.eintraege = keep; save('berichte'); }
-  h += '<div class="btns" style="margin-top:10px"><button class="btn" onclick="rptAdd(\'taetigkeit\')">+ Tätigkeitsnachweis</button><button class="btn" onclick="rptAdd(\'mangel\')">+ Mangel</button><button class="btn" onclick="rptPick()">Bestehende Mängel holen</button></div>' +
+  h += '<div class="btns" style="margin-top:10px"><button class="btn" onclick="rptAdd(\'taetigkeit\')">+ Tätigkeitsnachweis</button><button class="btn" onclick="rptAdd(\'mangel\')">+ Neuer Mangel</button><button class="btn" onclick="rptPick()">Mängel aus der Liste holen</button></div>' +
     '<button class="btn full" style="margin-top:18px;color:var(--red2)" onclick="rptDel()">Bericht löschen</button>';
   modal('Bericht ' + fmtD(r.datum), h, [{ label: 'Schließen', fn: function () { rptFeld(); closeModal(); render(); } }, { label: 'PDF / Mail', cls: 'pri', fn: rptPdf }]);
 }
@@ -2428,14 +2427,17 @@ function rptRaus(id) {
 function rptMove(i) { rptFeld(); var r = rptCur(); if (i <= 0) return; var t = r.eintraege[i - 1]; r.eintraege[i - 1] = r.eintraege[i]; r.eintraege[i] = t; save('berichte'); rptOpen(r.id); }
 function rptPick() {
   rptFeld();
-  var r = rptCur(), l = byG(DB.maengel), h = '<p class="small">Mängel anhaken, die in diesen Bericht sollen:</p>', n = 0;
+  var r = rptCur(), l = byG(DB.maengel), n = 0,
+    h = '<button class="btn pri full" onclick="rptAdd(\'mangel\')">+ Mangel eintragen, der nicht in der Liste steht</button>' +
+      '<p class="small" style="line-height:1.45">z. B. ein Mangel aus dem Papier-Brandschutzbuch oder einem früheren Bericht. Ist er schon behoben, beim Eintragen den Status auf „Abgeschlossen“ stellen.</p>' +
+      '<p class="small" style="margin-top:14px">Oder Mängel aus der Mängelliste anhaken:</p>';
   sortMaengel(l);
   for (var i = 0; i < l.length; i++) {
     if (l[i].typ === 'taetigkeit' || r.eintraege.indexOf(l[i].id) >= 0) continue; n++;
     var f = mFotos(l[i]);
     h += '<label class="chk" style="border-bottom:1px solid var(--bd)"><input type="checkbox" class="rpchk" value="' + l[i].id + '"' + (l[i].status !== 'behoben' ? ' checked' : '') + '><span style="flex:1;min-width:0"><b>' + esc(mTitel(l[i])) + '</b><br><span class="small">' + fmtD(l[i].datum) + ' - ' + mStatusText(l[i].status) + (f.length ? ' - ' + f.length + ' Foto(s)' : '') + '</span></span></label>';
   }
-  if (!n) h += '<div class="small" style="padding:10px 0">Keine weiteren Mängel vorhanden.</div>';
+  if (!n) h += '<div class="small" style="padding:10px 0">Keine weiteren Mängel in der Mängelliste.</div>';
   modal('Mängel holen', h, [{ label: 'Zurück', fn: function () { rptOpen(r.id); } }, { label: 'Übernehmen', cls: 'pri', fn: function () {
     var c = document.querySelectorAll('.rpchk');
     for (var j = 0; j < c.length; j++) if (c[j].checked && r.eintraege.indexOf(c[j].value) < 0) r.eintraege.push(c[j].value);
