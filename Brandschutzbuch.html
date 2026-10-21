@@ -115,8 +115,8 @@ textarea{min-height:80px;resize:vertical}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 /* Brandschutzbuch - lokale Web-App (Janiba Brandschutztechnik GmbH) */
-var APP_VERSION = '2.16';
-var APP_STAND = '21.10.2026 15:55';
+var APP_VERSION = '2.17';
+var APP_STAND = '21.10.2026 16:10';
 var UPD = null;
 function verText() { return 'Version ' + APP_VERSION + ' vom ' + APP_STAND; }
 function verFooter() {
@@ -189,7 +189,7 @@ var KATS = [
 ];
 var PRIOS = [{ k: 'hoch', l: 'Hoch', c: '#dc2626' }, { k: 'mittel', l: 'Mittel', c: '#f59e0b' }, { k: 'gering', l: 'Gering', c: '#16a34a' }];
 
-var VORLAGEN_VER = 6;
+var VORLAGEN_VER = 7;
 /* Zeilen mit # am Anfang sind Abschnitts-Überschriften (z. B. Pos. 1) */
 function jahresBegehung() {
   return { id: uid(), name: 'Jährliche Begehung', art: 'jaehrlich', punkte: [
@@ -587,6 +587,10 @@ var ALLG_KONTROLLE = [
   'Sind Rettungszeichen und Sicherheitsbeleuchtung sichtbar, ohne Störungsanzeige?',
   'Ist der Bereich frei von offensichtlichen Gefahren (defekte Elektrogeräte, offene Zündquellen)?'
 ];
+function normTxt(s) { s = String(s || ''); try { s = s.normalize('NFC'); } catch (e) {} return s.toLowerCase().replace(/\s+/g, ' ').replace(/^\s+|\s+$/g, ''); }
+/* tägliche Kontrolle wird nicht mehr verwendet (Fragen sind jetzt in der monatlichen Begehung) */
+function istTaeglich(v) { return v && (v.art === 'taeglich' || normTxt(v.name).indexOf('gliche kontrolle') >= 0); }
+function hatAllg(v) { for (var i = 0; i < v.punkte.length; i++) if (normTxt(v.punkte[i]) === normTxt(ALLG_KONTROLLE[0])) return true; return false; }
 function monatsBegehung() {
   return { id: uid(), name: 'Monatliche Begehung', art: 'monatlich', punkte: ALLG_KONTROLLE.concat([
     '# Pos. 86 – Sicherheitsabfallbehälter',
@@ -2595,7 +2599,7 @@ function buchVorlagen() {
     for (var i = 0; i < std.length; i++) names[std[i].name] = std[i];
     for (var j = DB.vorlagen.length - 1; j >= 0; j--) {
       var v = DB.vorlagen[j];
-      if (v.name === 'Jährliche Überprüfung' || v.name === 'Jährliche Unterlagen und Prüfbefunde' || (v.name === 'Tägliche Kontrolle' && v.art === 'taeglich')) { DB.vorlagen.splice(j, 1); continue; }
+      if (v.name === 'Jährliche Überprüfung' || v.name === 'Jährliche Unterlagen und Prüfbefunde' || istTaeglich(v)) { DB.vorlagen.splice(j, 1); continue; }
       if (names[v.name]) { v.punkte = names[v.name].punkte; v.art = names[v.name].art; v.geaendert = false; names[v.name] = null; }
     }
     for (var k = 0; k < std.length; k++) if (names[std[k].name]) DB.vorlagen.push(std[k]);
@@ -2652,12 +2656,12 @@ function init() {
     if (!DB.vorlagen.length) { DB.vorlagen = defVorlagen(); DB.settings.vorlagenVer = VORLAGEN_VER; save('vorlagen'); save('settings'); }
     if ((DB.settings.vorlagenVer || 1) < VORLAGEN_VER) {
       var std = [monatsBegehung(), quartalBegehung(), jahresBegehung()];
-      for (var ov = DB.vorlagen.length - 1; ov >= 0; ov--) if (DB.vorlagen[ov].name === 'Jährliche Überprüfung' || DB.vorlagen[ov].name === 'Jährliche Unterlagen und Prüfbefunde' || (DB.vorlagen[ov].name === 'Tägliche Kontrolle' && DB.vorlagen[ov].art === 'taeglich')) DB.vorlagen.splice(ov, 1);
+      for (var ov = DB.vorlagen.length - 1; ov >= 0; ov--) if (DB.vorlagen[ov].name === 'Jährliche Überprüfung' || DB.vorlagen[ov].name === 'Jährliche Unterlagen und Prüfbefunde' || istTaeglich(DB.vorlagen[ov])) DB.vorlagen.splice(ov, 1);
       for (var sv = 0; sv < std.length; sv++) {
         var ex = null;
         for (var vv = 0; vv < DB.vorlagen.length; vv++) if (DB.vorlagen[vv].name === std[sv].name) ex = DB.vorlagen[vv];
         if (!ex) DB.vorlagen.push(std[sv]); else if (!ex.geaendert) ex.punkte = std[sv].punkte;
-        else if (ex.art === 'monatlich' && ex.punkte.indexOf(ALLG_KONTROLLE[0]) < 0) ex.punkte = ALLG_KONTROLLE.concat(ex.punkte);
+        else if (ex.art === 'monatlich' && !hatAllg(ex)) ex.punkte = ALLG_KONTROLLE.concat(ex.punkte);
       }
       DB.settings.vorlagenVer = VORLAGEN_VER; save('vorlagen'); save('settings');
     }
@@ -2674,6 +2678,8 @@ function init() {
     }
     render();
     setTimeout(function () { checkUpdate(false); }, 1500);
+    /* App war im Hintergrund (Homescreen): beim Zurückkommen auf neue Version prüfen */
+    try { document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') checkUpdate(false); }); } catch (e) {}
   });
   try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
