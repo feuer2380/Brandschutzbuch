@@ -115,8 +115,8 @@ textarea{min-height:80px;resize:vertical}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 /* Brandschutzbuch - lokale Web-App (Janiba Brandschutztechnik GmbH) */
-var APP_VERSION = '2.15';
-var APP_STAND = '21.10.2026 15:45';
+var APP_VERSION = '2.16';
+var APP_STAND = '21.10.2026 15:55';
 var UPD = null;
 function verText() { return 'Version ' + APP_VERSION + ' vom ' + APP_STAND; }
 function verFooter() {
@@ -189,7 +189,7 @@ var KATS = [
 ];
 var PRIOS = [{ k: 'hoch', l: 'Hoch', c: '#dc2626' }, { k: 'mittel', l: 'Mittel', c: '#f59e0b' }, { k: 'gering', l: 'Gering', c: '#16a34a' }];
 
-var VORLAGEN_VER = 5;
+var VORLAGEN_VER = 6;
 /* Zeilen mit # am Anfang sind Abschnitts-Überschriften (z. B. Pos. 1) */
 function jahresBegehung() {
   return { id: uid(), name: 'Jährliche Begehung', art: 'jaehrlich', punkte: [
@@ -577,8 +577,18 @@ function quartalBegehung() {
     'Wurde die Funktionsprüfung u. Wartung von Fernüberwachungsanlagen (z. B. Hebeanlagen) durchgeführt?'
   ] };
 }
+/* frühere "Tägliche Kontrolle" - wird jetzt monatlich als erstes Kapitel der Monatlichen Begehung geprüft */
+var ALLG_KONTROLLE = [
+  '# Allgemeine Kontrolle (Fluchtwege, Türen, Feuerlöscher)',
+  'Sind Fluchtwege und Stiegenhäuser frei von Gegenständen und Brandlasten?',
+  'Lassen sich Notausgänge von innen ohne Hilfsmittel öffnen?',
+  'Sind Brandschutztüren geschlossen bzw. nicht verkeilt oder blockiert?',
+  'Sind die Feuerlöscher an ihrem Platz und frei zugänglich?',
+  'Sind Rettungszeichen und Sicherheitsbeleuchtung sichtbar, ohne Störungsanzeige?',
+  'Ist der Bereich frei von offensichtlichen Gefahren (defekte Elektrogeräte, offene Zündquellen)?'
+];
 function monatsBegehung() {
-  return { id: uid(), name: 'Monatliche Begehung', art: 'monatlich', punkte: [
+  return { id: uid(), name: 'Monatliche Begehung', art: 'monatlich', punkte: ALLG_KONTROLLE.concat([
     '# Pos. 86 – Sicherheitsabfallbehälter',
     'Ist der Löschkonus ordnungsgemäß und dicht aufgesetzt?',
     'Sind die Sicherheitsabfallbehälter frei von Verformungen und Beschädigungen?',
@@ -707,21 +717,13 @@ function monatsBegehung() {
     'Sind Befestigungen, Kanäle und Aufhängungen ordnungsgemäß und sicher montiert?',
     'Ist die Gesamtanlage dicht, frei von Leckagen u. sichtbaren Mängeln?',
     'Werden regelmäßige Funktionsprüfungen und Wartungen durchgeführt u. dokumentiert?'
-  ] };
+  ]) };
 }
 function isHdr(p) { return String(p).charAt(0) === '#'; }
 function hdrText(p) { return String(p).replace(/^#+\s*/, ''); }
 function nFragen(v) { var n = 0; for (var i = 0; i < v.punkte.length; i++) if (!isHdr(v.punkte[i])) n++; return n; }
 function defVorlagen() {
   return [
-    { id: uid(), name: 'Tägliche Kontrolle', art: 'taeglich', punkte: [
-      'Sind Fluchtwege und Stiegenhäuser frei von Gegenständen und Brandlasten?',
-      'Lassen sich Notausgänge von innen ohne Hilfsmittel öffnen?',
-      'Sind Brandschutztüren geschlossen bzw. nicht verkeilt oder blockiert?',
-      'Sind die Feuerlöscher an ihrem Platz und frei zugänglich?',
-      'Sind Rettungszeichen und Sicherheitsbeleuchtung sichtbar, ohne Störungsanzeige?',
-      'Ist der Bereich frei von offensichtlichen Gefahren (defekte Elektrogeräte, offene Zündquellen)?'
-    ] },
     monatsBegehung(),
     quartalBegehung(),
     jahresBegehung()
@@ -2588,12 +2590,12 @@ function delVorlage(id) {
   ask('Checkliste löschen? Bestehende Protokolle bleiben erhalten.', function () { removeById(DB.vorlagen, id); save('vorlagen'); openSettings(); }, 'Löschen');
 }
 function buchVorlagen() {
-  ask('Tägliche, monatliche, vierteljährliche und jährliche Checkliste auf den Stand des Brandschutzbuchs zurücksetzen? Eigene Änderungen daran gehen verloren, eigene zusätzliche Checklisten und alle Protokolle bleiben erhalten.', function () {
+  ask('Monatliche, vierteljährliche und jährliche Checkliste auf den Stand des Brandschutzbuchs zurücksetzen? Eigene Änderungen daran gehen verloren, eigene zusätzliche Checklisten und alle Protokolle bleiben erhalten.', function () {
     var std = defVorlagen(), names = {};
     for (var i = 0; i < std.length; i++) names[std[i].name] = std[i];
     for (var j = DB.vorlagen.length - 1; j >= 0; j--) {
       var v = DB.vorlagen[j];
-      if (v.name === 'Jährliche Überprüfung' || v.name === 'Jährliche Unterlagen und Prüfbefunde') { DB.vorlagen.splice(j, 1); continue; }
+      if (v.name === 'Jährliche Überprüfung' || v.name === 'Jährliche Unterlagen und Prüfbefunde' || (v.name === 'Tägliche Kontrolle' && v.art === 'taeglich')) { DB.vorlagen.splice(j, 1); continue; }
       if (names[v.name]) { v.punkte = names[v.name].punkte; v.art = names[v.name].art; v.geaendert = false; names[v.name] = null; }
     }
     for (var k = 0; k < std.length; k++) if (names[std[k].name]) DB.vorlagen.push(std[k]);
@@ -2649,12 +2651,13 @@ function init() {
     if (mig) save('maengel');
     if (!DB.vorlagen.length) { DB.vorlagen = defVorlagen(); DB.settings.vorlagenVer = VORLAGEN_VER; save('vorlagen'); save('settings'); }
     if ((DB.settings.vorlagenVer || 1) < VORLAGEN_VER) {
-      var std = [defVorlagen()[0], monatsBegehung(), quartalBegehung(), jahresBegehung()];
-      for (var ov = DB.vorlagen.length - 1; ov >= 0; ov--) if (DB.vorlagen[ov].name === 'Jährliche Überprüfung' || DB.vorlagen[ov].name === 'Jährliche Unterlagen und Prüfbefunde') DB.vorlagen.splice(ov, 1);
+      var std = [monatsBegehung(), quartalBegehung(), jahresBegehung()];
+      for (var ov = DB.vorlagen.length - 1; ov >= 0; ov--) if (DB.vorlagen[ov].name === 'Jährliche Überprüfung' || DB.vorlagen[ov].name === 'Jährliche Unterlagen und Prüfbefunde' || (DB.vorlagen[ov].name === 'Tägliche Kontrolle' && DB.vorlagen[ov].art === 'taeglich')) DB.vorlagen.splice(ov, 1);
       for (var sv = 0; sv < std.length; sv++) {
         var ex = null;
         for (var vv = 0; vv < DB.vorlagen.length; vv++) if (DB.vorlagen[vv].name === std[sv].name) ex = DB.vorlagen[vv];
         if (!ex) DB.vorlagen.push(std[sv]); else if (!ex.geaendert) ex.punkte = std[sv].punkte;
+        else if (ex.art === 'monatlich' && ex.punkte.indexOf(ALLG_KONTROLLE[0]) < 0) ex.punkte = ALLG_KONTROLLE.concat(ex.punkte);
       }
       DB.settings.vorlagenVer = VORLAGEN_VER; save('vorlagen'); save('settings');
     }
