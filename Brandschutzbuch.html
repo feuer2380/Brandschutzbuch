@@ -115,8 +115,8 @@ textarea{min-height:80px;resize:vertical}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 /* Brandschutzbuch - lokale Web-App (Janiba Brandschutztechnik GmbH) */
-var APP_VERSION = '2.14';
-var APP_STAND = '21.10.2026 15:35';
+var APP_VERSION = '2.15';
+var APP_STAND = '21.10.2026 15:45';
 var UPD = null;
 function verText() { return 'Version ' + APP_VERSION + ' vom ' + APP_STAND; }
 function verFooter() {
@@ -1505,10 +1505,19 @@ function mangelPill(m) {
   return pill('p-warn', 'offen');
 }
 function mangelOrt(m) { var a = m.aid ? findById(DB.anlagen, m.aid) : null; var t = []; if (a) t.push(anlName(a)); if (m.standort) t.push(m.standort); else if (a && a.standort) t.push(a.standort); return t.join(' - '); }
+/* Beschreibung kurz anzeigen, damit gleiche Überschriften (z. B. "Pos. 78 ...") unterscheidbar sind */
+function mDescHtml(m) {
+  var d = String(m.beschreibung || '').replace(/^\s+|\s+$/g, ''); if (!d || d === mTitel(m)) return '';
+  var ls = d.split(/\n+/), q = ls[0], rest = ls.slice(1).join(' ');
+  if (q.length > 140) q = q.substr(0, 137) + '...';
+  if (rest.length > 140) rest = rest.substr(0, 137) + '...';
+  return '<div style="font-size:14px;line-height:1.35;margin-top:3px;color:var(--tx)">' + esc(q) + '</div>' +
+    (rest ? '<div style="font-size:14px;line-height:1.35;margin-top:2px;font-weight:700;color:var(--red2)">' + esc(rest) + '</div>' : '');
+}
 function mangelRow(m) {
   var o = mangelOrt(m), f = mFotos(m);
   return '<div class="row" onclick="showMangel(\'' + m.id + '\')">' + (f.length ? '<img class="thumb" src="' + f[0] + '">' : '<span class="dot" style="background:' + prioObj(m.prioritaet).c + '"></span>') +
-    '<div class="m"><div class="t">' + esc(mTitel(m)) + '</div><div class="s">' + fmtD(m.datum) + (o ? ' - ' + esc(o) : '') + (f.length > 1 ? ' - ' + f.length + ' Fotos' : '') + '</div></div>' + mangelPill(m) + '</div>';
+    '<div class="m"><div class="t">' + esc(mTitel(m)) + '</div>' + mDescHtml(m) + '<div class="s">' + fmtD(m.datum) + (o ? ', ' + esc(o) : '') + (f.length > 1 ? ', ' + f.length + ' Fotos' : '') + '</div></div>' + mangelPill(m) + '</div>';
 }
 function viewMaengel() {
   var all = nurMaengel(byG(DB.maengel)), no = 0, nb = 0, l = [];
@@ -2448,7 +2457,7 @@ function rptPick() {
   for (var i = 0; i < l.length; i++) {
     if (l[i].typ === 'taetigkeit' || r.eintraege.indexOf(l[i].id) >= 0) continue; n++;
     var f = mFotos(l[i]);
-    h += '<label class="chk" style="border-bottom:1px solid var(--bd)"><input type="checkbox" class="rpchk" value="' + l[i].id + '"' + (l[i].status !== 'behoben' ? ' checked' : '') + '><span style="flex:1;min-width:0"><b>' + esc(mTitel(l[i])) + '</b><br><span class="small">' + fmtD(l[i].datum) + ' - ' + mStatusText(l[i].status) + (f.length ? ' - ' + f.length + ' Foto(s)' : '') + '</span></span></label>';
+    h += '<label class="chk" style="border-bottom:1px solid var(--bd)"><input type="checkbox" class="rpchk" value="' + l[i].id + '"' + (l[i].status !== 'behoben' ? ' checked' : '') + '><span style="flex:1;min-width:0"><b>' + esc(mTitel(l[i])) + '</b>' + (mDescHtml(l[i]) || '<br>') + '<span class="small">' + fmtD(l[i].datum) + ' - ' + mStatusText(l[i].status) + (f.length ? ' - ' + f.length + ' Foto(s)' : '') + '</span></span></label>';
   }
   if (!n) h += '<div class="small" style="padding:10px 0">Keine weiteren Mängel in der Mängelliste.</div>';
   modal('Mängel holen', h, [{ label: 'Zurück', fn: function () { rptOpen(r.id); } }, { label: 'Übernehmen', cls: 'pri', fn: function () {
