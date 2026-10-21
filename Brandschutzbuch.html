@@ -115,8 +115,8 @@ textarea{min-height:80px;resize:vertical}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 /* Brandschutzbuch - lokale Web-App (Janiba Brandschutztechnik GmbH) */
-var APP_VERSION = '2.18';
-var APP_STAND = '21.10.2026 16:40';
+var APP_VERSION = '2.19';
+var APP_STAND = '21.10.2026 16:50';
 var UPD = null;
 function verText() { return 'Version ' + APP_VERSION + ' vom ' + APP_STAND; }
 function verFooter() {
@@ -2671,6 +2671,17 @@ function init() {
       }
       DB.settings.vorlagenVer = VORLAGEN_VER; save('vorlagen'); save('settings');
     }
+    /* bei JEDEM Start: tägliche Kontrolle entfernen und Kapitel "Allgemeine Kontrolle" in der monatlichen Begehung sicherstellen
+       (nicht nur einmalig - falls eine ältere, noch offene App-Version die alten Checklisten zurückgeschrieben hat) */
+    var vgAend = false;
+    for (var tv = DB.vorlagen.length - 1; tv >= 0; tv--) if (istTaeglich(DB.vorlagen[tv])) { DB.vorlagen.splice(tv, 1); vgAend = true; }
+    var hatMon = false;
+    for (var mv2 = 0; mv2 < DB.vorlagen.length; mv2++) {
+      var VM = DB.vorlagen[mv2];
+      if (VM.art === 'monatlich' && normTxt(VM.name) === normTxt('Monatliche Begehung')) { hatMon = true; if (!hatAllg(VM)) { VM.punkte = ALLG_KONTROLLE.concat(VM.punkte); vgAend = true; } }
+    }
+    if (!hatMon) { DB.vorlagen.unshift(monatsBegehung()); vgAend = true; }
+    if (vgAend) save('vorlagen', function (er) { if (er) info('Speichern fehlgeschlagen', '<p style="line-height:1.5">Die geänderten Checklisten konnten auf diesem Gerät nicht gespeichert werden.</p><p class="small">Fehler: ' + esc(er) + '</p>'); });
     /* leere Berichte von früheren Tagen aufräumen (entstehen durch "Neuer Bericht" ohne Einträge) */
     var leerB = 0;
     for (var lb = DB.berichte.length - 1; lb >= 0; lb--) if (!(DB.berichte[lb].eintraege || []).length && (DB.berichte[lb].datum || '') < todayStr()) { DB.berichte.splice(lb, 1); leerB++; }
