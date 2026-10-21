@@ -115,8 +115,8 @@ textarea{min-height:80px;resize:vertical}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 /* Brandschutzbuch - lokale Web-App (Janiba Brandschutztechnik GmbH) */
-var APP_VERSION = '2.11';
-var APP_STAND = '21.10.2026 06:40';
+var APP_VERSION = '2.12';
+var APP_STAND = '21.10.2026 06:50';
 var UPD = null;
 function verText() { return 'Version ' + APP_VERSION + ' vom ' + APP_STAND; }
 function verFooter() {
@@ -2373,6 +2373,9 @@ function rptCardHtml() {
 }
 function rptNeu() {
   var g = curGeb(); if (!g) { editGebaeude(); return; }
+  /* gibt es heute schon einen leeren Bericht, diesen öffnen statt einen weiteren anzulegen */
+  var l = byG(DB.berichte);
+  for (var i = 0; i < l.length; i++) if (l[i].datum === todayStr() && !l[i].eintraege.length) { rptOpen(l[i].id); return; }
   var r = { id: uid(), gid: g.id, datum: todayStr(), beschreibung: 'Brandschutzbegehung vom ' + fmtD(todayStr()), foto: g.foto || '', eintraege: [], erstellt: todayStr() };
   DB.berichte.push(r); save('berichte');
   rptOpen(r.id);
@@ -2399,7 +2402,13 @@ function rptOpen(id) {
   if (keep.length !== r.eintraege.length) { r.eintraege = keep; save('berichte'); }
   h += '<div class="btns" style="margin-top:10px"><button class="btn" onclick="rptAdd(\'taetigkeit\')">+ Tätigkeitsnachweis</button><button class="btn" onclick="rptAdd(\'mangel\')">+ Neuer Mangel</button><button class="btn" onclick="rptAdd(\'behoben\')">+ Mangel behoben</button><button class="btn" onclick="rptPick()">Mängel aus der Liste holen</button></div>' +
     '<button class="btn full" style="margin-top:18px;color:var(--red2)" onclick="rptDel()">Bericht löschen</button>';
-  modal('Bericht ' + fmtD(r.datum), h, [{ label: 'Schließen', fn: function () { rptFeld(); closeModal(); render(); } }, { label: 'PDF / Mail', cls: 'pri', fn: rptPdf }]);
+  modal('Bericht ' + fmtD(r.datum), h, [{ label: 'Schließen', fn: rptClose }, { label: 'PDF / Mail', cls: 'pri', fn: rptPdf }]);
+}
+function rptClose() {
+  rptFeld(); var r = rptCur();
+  closeModal();
+  if (r && !r.eintraege.length) { removeById(DB.berichte, r.id); save('berichte'); RPT = null; render(); toast('Leerer Bericht wurde verworfen'); return; }
+  render();
 }
 function rptCur() { return RPT ? findById(DB.berichte, RPT) : null; }
 function rptFeld() { var r = rptCur(); if (!r || !$('r_d')) return; r.datum = val('r_d') || r.datum; r.beschreibung = val('r_pb'); save('berichte'); $('mTitle').textContent = 'Bericht ' + fmtD(r.datum); }
@@ -2447,7 +2456,9 @@ function rptPick() {
   } }]);
 }
 function rptDel() {
-  var r = rptCur();
+  rptFeld();
+  var r = rptCur(); if (!r) { closeModal(); render(); return; }
+  var rid = r.id;
   ask('Diesen Bericht löschen? Die Mängel bleiben in der Mängelliste erhalten.', function () {
     for (var i = 0; i < r.eintraege.length; i++) {
       var m = findById(DB.maengel, r.eintraege[i]), used = false;
@@ -2455,7 +2466,7 @@ function rptDel() {
       for (var k = 0; k < DB.berichte.length; k++) if (DB.berichte[k] !== r && DB.berichte[k].eintraege.indexOf(m.id) >= 0) used = true;
       if (!used) removeById(DB.maengel, m.id);
     }
-    removeById(DB.berichte, r.id); save('berichte'); save('maengel'); RPT = null; render(); toast('Bericht gelöscht');
+    removeById(DB.berichte, rid); save('berichte'); save('maengel'); RPT = null; closeModal(); render(); toast('Bericht gelöscht');
   }, 'Löschen');
 }
 function rptPdf() { rptFeld(); var r = rptCur(); gesamtPdf(r.eintraege, { datum: r.datum, beschreibung: r.beschreibung, foto: r.foto, keepOrder: true, back: function () { rptOpen(r.id); } }); }
@@ -2632,6 +2643,10 @@ function init() {
       }
       DB.settings.vorlagenVer = VORLAGEN_VER; save('vorlagen'); save('settings');
     }
+    /* leere Berichte von früheren Tagen aufräumen (entstehen durch "Neuer Bericht" ohne Einträge) */
+    var leerB = 0;
+    for (var lb = DB.berichte.length - 1; lb >= 0; lb--) if (!(DB.berichte[lb].eintraege || []).length && (DB.berichte[lb].datum || '') < todayStr()) { DB.berichte.splice(lb, 1); leerB++; }
+    if (leerB) save('berichte');
     var g = null; try { g = localStorage.getItem('bsb_gid'); } catch (e) {}
     STATE.gid = (g && findById(DB.gebaeude, g)) ? g : (DB.gebaeude.length ? DB.gebaeude[0].id : null);
     if (DB.settings.appVersion !== APP_VERSION + '|' + APP_STAND) {
