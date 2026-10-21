@@ -115,8 +115,8 @@ textarea{min-height:80px;resize:vertical}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 /* Brandschutzbuch - lokale Web-App (Janiba Brandschutztechnik GmbH) */
-var APP_VERSION = '2.12';
-var APP_STAND = '21.10.2026 06:50';
+var APP_VERSION = '2.13';
+var APP_STAND = '21.10.2026 07:05';
 var UPD = null;
 function verText() { return 'Version ' + APP_VERSION + ' vom ' + APP_STAND; }
 function verFooter() {
@@ -780,16 +780,18 @@ function dbOpen(cb) {
   };
   req.onerror = function () { idb = null; loadLS(); fin(); };
 }
-function save(coll) {
+function save(coll, done) {
   if (idb) {
     try {
       var tx = idb.transaction('kv', 'readwrite');
       tx.objectStore('kv').put({ k: coll, v: DB[coll] });
-      tx.onerror = function () { toast('Speichern fehlgeschlagen - Speicher voll?'); };
+      tx.onerror = function () { var er = tx.error ? (tx.error.name + ': ' + tx.error.message) : 'unbekannt'; if (done) done(er); else toast('Speichern fehlgeschlagen - Speicher voll?'); };
+      tx.onabort = function () { if (done) done('abgebrochen'); };
+      tx.oncomplete = function () { if (done) done(null); };
       return;
     } catch (e) {}
   }
-  try { localStorage.setItem('bsb_' + coll, JSON.stringify(DB[coll])); } catch (e2) { toast('Speicher voll - bitte Fotos reduzieren'); }
+  try { localStorage.setItem('bsb_' + coll, JSON.stringify(DB[coll])); if (done) done(null); } catch (e2) { if (done) done('Speicher voll'); else toast('Speicher voll - bitte Fotos reduzieren'); }
 }
 
 /* ---------- Lizenz ---------- */
@@ -2466,7 +2468,11 @@ function rptDel() {
       for (var k = 0; k < DB.berichte.length; k++) if (DB.berichte[k] !== r && DB.berichte[k].eintraege.indexOf(m.id) >= 0) used = true;
       if (!used) removeById(DB.maengel, m.id);
     }
-    removeById(DB.berichte, rid); save('berichte'); save('maengel'); RPT = null; closeModal(); render(); toast('Bericht gelöscht');
+    removeById(DB.berichte, rid); save('maengel'); RPT = null; closeModal(); render();
+    save('berichte', function (er) {
+      if (er) info('Löschen nicht gespeichert', '<p style="line-height:1.5">Der Bericht konnte nicht dauerhaft gelöscht werden.</p><p class="small">Fehler: ' + esc(er) + '</p>');
+      else toast('Bericht gelöscht (' + byG(DB.berichte).length + ' Berichte übrig)');
+    });
   }, 'Löschen');
 }
 function rptPdf() { rptFeld(); var r = rptCur(); gesamtPdf(r.eintraege, { datum: r.datum, beschreibung: r.beschreibung, foto: r.foto, keepOrder: true, back: function () { rptOpen(r.id); } }); }
