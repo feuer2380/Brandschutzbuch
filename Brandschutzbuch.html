@@ -115,8 +115,8 @@ textarea{min-height:80px;resize:vertical}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 /* Brandschutzbuch - lokale Web-App (Janiba Brandschutztechnik GmbH) */
-var APP_VERSION = '2.13';
-var APP_STAND = '21.10.2026 07:05';
+var APP_VERSION = '2.14';
+var APP_STAND = '21.10.2026 07:35';
 var UPD = null;
 function verText() { return 'Version ' + APP_VERSION + ' vom ' + APP_STAND; }
 function verFooter() {
@@ -2418,11 +2418,20 @@ function rptFoto(input) {
   var f = input.files && input.files[0]; if (!f) return; rptFeld();
   readFoto(f, function (d) {
     var r = rptCur(); if (!r || !d) return; r.foto = d; save('berichte');
-    var g = curGeb(); if (g && !g.foto) { g.foto = d; save('gebaeude'); }
     rptOpen(r.id);
   }, 1000);
 }
-function rptFotoWeg() { var r = rptCur(); rptFeld(); r.foto = ''; save('berichte'); rptOpen(r.id); }
+function rptFotoWeg() {
+  rptFeld(); var r = rptCur(), g = curGeb(); if (!r) return;
+  if (g && g.foto && r.foto === g.foto) {
+    modal('Foto entfernen', '<p style="line-height:1.5;margin:14px 0">Dieses Foto ist auch als <b>Objektfoto beim Gebäude</b> hinterlegt. Deshalb erscheint es automatisch in jedem neuen Bericht.</p><p class="small" style="line-height:1.45">Soll es auch beim Gebäude entfernt werden?</p>', [
+      { label: 'Nur hier', fn: function () { r.foto = ''; save('berichte'); rptOpen(r.id); } },
+      { label: 'Auch beim Gebäude', cls: 'pri', fn: function () { r.foto = ''; g.foto = ''; save('berichte'); save('gebaeude'); toast('Objektfoto beim Gebäude entfernt'); rptOpen(r.id); } }
+    ]);
+    return;
+  }
+  r.foto = ''; save('berichte'); rptOpen(r.id);
+}
 function rptAdd(typ) {
   rptFeld();
   var r = rptCur(), beh = typ === 'behoben';
