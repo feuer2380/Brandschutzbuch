@@ -115,8 +115,8 @@ textarea{min-height:80px;resize:vertical}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 /* Brandschutzbuch - lokale Web-App (Janiba Brandschutztechnik GmbH) */
-var APP_VERSION = '2.17';
-var APP_STAND = '21.10.2026 16:10';
+var APP_VERSION = '2.18';
+var APP_STAND = '21.10.2026 16:40';
 var UPD = null;
 function verText() { return 'Version ' + APP_VERSION + ' vom ' + APP_STAND; }
 function verFooter() {
@@ -126,7 +126,7 @@ function updBanner() {
   if (!UPD) return '';
   return '<div class="hint" style="background:#fef3c7;border-color:#f59e0b;color:#92400e"><b>Neue Version verfügbar:</b> ' + esc(UPD.v) + ' vom ' + esc(UPD.d) + '<br>Bei Ihnen läuft noch ' + esc(verText()) + '.<br><button class="btn pri" style="margin-top:8px" onclick="doUpdate()">Jetzt aktualisieren</button></div>';
 }
-function doUpdate() { location.replace(location.pathname + '?v=' + encodeURIComponent(UPD ? UPD.v : Date.now())); }
+function doUpdate() { location.replace(location.pathname + '?v=' + encodeURIComponent((UPD ? UPD.v : '') + '-' + Date.now())); }
 function checkUpdate(manual) {
   if (!/^https?:$/.test(location.protocol) || !window.fetch) { if (manual) toast('Update-Prüfung nur online möglich'); return; }
   if (manual) toast('Prüfe auf Update ...');
@@ -135,6 +135,12 @@ function checkUpdate(manual) {
     if (!mv) { if (manual) toast('Update-Prüfung nicht möglich'); return; }
     var neu = mv[1] !== APP_VERSION || (md && md[1] !== APP_STAND);
     UPD = neu ? { v: mv[1], d: md ? md[1] : '' } : null;
+    if (neu && !manual) {
+      /* neue Version automatisch laden (einmal pro Version, damit keine Schleife entsteht) */
+      var key = mv[1] + '|' + (md ? md[1] : ''), war = '';
+      try { war = sessionStorage.getItem('bsb_auto_upd') || ''; } catch (e) {}
+      if (war !== key && !(MODAL_GUARD || BEG)) { try { sessionStorage.setItem('bsb_auto_upd', key); } catch (e2) {} doUpdate(); return; }
+    }
     if (neu) render(); else if (manual) toast('Sie haben die neueste ' + verText());
   })['catch'](function () { if (manual) toast('Keine Internetverbindung - Update-Prüfung nicht möglich'); });
 }
