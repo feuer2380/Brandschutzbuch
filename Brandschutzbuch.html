@@ -115,8 +115,8 @@ textarea{min-height:80px;resize:vertical}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 /* Brandschutzbuch - lokale Web-App (Janiba Brandschutztechnik GmbH) */
-var APP_VERSION = '2.10';
-var APP_STAND = '21.10.2026 06:30';
+var APP_VERSION = '2.11';
+var APP_STAND = '21.10.2026 06:40';
 var UPD = null;
 function verText() { return 'Version ' + APP_VERSION + ' vom ' + APP_STAND; }
 function verFooter() {
@@ -2392,12 +2392,12 @@ function rptOpen(id) {
     var m = findById(DB.maengel, r.eintraege[i]); if (!m) continue; keep.push(m.id);
     var f = mFotos(m), isM = m.typ !== 'taetigkeit';
     h += '<div class="row"><div style="display:flex;flex:1;min-width:0;align-items:center" onclick="rptEdit(\'' + m.id + '\')">' + (f.length ? '<img class="thumb" src="' + f[0] + '" style="margin-right:10px">' : '') +
-      '<div class="m"><div class="t">' + esc(mTitel(m)) + '</div><div class="s">' + (isM ? '<b style="color:var(--red2)">Mangel</b>' : 'Tätigkeitsnachweis') + (f.length ? ' - ' + f.length + ' Foto' + (f.length > 1 ? 's' : '') : '') + '</div></div></div>' +
+      '<div class="m"><div class="t">' + esc(mTitel(m)) + '</div><div class="s">' + (isM ? (m.status === 'behoben' ? '<b style="color:var(--ok)">Mangel behoben</b>' : '<b style="color:var(--red2)">Mangel</b>') : 'Tätigkeitsnachweis') + (f.length ? ' - ' + f.length + ' Foto' + (f.length > 1 ? 's' : '') : '') + '</div></div></div>' +
       (keep.length > 1 ? '<button class="btn sm" style="padding:6px 9px" onclick="rptMove(' + (keep.length - 1) + ')">&uarr;</button>' : '') +
       '<button class="btn sm" style="padding:6px 9px;color:var(--red2)" onclick="rptRaus(\'' + m.id + '\')">&#10005;</button></div>';
   }
   if (keep.length !== r.eintraege.length) { r.eintraege = keep; save('berichte'); }
-  h += '<div class="btns" style="margin-top:10px"><button class="btn" onclick="rptAdd(\'taetigkeit\')">+ Tätigkeitsnachweis</button><button class="btn" onclick="rptAdd(\'mangel\')">+ Neuer Mangel</button><button class="btn" onclick="rptPick()">Mängel aus der Liste holen</button></div>' +
+  h += '<div class="btns" style="margin-top:10px"><button class="btn" onclick="rptAdd(\'taetigkeit\')">+ Tätigkeitsnachweis</button><button class="btn" onclick="rptAdd(\'mangel\')">+ Neuer Mangel</button><button class="btn" onclick="rptAdd(\'behoben\')">+ Mangel behoben</button><button class="btn" onclick="rptPick()">Mängel aus der Liste holen</button></div>' +
     '<button class="btn full" style="margin-top:18px;color:var(--red2)" onclick="rptDel()">Bericht löschen</button>';
   modal('Bericht ' + fmtD(r.datum), h, [{ label: 'Schließen', fn: function () { rptFeld(); closeModal(); render(); } }, { label: 'PDF / Mail', cls: 'pri', fn: rptPdf }]);
 }
@@ -2414,8 +2414,9 @@ function rptFoto(input) {
 function rptFotoWeg() { var r = rptCur(); rptFeld(); r.foto = ''; save('berichte'); rptOpen(r.id); }
 function rptAdd(typ) {
   rptFeld();
-  var r = rptCur();
-  editMangel(null, { typ: typ, status: typ === 'taetigkeit' ? 'behoben' : 'offen', datum: r.datum }, function (id) { if (id && r.eintraege.indexOf(id) < 0) { r.eintraege.push(id); save('berichte'); } rptOpen(r.id); });
+  var r = rptCur(), beh = typ === 'behoben';
+  if (beh) typ = 'mangel';
+  editMangel(null, { typ: typ, status: (typ === 'taetigkeit' || beh) ? 'behoben' : 'offen', datum: r.datum, titel: beh ? 'Mängelbehebung - ' : undefined }, function (id) { if (id && r.eintraege.indexOf(id) < 0) { r.eintraege.push(id); save('berichte'); } rptOpen(r.id); });
 }
 function rptEdit(id) { rptFeld(); var r = rptCur(); editMangel(id, null, function () { rptOpen(r.id); }); }
 function rptRaus(id) {
@@ -2428,8 +2429,9 @@ function rptMove(i) { rptFeld(); var r = rptCur(); if (i <= 0) return; var t = r
 function rptPick() {
   rptFeld();
   var r = rptCur(), l = byG(DB.maengel), n = 0,
-    h = '<button class="btn pri full" onclick="rptAdd(\'mangel\')">+ Mangel eintragen, der nicht in der Liste steht</button>' +
-      '<p class="small" style="line-height:1.45">z. B. ein Mangel aus dem Papier-Brandschutzbuch oder einem früheren Bericht. Ist er schon behoben, beim Eintragen den Status auf „Abgeschlossen“ stellen.</p>' +
+    h = '<p class="small" style="line-height:1.45;margin-top:0">Mangel, der nicht in der Liste steht (z. B. aus dem Papier-Brandschutzbuch):</p>' +
+      '<button class="btn pri full" onclick="rptAdd(\'behoben\')">+ Mangel behoben eintragen</button>' +
+      '<button class="btn full" onclick="rptAdd(\'mangel\')">+ Offenen Mangel eintragen</button>' +
       '<p class="small" style="margin-top:14px">Oder Mängel aus der Mängelliste anhaken:</p>';
   sortMaengel(l);
   for (var i = 0; i < l.length; i++) {
