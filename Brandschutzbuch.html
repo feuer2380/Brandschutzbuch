@@ -115,8 +115,8 @@ textarea{min-height:80px;resize:vertical}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 /* Brandschutzbuch - lokale Web-App (Janiba Brandschutztechnik GmbH) */
-var APP_VERSION = '2.22';
-var APP_STAND = '25.10.2026 09:30';
+var APP_VERSION = '2.23';
+var APP_STAND = '25.10.2026 11:00';
 var UPD = null;
 function verText() { return 'Version ' + APP_VERSION + ' vom ' + APP_STAND; }
 function verFooter() {
@@ -859,23 +859,85 @@ function renderTabs() {
 function renderGebSel() {
   var s = $('gebSel'), h = '';
   if (!DB.gebaeude.length) h += '<option value="">Kein Gebäude</option>';
+  else h += '<option value="__alle"' + (STATE.tab === 'alle' ? ' selected' : '') + '>Alle Gebäude - Überblick</option>';
   var list = DB.gebaeude.slice().sort(function (a, b) { return a.name.localeCompare(b.name); });
-  for (var i = 0; i < list.length; i++) h += '<option value="' + list[i].id + '"' + (list[i].id === STATE.gid ? ' selected' : '') + '>' + esc(list[i].name) + '</option>';
+  for (var i = 0; i < list.length; i++) h += '<option value="' + list[i].id + '"' + (list[i].id === STATE.gid && STATE.tab !== 'alle' ? ' selected' : '') + '>' + esc(list[i].name) + '</option>';
   h += '<option value="__new">+ Neues Gebäude ...</option>';
   s.innerHTML = h;
 }
 function gebSelChange(s) {
   if (s.value === '__new') { renderGebSel(); editGebaeude(); return; }
+  if (s.value === '__alle') { goTab('alle'); return; }
   if (!s.value) return;
   STATE.gid = s.value; try { localStorage.setItem('bsb_gid', s.value); } catch (e) {}
   render();
 }
 function goTab(t) { STATE.tab = t; render(); window.scrollTo(0, 0); }
+/* ---------- Checklisten je Gebäude (z. B. nur vierteljährlich) ---------- */
+function aktVorlagen(g) {
+  g = g || curGeb(); var aus = (g && g.ohneVorlagen) || [], r = [];
+  for (var i = 0; i < DB.vorlagen.length; i++) if (aus.indexOf(DB.vorlagen[i].id) < 0) r.push(DB.vorlagen[i]);
+  return r;
+}
+/* ---------- Überblick über alle Gebäude ---------- */
+function mitGeb(gid, fn) { var alt = STATE.gid; STATE.gid = gid; try { return fn(); } finally { STATE.gid = alt; } }
+function gebLage(g) {
+  return mitGeb(g.id, function () {
+    var t = todayStr(), y = +t.substr(0, 4), r = { anlUe: [], anlF: [], mo: offeneMaengel(), moUe: [], fehlt: [], akt: [], lauf: [], fs: [], stufe: 0 };
+    var al = byG(DB.anlagen);
+    for (var i = 0; i < al.length; i++) { var d = daysUntil(al[i].naechstePruefung); if (d === null) continue; if (d < 0) r.anlUe.push(al[i]); else if (d <= 30) r.anlF.push(al[i]); }
+    for (var m = 0; m < r.mo.length; m++) if (r.mo[m].frist && r.mo[m].frist < t) r.moUe.push(r.mo[m]);
+    var vs = aktVorlagen(g);
+    for (var v = 0; v < vs.length; v++) {
+      if (!isPerArt(vs[v].art)) continue;
+      var ps = perList(vs[v].art, y), cp = perOf(vs[v].art, t);
+      for (var p = 0; p < ps.length; p++) {
+        var s = perStatus(vs[v].id, ps[p]);
+        if (ps[p] === cp) { if (s.k !== 'ok') (daysUntil(perRange(ps[p]).bis) <= 30 ? r.akt : r.lauf).push({ v: vs[v], p: ps[p], s: s }); }
+        else if (s.k === 'fehlt' || s.k === 'unvoll') r.fehlt.push({ v: vs[v], p: ps[p], s: s });
+      }
+    }
+    var fl = byG(DB.freigaben || []);
+    for (var f = 0; f < fl.length; f++) { var fs = fsStatus(fl[f]); if (fs.t !== 'abgeschlossen' && fs.t !== 'storniert' && fs.t !== 'Entwurf') r.fs.push({ f: fl[f], s: fs }); }
+    if (r.anlUe.length || r.fehlt.length || r.moUe.length) r.stufe = 2;
+    else if (r.anlF.length || r.mo.length || r.akt.length || r.fs.length) r.stufe = 1;
+    return r;
+  });
+}
+function viewAlle() {
+  var gs = DB.gebaeude.slice(), lagen = {}, sum = { ue: 0, mo: 0, fehlt: 0, rot: 0 };
+  for (var i = 0; i < gs.length; i++) { var L = gebLage(gs[i]); lagen[gs[i].id] = L; sum.ue += L.anlUe.length; sum.mo += L.mo.length; sum.fehlt += L.fehlt.length; if (L.stufe === 2) sum.rot++; }
+  gs.sort(function (a, b) { var d = lagen[b.id].stufe - lagen[a.id].stufe; return d || a.name.localeCompare(b.name); });
+  var h = updBanner() + '<h2>Alle Gebäude</h2>' +
+    '<div class="stats">' + stat(gs.length, 'Gebäude', 'alle', false) + stat(sum.rot, 'mit Handlungsbedarf', 'alle', sum.rot > 0) + stat(sum.ue, 'Prüffristen überfällig', 'alle', sum.ue > 0) + stat(sum.mo, 'Offene Mängel', 'alle', sum.mo > 0) + '</div>';
+  for (var k = 0; k < gs.length; k++) {
+    var g = gs[k], L2 = lagen[g.id], zs = [];
+    var farbe = L2.stufe === 2 ? 'var(--red2)' : L2.stufe === 1 ? 'var(--warn)' : 'var(--ok)';
+    function z(cls, t) { zs.push('<div style="font-size:14px;line-height:1.4;margin-top:4px;color:' + (cls === 'r' ? 'var(--red2)' : cls === 'o' ? 'var(--warn)' : 'var(--tx)') + ';' + (cls === 'r' ? 'font-weight:700' : '') + '">' + t + '</div>'); }
+    if (L2.anlUe.length) { var n1 = []; for (var a = 0; a < L2.anlUe.length && a < 3; a++) n1.push(esc(anlName(L2.anlUe[a]))); z('r', L2.anlUe.length + (L2.anlUe.length === 1 ? ' Prüffrist überfällig' : ' Prüffristen überfällig') + ': ' + n1.join(', ') + (L2.anlUe.length > 3 ? ' ...' : '')); }
+    if (L2.fehlt.length) { var n2 = []; for (var b = 0; b < L2.fehlt.length && b < 4; b++) n2.push(perSide(L2.fehlt[b].p) + (L2.fehlt[b].s.k === 'unvoll' ? ' (unvollständig)' : '')); z('r', L2.fehlt.length + (L2.fehlt.length === 1 ? ' Begehung fehlt' : ' Begehungen fehlen') + ': ' + n2.join(', ') + (L2.fehlt.length > 4 ? ' ...' : '')); }
+    if (L2.mo.length) z(L2.moUe.length ? 'r' : 'o', L2.mo.length + (L2.mo.length === 1 ? ' offener Mangel' : ' offene Mängel') + (L2.moUe.length ? ', davon ' + L2.moUe.length + ' mit überschrittener Frist' : ''));
+    if (L2.anlF.length) z('o', L2.anlF.length + (L2.anlF.length === 1 ? ' Prüffrist' : ' Prüffristen') + ' fällig in 30 Tagen');
+    function pTxt(A) { return (A.p.length === 4 ? 'Jahr ' + A.p : perSide(A.p)) + (A.s.k === 'arbeit' ? ' ' + A.s.sd.a + '/' + A.s.sd.n : ' offen'); }
+    if (L2.akt.length) { var n3 = []; for (var c = 0; c < L2.akt.length; c++) n3.push(pTxt(L2.akt[c]) + ' (bis ' + fmtD(perRange(L2.akt[c].p).bis).substr(0, 6) + ')'); z('o', 'Bald fällig: ' + n3.join(', ')); }
+    if (L2.lauf.length) { var n4 = []; for (var c2 = 0; c2 < L2.lauf.length; c2++) n4.push(pTxt(L2.lauf[c2])); zs.push('<div class="small" style="margin-top:4px">Laufend: ' + n4.join(', ') + '</div>'); }
+    if (L2.fs.length) z('o', L2.fs.length + ' Freigabeschein' + (L2.fs.length === 1 ? '' : 'e') + ' offen (' + L2.fs[0].s.t + ')');
+    if (!L2.stufe) zs.unshift('<div style="font-size:14px;margin-top:4px;color:var(--ok);font-weight:700">&#10003; Nichts überfällig</div>');
+    h += '<div class="card" onclick="gebOeffnen(\'' + g.id + '\')" style="cursor:pointer;border-left:5px solid ' + farbe + '">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between"><div style="font-size:18px;font-weight:700">' + esc(g.name) + '</div><span class="small lnk">Öffnen</span></div>' +
+      (g.adresse ? '<div class="small">' + esc(g.adresse) + '</div>' : '') + zs.join('') + '</div>';
+  }
+  h += '<button class="btn full" onclick="editGebaeude()">+ Gebäude anlegen</button>';
+  return h + verFooter();
+}
+function gebOeffnen(id) { STATE.gid = id; try { localStorage.setItem('bsb_gid', id); } catch (e) {} goTab('home'); }
 function render() {
-  if (!curGeb()) STATE.tab = 'home';
+  if (!curGeb() && STATE.tab !== 'alle') STATE.tab = 'home';
+  if (STATE.tab === 'alle' && !DB.gebaeude.length) STATE.tab = 'home';
   renderGebSel(); renderTabs();
   var v = $('view');
-  if (STATE.tab === 'home') v.innerHTML = viewHome();
+  if (STATE.tab === 'alle') v.innerHTML = viewAlle();
+  else if (STATE.tab === 'home') v.innerHTML = viewHome();
   else if (STATE.tab === 'anl') v.innerHTML = viewAnlagen();
   else if (STATE.tab === 'beg') v.innerHTML = viewBegehungen();
   else if (STATE.tab === 'mae') v.innerHTML = viewMaengel();
@@ -1012,6 +1074,7 @@ function viewHome() {
   }
   var anl = byG(DB.anlagen), mo = offeneMaengel(), fa = faelligeAnlagen(30), begs = byG(DB.begehungen);
   var h = updBanner();
+  if (DB.gebaeude.length > 1) h += '<button class="btn full" style="margin:0 0 12px" onclick="goTab(\'alle\')">&#9638; Alle ' + DB.gebaeude.length + ' Gebäude im Überblick</button>';
   if (!isLicensed()) h += '<div class="hint">Demoversion: 1 Gebäude, PDF mit Wasserzeichen. <span class="lnk" onclick="openSettings()">Lizenz eingeben</span></div>';
   var bk = DB.settings.letztesBackup;
   if ((anl.length || begs.length) && (!bk || -daysUntil(bk) > 30)) h += '<div class="hint">Die Daten liegen nur auf diesem Gerät. ' + (bk ? 'Letzte Sicherung: ' + fmtD(bk) + '. ' : 'Noch keine Sicherung. ') + '<span class="lnk" onclick="exportBackup()">Jetzt sichern</span></div>';
@@ -1019,8 +1082,9 @@ function viewHome() {
   h += '<div class="card"><div style="font-size:19px;font-weight:700">' + esc(g.name) + '</div>' + (g.adresse ? '<div class="small">' + esc(g.adresse) + '</div>' : '') + (g.bsb ? '<div class="small">Brandschutzbeauftragte/r: ' + esc(g.bsb) + '</div>' : '') + '<div class="btns"><button class="btn sm" onclick="editGebaeude(\'' + g.id + '\')">Gebäudedaten</button></div></div>';
   h += '<div class="stats">' + stat(anl.length, 'Prüffristen gesamt', 'anl', false) + stat(mo.length, 'Offene Mängel', 'mae', mo.length > 0) + stat(fa.length, 'Prüffristen fällig in 30 Tagen', 'anl', fa.length > 0) + stat(begs.length, 'Begehungen gesamt', 'beg', false) + '</div>';
   h += '<div class="card"><h3>Begehungen</h3>';
-  for (var i = 0; i < DB.vorlagen.length; i++) {
-    var v = DB.vorlagen[i], s = begStatus(v);
+  var AV = aktVorlagen();
+  for (var i = 0; i < AV.length; i++) {
+    var v = AV[i], s = begStatus(v);
     h += '<div class="row" onclick="startBegehung(\'' + v.id + '\')"><div class="m"><div class="t">' + esc(v.name) + '</div><div class="s">' + artLabel(v.art) + (s.last ? ', zuletzt am ' + fmtD(s.last.datum) + ' (' + esc(s.last.pruefer) + ')' : ', noch nie durchgeführt') + '</div></div>' + pill(s.cls, s.txt) + '</div>';
   }
   h += '</div>';
@@ -1062,7 +1126,9 @@ function editGebaeude(id) {
     '<label>Brandschutzbeauftragte/r</label><input id="g_bsb" value="' + esc(p.bsb) + '">' +
     '<label>Telefon</label><input id="g_tel" type="text" autocomplete="off" value="' + esc(p.telefon) + '">' +
     '<label>Wartungsfirma</label><input id="g_fa" value="' + esc(p.firma) + '" placeholder="z. B. Janiba Brandschutztechnik GmbH">' +
-    '<label>Notizen</label><textarea id="g_not">' + esc(p.notiz) + '</textarea>';
+    '<label>Notizen</label><textarea id="g_not">' + esc(p.notiz) + '</textarea>' +
+    '<label>Begehungen für dieses Gebäude</label>' + (function () { var s = '', aus = p.ohneVorlagen || []; for (var vi = 0; vi < DB.vorlagen.length; vi++) s += '<label class="chk"><input type="checkbox" class="g_vl" value="' + DB.vorlagen[vi].id + '"' + (aus.indexOf(DB.vorlagen[vi].id) < 0 ? ' checked' : '') + '>' + esc(DB.vorlagen[vi].name) + '</label>'; return s; })() +
+    '<div class="small" style="line-height:1.4">Nicht angehakte Begehungen werden bei diesem Gebäude weder angezeigt noch als „fehlt“ gezählt.</div>';
   if (g) h += '<button class="btn full" style="margin-top:18px;color:var(--red2)" onclick="delGebaeude(\'' + g.id + '\')">Gebäude löschen</button>';
   modal(g ? 'Gebäude bearbeiten' : 'Neues Gebäude', h, [{ label: 'Abbrechen', fn: closeModal }, { label: 'Speichern', cls: 'pri', fn: function () { saveGebaeude(id); } }]);
 }
@@ -1070,7 +1136,8 @@ function saveGebaeude(id) {
   var name = val('g_name'); if (!name) { toast('Bitte eine Bezeichnung angeben'); return; }
   var g = id ? findById(DB.gebaeude, id) : null;
   if (!g) { g = { id: uid(), erstellt: todayStr() }; DB.gebaeude.push(g); }
-  g.name = name; g.adresse = val('g_adr'); g.verantwortlich = val('g_ver'); g.bsb = val('g_bsb'); g.telefon = val('g_tel'); g.firma = val('g_fa'); g.notiz = val('g_not'); g.foto = GFOTO; g.beschreibung = val('g_pb'); g.startDatum = val('g_ab') || g.erstellt;
+  g.name = name; g.adresse = val('g_adr'); g.verantwortlich = val('g_ver');
+  var vlc = document.querySelectorAll('.g_vl'); g.ohneVorlagen = []; for (var vk = 0; vk < vlc.length; vk++) if (!vlc[vk].checked) g.ohneVorlagen.push(vlc[vk].value); g.bsb = val('g_bsb'); g.telefon = val('g_tel'); g.firma = val('g_fa'); g.notiz = val('g_not'); g.foto = GFOTO; g.beschreibung = val('g_pb'); g.startDatum = val('g_ab') || g.erstellt;
   save('gebaeude');
   STATE.gid = g.id; try { localStorage.setItem('bsb_gid', g.id); } catch (e) {}
   closeModal(); render(); toast('Gebäude gespeichert');
@@ -1235,7 +1302,8 @@ function viewBegehungen() {
     '<div style="display:flex;align-items:center;justify-content:center;margin-bottom:12px"><button class="btn sm" onclick="STATE.begJahr=' + (y - 1) + ';render()">&#9664;</button><div style="font-size:20px;font-weight:700;margin:0 22px">' + y + '</div><button class="btn sm" onclick="STATE.begJahr=' + (y + 1) + ';render()">&#9654;</button></div>';
   var ord = { jaehrlich: 0, halbjaehrlich: 1, vierteljaehrlich: 2, monatlich: 3 };
   var pv = [], sonst = [];
-  for (var i = 0; i < DB.vorlagen.length; i++) { if (isPerArt(DB.vorlagen[i].art)) pv.push(DB.vorlagen[i]); else sonst.push(DB.vorlagen[i]); }
+  var AV = aktVorlagen();
+  for (var i = 0; i < AV.length; i++) { if (isPerArt(AV[i].art)) pv.push(AV[i]); else sonst.push(AV[i]); }
   pv.sort(function (a, b) { return ord[a.art] - ord[b.art]; });
   for (var q = 0; q < sonst.length; q++) {
     var w = sonst[q], bl = [], all = byG(DB.begehungen);
@@ -1291,8 +1359,9 @@ function perTap(vid, p) {
 function newBegehung() {
   if (!curGeb()) { editGebaeude(); return; }
   var h = '<p class="small">Welche Begehung möchten Sie durchführen?</p>';
-  for (var i = 0; i < DB.vorlagen.length; i++) {
-    var v = DB.vorlagen[i], s = begStatus(v);
+  var AV = aktVorlagen();
+  for (var i = 0; i < AV.length; i++) {
+    var v = AV[i], s = begStatus(v);
     h += '<div class="row" onclick="startBegehung(\'' + v.id + '\')"><div class="m"><div class="t">' + esc(v.name) + '</div><div class="s">' + artLabel(v.art) + ' - ' + nFragen(v) + ' Fragen</div></div>' + pill(s.cls, s.txt) + '</div>';
   }
   h += '<div class="small" style="margin-top:12px">Checklisten können unter Einstellungen angepasst werden.</div>';
@@ -2109,8 +2178,9 @@ function absPdf(art) {
       for (var a = 0; a < al.length; a++) if (al[a].naechstePruefung && al[a].naechstePruefung <= st) rows.push({ t: 'Prüffrist überschritten: ' + anlName(al[a]) + (al[a].standort ? '\nOrt: ' + al[a].standort : ''), fest: fmtD(al[a].naechstePruefung), gem: '' });
     }
     if (mitBg) {
-      for (var v = 0; v < DB.vorlagen.length; v++) {
-        var vo = DB.vorlagen[v]; if (!isPerArt(vo.art)) continue;
+      var AVa = aktVorlagen();
+      for (var v = 0; v < AVa.length; v++) {
+        var vo = AVa[v]; if (!isPerArt(vo.art)) continue;
         var ps = perList(vo.art, y);
         for (var p = 0; p < ps.length; p++) {
           var r = perRange(ps[p]); if (r.von > st) continue;
@@ -2334,8 +2404,9 @@ function makeReport(o) {
     if (jy1 - jy0 > 4) jy0 = jy1 - 4;
     for (var jy = jy0; jy <= jy1; jy++) {
       var jr = [];
-      for (var jv = 0; jv < DB.vorlagen.length; jv++) {
-        var JV = DB.vorlagen[jv]; if (!isPerArt(JV.art)) continue;
+      var AVr = aktVorlagen();
+      for (var jv = 0; jv < AVr.length; jv++) {
+        var JV = AVr[jv]; if (!isPerArt(JV.art)) continue;
         var jps = perList(JV.art, jy);
         for (var jp = 0; jp < jps.length; jp++) {
           var JS = perStatus(JV.id, jps[jp]);
@@ -3151,6 +3222,7 @@ function init() {
       DB.settings.appVersion = APP_VERSION + '|' + APP_STAND; save('settings');
       if (warAlt || DB.gebaeude.length) setTimeout(function () { info('Update installiert', '<p style="line-height:1.5">Das Brandschutzbuch wurde aktualisiert auf <b>' + esc(verText()) + '</b>.</p><p class="small">Vorher: Version ' + esc((warAlt || 'älter').split('|')[0]) + ((warAlt || '').split('|')[1] ? ' vom ' + esc(warAlt.split('|')[1]) : '') + '</p>'); }, 400);
     }
+    if (DB.gebaeude.length > 1) STATE.tab = 'alle';
     render();
     setTimeout(function () { checkUpdate(false); }, 1500);
     setTimeout(function () { if ($('modalWrap').className === 'hidden') backupErinnerung(); }, 2500);
