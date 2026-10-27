@@ -115,8 +115,8 @@ textarea{min-height:80px;resize:vertical}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 /* Brandschutzbuch - lokale Web-App (Janiba Brandschutztechnik GmbH) */
-var APP_VERSION = '2.25';
-var APP_STAND = '27.10.2026 13:15';
+var APP_VERSION = '2.27';
+var APP_STAND = '27.10.2026 21:30';
 var UPD = null;
 function verText() { return 'Version ' + APP_VERSION + ' vom ' + APP_STAND; }
 function verFooter() {
@@ -1537,6 +1537,22 @@ function begTermine(b) {
   r.sort(function (x, y) { return x.datum < y.datum ? -1 : 1; });
   return r;
 }
+function begTerminDatum(bid, alt) {
+  var b = findById(DB.begehungen, bid); if (!b) return;
+  modal('Datum ändern', '<p style="line-height:1.5">Alle <b>' + begTerminAnz(b, alt) + ' Fragen</b>, die am <b>' + fmtD(alt) + '</b> beantwortet wurden, bekommen das neue Datum. Andere Termine bleiben unverändert.</p><label>Neues Datum</label><input id="td_neu" type="date" value="' + alt + '">',
+    [{ label: 'Abbrechen', fn: function () { showBegehung(bid); } }, { label: 'Übernehmen', cls: 'pri', fn: function () {
+      var neu = val('td_neu'); if (!neu || neu === alt) { showBegehung(bid); return; }
+      var ts = begTermine(b); b.termine = ts;
+      for (var i = 0; i < b.punkte.length; i++) if (b.punkte[i].status && (b.punkte[i].datum || b.datum) === alt) b.punkte[i].datum = neu;
+      var tA = null, tN = null; for (var k = 0; k < ts.length; k++) { if (ts[k].datum === alt) tA = ts[k]; if (ts[k].datum === neu) tN = ts[k]; }
+      if (tA && tN) { if (!tN.unterschrift) tN.unterschrift = tA.unterschrift; ts.splice(ts.indexOf(tA), 1); } else if (tA) tA.datum = neu;
+      ts.sort(function (x, y) { return x.datum < y.datum ? -1 : 1; });
+      if (b.datum === alt) b.datum = neu;
+      if (!b.begonnen || b.begonnen === alt || neu < b.begonnen) b.begonnen = ts.length ? ts[0].datum : neu;
+      for (var m = 0; m < DB.maengel.length; m++) if (DB.maengel[m].begehungId === bid && DB.maengel[m].datum === alt) DB.maengel[m].datum = neu;
+      save('begehungen'); save('maengel'); toast('Datum geändert auf ' + fmtD(neu)); showBegehung(bid);
+    } }]);
+}
 function begTerminAnz(b, d) { var n = 0; for (var i = 0; i < b.punkte.length; i++) if (b.punkte[i].status && (b.punkte[i].datum || b.datum) === d) n++; return n; }
 /* Bericht nur für die an einem Tag beantworteten Fragen (Teilbegehung) */
 function begTerminPdf(bid, d) {
@@ -1556,9 +1572,10 @@ function showBegehung(id) {
   var h = (b.offen ? '<div class="hint" style="margin-top:10px">In Arbeit: ' + sd.a + ' von ' + sd.n + ' Fragen beantwortet, ' + (sd.n - sd.a) + ' noch offen' + (begPer(b) ? ' (bis ' + fmtD(perRange(begPer(b)).bis) + ')' : '') + '.</div>' : '') +
     '<table class="kv"><tr><td>' + (b.offen ? 'Zuletzt bearbeitet' : 'Datum') + '</td><td>' + fmtD(b.datum) + (b.zeit ? ', ' + esc(b.zeit) : '') + '</td></tr>' + (b.begonnen && b.begonnen !== b.datum ? '<tr><td>Begonnen</td><td>' + fmtD(b.begonnen) + '</td></tr>' : '') + '<tr><td>Checkliste</td><td>' + esc(b.vorlageName) + ' (' + artLabel(b.art) + ')</td></tr>' + (begPer(b) ? '<tr><td>Begehung für</td><td>' + perLabel(begPer(b)) + '</td></tr>' : '') + '<tr><td>Durchgeführt von</td><td>' + esc(b.pruefer) + '</td></tr></table>';
   var TS = begTermine(b);
-  if (TS.length > 1 || b.offen) {
+  if (TS.length) {
     h += '<div class="grp">Termine (je Termin ein eigener Bericht)</div>';
-    for (var tt = 0; tt < TS.length; tt++) h += '<div class="row" onclick="begTerminPdf(\'' + b.id + '\',\'' + TS[tt].datum + '\')"><div class="m"><div class="t">' + fmtD(TS[tt].datum) + (TS[tt].pruefer ? ', ' + esc(TS[tt].pruefer) : '') + '</div><div class="s">' + begTerminAnz(b, TS[tt].datum) + ' Fragen beantwortet' + (TS[tt].unterschrift ? ', unterschrieben' : '') + '</div></div><span class="small lnk">PDF</span></div>';
+    for (var tt = 0; tt < TS.length; tt++) h += '<div class="row"><div class="m"><div class="t">' + fmtD(TS[tt].datum) + (TS[tt].pruefer ? ', ' + esc(TS[tt].pruefer) : '') + '</div><div class="s">' + begTerminAnz(b, TS[tt].datum) + ' Fragen beantwortet' + (TS[tt].unterschrift ? ', unterschrieben' : '') + '</div></div>' +
+      '<button class="btn sm" style="margin-right:6px" onclick="begTerminDatum(\'' + b.id + '\',\'' + TS[tt].datum + '\')">Datum ändern</button><button class="btn sm pri" onclick="begTerminPdf(\'' + b.id + '\',\'' + TS[tt].datum + '\')">PDF</button></div>';
   }
   var sec = null;
   if (!b.punkte.length || !b.punkte[0].sec) h += '<div class="grp">Fragen</div>';
@@ -1621,7 +1638,7 @@ function sortMaengel(l) {
 function mangelPill(m) {
   if (m.status === 'behoben') return pill('p-ok', 'abgeschlossen');
   var d = daysUntil(m.frist);
-  if (d !== null && d < 0) return pill('p-err', 'Frist vorbei');
+  if (d !== null && d < 0) return pill('p-err', 'Frist vorbei (' + fmtD(m.frist).substr(0, 6) + ')');
   if (d !== null && d <= 7) return pill('p-warn', 'bis ' + fmtD(m.frist));
   if (m.status === 'arbeit') return pill('p-warn', 'in Arbeit');
   return pill('p-warn', 'offen');
@@ -1715,6 +1732,7 @@ function editMangel(id, preset, ret) {
     '<label class="btn full" style="text-align:center;color:var(--tx);margin-top:6px">+ Foto hinzufügen<input type="file" accept="image/*" multiple style="display:none" onchange="mAddFotos(this)"></label>' +
     '<label>Maßnahme</label><textarea id="m_m" placeholder="z. B. Tausch abgeschlossen, keine weiteren Maßnahmen erforderlich.">' + esc(p.massnahme) + '</textarea>' +
     '<label>Status</label><div class="seg">' + sb + '</div>' +
+    '<div id="m_bawrap" style="display:' + (st === 'behoben' ? 'block' : 'none') + '"><label>Behoben am</label><input id="m_ba" type="date" value="' + esc(p.behobenAm || todayStr()) + '"></div>' +
     '<div class="two"><div><label>Frist</label><input id="m_f" type="date" value="' + esc(p.frist) + '"></div><div><label>Erstellungsdatum</label><input id="m_d" type="date" value="' + esc(p.datum || todayStr()) + '"></div></div>' +
     '<div class="btns"><button class="btn sm" onclick="mFrist(7)">Frist +7 Tage</button><button class="btn sm" onclick="mFrist(14)">+14</button><button class="btn sm" onclick="mFrist(30)">+30</button><button class="btn sm" onclick="$(\'m_f\').value=\'\'">keine</button></div>' +
     '<label>Zuständigkeit</label><input id="m_z" value="' + esc(zust) + '">' +
@@ -1729,8 +1747,8 @@ function editMangel(id, preset, ret) {
 function mAnlChg(s) { var a = findById(DB.anlagen, s.value); if (!a) return; if (!val('m_inv') && a.nr) $('m_inv').value = a.nr; if (!val('m_s') && a.standort) $('m_s').value = a.standort; }
 function mTyp(k) { MFORM.typ = k; $('mt_mangel').className = k === 'mangel' ? 'on' : ''; $('mt_taetigkeit').className = k === 'taetigkeit' ? 'on' : ''; }
 function mPrio(k) { MFORM.prio = k; for (var j = 0; j < PRIOS.length; j++) $('mp_' + PRIOS[j].k).className = PRIOS[j].k === k ? 'on' : ''; }
-function mStat(k) { MFORM.status = k; for (var j = 0; j < MSTATUS.length; j++) $('ms_' + MSTATUS[j].k).className = MSTATUS[j].k === k ? 'on' : ''; }
-function mFrist(n) { $('m_f').value = addDays(val('m_d') || todayStr(), n); }
+function mStat(k) { MFORM.status = k; if ($('m_bawrap')) $('m_bawrap').style.display = k === 'behoben' ? 'block' : 'none'; for (var j = 0; j < MSTATUS.length; j++) $('ms_' + MSTATUS[j].k).className = MSTATUS[j].k === k ? 'on' : ''; }
+function mFrist(n) { var b = val('m_d') || todayStr(); if (b < todayStr()) b = todayStr(); $('m_f').value = addDays(b, n); toast('Frist: ' + fmtD($('m_f').value)); }
 function mAddFotos(input) {
   var fs = input.files, n = fs ? fs.length : 0, i = 0;
   function next() { if (i >= n) { input.value = ''; return; } readFoto(fs[i++], function (d) { if (d) MFORM.fotos.push(d); mFotoPrev(); next(); }); }
@@ -1758,7 +1776,7 @@ function saveMangel(id) {
   m.massnahme = val('m_m'); m.frist = val('m_f'); m.datum = val('m_d') || todayStr(); m.zustaendig = val('m_z'); m.arbeitszeit = val('m_w');
   m.prioritaet = MFORM.prio; m.typ = MFORM.typ; m.fotos = MFORM.fotos.slice(0); delete m.foto; delete m.fotoBehoben;
   var war = m.status; m.status = MFORM.status;
-  if (m.status === 'behoben' && war !== 'behoben') m.behobenAm = todayStr();
+  if (m.status === 'behoben') m.behobenAm = val('m_ba') || m.behobenAm || todayStr();
   if (m.status !== 'behoben') m.behobenAm = '';
   if (m.zustaendig) DB.settings.letzteZust = m.zustaendig;
   if (neu) DB.maengel.push(m);
@@ -1773,7 +1791,7 @@ function showMangel(id) {
   function r(l, v) { return v ? '<tr><td>' + l + '</td><td style="white-space:pre-wrap">' + esc(v) + '</td></tr>' : ''; }
   var h = '<p style="font-size:17px;font-weight:700;margin:12px 0 6px;line-height:1.35">' + esc(mTitel(m)) + '</p><div style="margin-bottom:8px">' + mangelPill(m) + '</div><table class="kv">' +
     r('Inventar Nr.', mInv(m)) + r('Standort', m.standort || o) + r('Beschreibung', m.beschreibung) + r('Maßnahme', m.massnahme) +
-    r('Status', mStatusText(m.status)) + r('Frist', fmtD(m.frist)) + r('Zuständigkeit', m.zustaendig) + r('Erstellungsdatum', fmtD(m.datum)) + r('Arbeitszeit', m.arbeitszeit) +
+    r('Status', mStatusText(m.status)) + r('Behoben am', m.status === 'behoben' ? fmtD(m.behobenAm) : '') + r('Frist', fmtD(m.frist)) + r('Zuständigkeit', m.zustaendig) + r('Erstellungsdatum', fmtD(m.datum)) + r('Arbeitszeit', m.arbeitszeit) +
     r('Quelle', m.quelle) + '</table>';
   for (var i = 0; i < f.length; i++) h += '<img class="foto" src="' + f[i] + '">';
   h += '<div class="btns" style="margin-top:14px"><button class="btn" onclick="editMangel(\'' + id + '\')">Bearbeiten</button><button class="btn" onclick="gesamtPdf([\'' + id + '\'])">Als PDF / Mail</button>' + (m.status === 'behoben' ? '<button class="btn" onclick="reopenMangel(\'' + id + '\')">Wieder öffnen</button>' : '') + '</div>';
