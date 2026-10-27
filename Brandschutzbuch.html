@@ -115,8 +115,8 @@ textarea{min-height:80px;resize:vertical}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 /* Brandschutzbuch - lokale Web-App (Janiba Brandschutztechnik GmbH) */
-var APP_VERSION = '2.23';
-var APP_STAND = '25.10.2026 11:00';
+var APP_VERSION = '2.25';
+var APP_STAND = '27.10.2026 13:15';
 var UPD = null;
 function verText() { return 'Version ' + APP_VERSION + ' vom ' + APP_STAND; }
 function verFooter() {
@@ -1397,7 +1397,8 @@ function startBegehung(vid, per, bid) {
   var st0 = ex ? begStand(ex) : null;
   var h = '<div class="small" style="margin-top:8px">' + esc(curGeb().name) + ' - ' + artLabel(v.art) + ' - ' + nFragen(v) + ' Fragen</div>' +
     (ex ? '<div class="hint" style="margin-top:10px">Weiter ausfüllen: ' + st0.a + ' von ' + st0.n + ' Fragen sind bereits beantwortet. ' + (ex.offen ? 'Es werden nur noch die offenen Fragen angezeigt.' : '') + ' Offene Fragen können Sie jetzt oder später beantworten.</div>' : '') +
-    '<div class="two"><div><label>Datum (heute erledigt)</label><input id="b_d" type="date" value="' + todayStr() + '"></div><div><label>Uhrzeit</label><input id="b_z" type="time" value="' + nowTime() + '"></div></div>' +
+    '<div class="two"><div><label>Datum der Begehung</label><input id="b_d" type="date" value="' + todayStr() + '"></div><div><label>Uhrzeit</label><input id="b_z" type="time" value="' + nowTime() + '"></div></div>' +
+    (ex && st0.a ? '<label class="chk"><input type="checkbox" id="b_dalle">Dieses Datum auch für die ' + st0.a + ' bereits beantworteten Fragen übernehmen</label>' : '') +
     perSel +
     '<label>Durchgeführt von *</label><input id="b_pr" value="' + esc(ex ? ex.pruefer : (DB.settings.letzterPruefer || '')) + '">' +
     '<div class="small" style="margin-top:10px">Bei Nein öffnet sich ein Feld für die Beschreibung. Mit dem Häkchen entscheiden Sie, ob es als Mangel in die Mängelliste kommt. Falsch getippt? Einfach nochmal auf denselben Knopf tippen, dann ist die Auswahl wieder weg. ' + (isPerArt(v.art) ? 'Sie müssen nicht alles auf einmal ausfüllen - mit „Zwischenspeichern“ bleiben offene Fragen bis zum Ende des Zeitraums offen.' : '') + '</div>' +
@@ -1475,18 +1476,18 @@ function saveBegehung(zwischen) {
     zwischen = true;
   }
   if (!beantw && !BEG.ex) { toast('Bitte mindestens eine Frage beantworten'); return; }
-  var d = val('b_d') || todayStr();
+  var d = val('b_d') || todayStr(), dAlle = !!($('b_dalle') && $('b_dalle').checked);
   var ex = BEG.ex ? findById(DB.begehungen, BEG.ex) : null;
   var per = ex ? begPer(ex) : (val('b_per') || perOf(v.art, d));
   var b = ex || { id: uid(), gid: STATE.gid, vorlageId: v.id, vorlageName: v.name, art: v.art, periode: per, begonnen: d, zusatz: 0 };
-  b.datum = d; b.zeit = val('b_z'); b.pruefer = pr; b.bemerkung = val('b_bem');
+  b.datum = d; b.zeit = val('b_z'); if (dAlle || (b.begonnen && d < b.begonnen)) b.begonnen = d; b.pruefer = pr; b.bemerkung = val('b_bem');
   if (SIG && !SIG.isEmpty()) b.unterschrift = SIG.data(); else if (!ex) b.unterschrift = '';
   var neu = [], nr = nextMangelNr(), sec = '', pts = [];
   for (var j = 0; j < v.punkte.length; j++) {
     if (isHdr(v.punkte[j])) { sec = hdrText(v.punkte[j]); continue; }
     var bem = val('bb' + j), st = BEG.st[j], a = BEG.alt[sec + '|' + v.punkte[j]] || {};
     var mk = !!(st && BEG.mk[j]), hatte = !!(a.status && ptMangel(a) && a.mid);
-    var p = { text: v.punkte[j], status: st, bemerkung: (st === 'mangel' || mk) ? bem : '', mangel: mk, sec: sec, datum: st ? (a.status === st && a.datum ? a.datum : d) : '', mid: hatte ? a.mid : '' };
+    var p = { text: v.punkte[j], status: st, bemerkung: (st === 'mangel' || mk) ? bem : '', mangel: mk, sec: sec, datum: st ? (a.status === st && a.datum && !dAlle ? a.datum : d) : '', mid: hatte ? a.mid : '' };
     if (hatte && !mk) {
       /* Nein wurde zurückgenommen: automatisch angelegten Mangel entfernen, solange er unbearbeitet ist */
       var am = findById(DB.maengel, a.mid);
@@ -1506,19 +1507,59 @@ function saveBegehung(zwischen) {
     DB.maengel.push({ id: neu[k].id, gid: STATE.gid, nr: nr++, begehungId: b.id, aid: '', datum: d, titel: neu[k].t, beschreibung: neu[k].b, standort: '', inventar: '', massnahme: '', prioritaet: 'mittel', frist: '', status: 'offen', typ: 'mangel', zustaendig: DB.settings.letzteZust || 'Brandschutzbeauftragter', arbeitszeit: '', quelle: v.name + (per ? ' ' + perLabel(per) : '') + ' vom ' + fmtD(d), fotos: [] });
   }
   b.offen = offen > 0;
+  /* Termin (Teilbegehung) festhalten: wer, wann, Unterschrift - je Datum ein eigener Bericht möglich */
+  if (dAlle) b.termine = null;
+  if (!b.termine) b.termine = begTermine(b);
+  for (var tz = b.termine.length - 1; tz >= 0; tz--) if (b.termine[tz].datum !== d && !begTerminAnz(b, b.termine[tz].datum)) b.termine.splice(tz, 1);
+  var tm = null; for (var ti = 0; ti < b.termine.length; ti++) if (b.termine[ti].datum === d) tm = b.termine[ti];
+  if (!tm) { tm = { datum: d }; b.termine.push(tm); b.termine.sort(function (x, y) { return x.datum < y.datum ? -1 : 1; }); }
+  tm.zeit = val('b_z'); tm.pruefer = pr; tm.bemerkung = val('b_bem') || tm.bemerkung || '';
+  if (SIG && !SIG.isEmpty()) tm.unterschrift = b.unterschrift;
+  else if (!tm.unterschrift && b.unterschrift && !ex) tm.unterschrift = b.unterschrift;
   if (!ex) DB.begehungen.push(b);
   DB.settings.letzterPruefer = pr;
   save('begehungen'); save('maengel'); save('settings');
   closeModal(); STATE.tab = 'beg'; STATE.begJahr = +(per || d).substr(0, 4); render();
   var msg = b.offen ? 'Zwischengespeichert: ' + (pts.length - offen) + ' von ' + pts.length + ' Fragen beantwortet, ' + offen + ' noch offen' + (per ? ' bis ' + fmtD(perRange(per).bis) : '') + '.' : 'Begehung vollständig abgeschlossen.';
-  if (neu.length) info(b.offen ? 'Zwischengespeichert' : 'Begehung gespeichert', '<p style="line-height:1.5">' + esc(msg) + '</p><p style="line-height:1.5">' + neu.length + (neu.length === 1 ? ' Mangel wurde' : ' Mängel wurden') + ' in die Mängelliste übernommen.</p>');
+  var nT = 0; for (var tq = 0; tq < pts.length; tq++) if (pts[tq].status && pts[tq].datum === d) nT++;
+  if (b.offen || (b.termine && b.termine.length > 1)) {
+    modal(b.offen ? 'Zwischengespeichert' : 'Begehung gespeichert', '<p style="line-height:1.5">' + esc(msg) + '</p>' + (neu.length ? '<p style="line-height:1.5">' + neu.length + (neu.length === 1 ? ' Mangel wurde' : ' Mängel wurden') + ' in die Mängelliste übernommen.</p>' : '') +
+      '<p style="line-height:1.5">Am ' + fmtD(d) + ' wurden <b>' + nT + ' Fragen</b> beantwortet. Dafür können Sie einen eigenen Bericht erstellen.</p>',
+      [{ label: 'Schließen', fn: closeModal }, { label: 'Bericht vom ' + fmtD(d).substr(0, 6), cls: 'pri', fn: function () { closeModal(); begTerminPdf(b.id, d); } }]);
+  } else if (neu.length) info('Begehung gespeichert', '<p style="line-height:1.5">' + esc(msg) + '</p><p style="line-height:1.5">' + neu.length + (neu.length === 1 ? ' Mangel wurde' : ' Mängel wurden') + ' in die Mängelliste übernommen.</p>');
   else toast(msg);
+}
+function begTermine(b) {
+  if (b.termine && b.termine.length) return b.termine;
+  var ds = {}, r = [];
+  for (var i = 0; i < b.punkte.length; i++) if (b.punkte[i].status && b.punkte[i].datum) ds[b.punkte[i].datum] = 1;
+  for (var k in ds) r.push({ datum: k, pruefer: b.pruefer, zeit: k === b.datum ? b.zeit : '', unterschrift: k === b.datum ? b.unterschrift : '', bemerkung: k === b.datum ? b.bemerkung : '' });
+  r.sort(function (x, y) { return x.datum < y.datum ? -1 : 1; });
+  return r;
+}
+function begTerminAnz(b, d) { var n = 0; for (var i = 0; i < b.punkte.length; i++) if (b.punkte[i].status && (b.punkte[i].datum || b.datum) === d) n++; return n; }
+/* Bericht nur für die an einem Tag beantworteten Fragen (Teilbegehung) */
+function begTerminPdf(bid, d) {
+  var b = findById(DB.begehungen, bid); if (!b) return;
+  var t = null, ts = begTermine(b); for (var i = 0; i < ts.length; i++) if (ts[i].datum === d) t = ts[i];
+  var c = JSON.parse(JSON.stringify(b)), pk = [], sd = begStand(b);
+  for (var j = 0; j < b.punkte.length; j++) if (b.punkte[j].status && (b.punkte[j].datum || b.datum) === d) { var pj = JSON.parse(JSON.stringify(b.punkte[j])); pj._nr = j + 1; pk.push(pj); }
+  c.punkte = pk; c.offen = false; c.datum = d; c.zeit = t ? t.zeit : ''; c.pruefer = t && t.pruefer ? t.pruefer : b.pruefer;
+  c.unterschrift = t ? t.unterschrift || '' : ''; c.bemerkung = t ? t.bemerkung || '' : '';
+  c.vorlageName = b.vorlageName + ' - Teilbegehung (' + pk.length + ' Fragen, Stand gesamt ' + sd.a + ' von ' + sd.n + ')';
+  var doc = makeReport({ titel: 'Begehungsprotokoll', single: c, begd: true });
+  if (doc) pdfReady(doc, 'Begehung_' + safeName(curGeb().name) + '_' + d + '.pdf');
 }
 function showBegehung(id) {
   var b = findById(DB.begehungen, id); if (!b) return;
   var sd = begStand(b);
   var h = (b.offen ? '<div class="hint" style="margin-top:10px">In Arbeit: ' + sd.a + ' von ' + sd.n + ' Fragen beantwortet, ' + (sd.n - sd.a) + ' noch offen' + (begPer(b) ? ' (bis ' + fmtD(perRange(begPer(b)).bis) + ')' : '') + '.</div>' : '') +
     '<table class="kv"><tr><td>' + (b.offen ? 'Zuletzt bearbeitet' : 'Datum') + '</td><td>' + fmtD(b.datum) + (b.zeit ? ', ' + esc(b.zeit) : '') + '</td></tr>' + (b.begonnen && b.begonnen !== b.datum ? '<tr><td>Begonnen</td><td>' + fmtD(b.begonnen) + '</td></tr>' : '') + '<tr><td>Checkliste</td><td>' + esc(b.vorlageName) + ' (' + artLabel(b.art) + ')</td></tr>' + (begPer(b) ? '<tr><td>Begehung für</td><td>' + perLabel(begPer(b)) + '</td></tr>' : '') + '<tr><td>Durchgeführt von</td><td>' + esc(b.pruefer) + '</td></tr></table>';
+  var TS = begTermine(b);
+  if (TS.length > 1 || b.offen) {
+    h += '<div class="grp">Termine (je Termin ein eigener Bericht)</div>';
+    for (var tt = 0; tt < TS.length; tt++) h += '<div class="row" onclick="begTerminPdf(\'' + b.id + '\',\'' + TS[tt].datum + '\')"><div class="m"><div class="t">' + fmtD(TS[tt].datum) + (TS[tt].pruefer ? ', ' + esc(TS[tt].pruefer) : '') + '</div><div class="s">' + begTerminAnz(b, TS[tt].datum) + ' Fragen beantwortet' + (TS[tt].unterschrift ? ', unterschrieben' : '') + '</div></div><span class="small lnk">PDF</span></div>';
+  }
   var sec = null;
   if (!b.punkte.length || !b.punkte[0].sec) h += '<div class="grp">Fragen</div>';
   for (var i = 0; i < b.punkte.length; i++) {
@@ -1534,7 +1575,7 @@ function showBegehung(id) {
   h += '<button class="btn full" style="margin-top:8px;color:var(--red2)" onclick="delBegehung(\'' + id + '\')">Protokoll löschen</button>';
   var btns = [{ label: 'Schließen', fn: closeModal }];
   if (b.offen) btns.push({ label: 'Weiter ausfüllen', cls: 'pri', fn: function () { startBegehung(b.vorlageId, begPer(b), id); } });
-  btns.push({ label: 'Als PDF', cls: b.offen ? '' : 'pri', fn: function () { var doc = makeReport({ titel: 'Begehungsprotokoll', single: b, begd: true }); if (doc) pdfReady(doc, 'Begehung_' + safeName(curGeb().name) + '_' + b.datum + '.pdf'); } });
+  btns.push({ label: begTermine(b).length > 1 ? 'Gesamt-PDF' : 'Als PDF', cls: b.offen ? '' : 'pri', fn: function () { var doc = makeReport({ titel: 'Begehungsprotokoll', single: b, begd: true }); if (doc) pdfReady(doc, 'Begehung_' + safeName(curGeb().name) + '_' + b.datum + '.pdf'); } });
   modal(b.vorlageName + (begPer(b) ? ' - ' + perSide(begPer(b)) : ''), h, btns);
 }
 function delBegehung(id) { ask('Dieses Begehungsprotokoll löschen? Bereits erfasste Mängel bleiben erhalten.', function () { removeById(DB.begehungen, id); save('begehungen'); render(); toast('Protokoll gelöscht'); }, 'Löschen'); }
@@ -2441,7 +2482,7 @@ function makeReport(o) {
         var PP = BB.punkte[p2];
         if (PP.sec && PP.sec !== csec) { csec = PP.sec; pr2.push([{ content: PP.sec, colSpan: 6, styles: { fontStyle: 'bold', fillColor: [254, 236, 226], textColor: [160, 50, 10] } }]); }
         var na = PP.status === 'na';
-        pr2.push([String(p2 + 1), PP.text, PP.status === 'ok' ? 'X' : (na ? '-' : ''), PP.status === 'mangel' ? 'X' : (na ? '-' : ''), PP.datum ? fmtD(PP.datum) : (PP.status ? fmtD(BB.datum) : ''), !PP.status ? 'offen' : (ptMangel(PP) && PP.status !== 'mangel') ? 'MANGEL' + (PP.bemerkung ? ': ' + PP.bemerkung : '') : na ? 'entfällt' + (PP.bemerkung ? ': ' + PP.bemerkung : '') : (PP.bemerkung || '')]);
+        pr2.push([String(PP._nr || p2 + 1), PP.text, PP.status === 'ok' ? 'X' : (na ? '-' : ''), PP.status === 'mangel' ? 'X' : (na ? '-' : ''), PP.datum ? fmtD(PP.datum) : (PP.status ? fmtD(BB.datum) : ''), !PP.status ? 'offen' : (ptMangel(PP) && PP.status !== 'mangel') ? 'MANGEL' + (PP.bemerkung ? ': ' + PP.bemerkung : '') : na ? 'entfällt' + (PP.bemerkung ? ': ' + PP.bemerkung : '') : (PP.bemerkung || '')]);
       }
       tbl(['Nr.', 'Frage', 'Ja', 'Nein', 'Datum', 'Bemerkung'], pr2, {
         didParseCell: function (d) {
