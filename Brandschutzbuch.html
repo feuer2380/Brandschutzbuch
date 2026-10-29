@@ -115,8 +115,8 @@ textarea{min-height:80px;resize:vertical}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 /* Brandschutzbuch - lokale Web-App (Janiba Brandschutztechnik GmbH) */
-var APP_VERSION = '2.32';
-var APP_STAND = '29.10.2026 19:00';
+var APP_VERSION = '2.33';
+var APP_STAND = '29.10.2026 20:00';
 var UPD = null;
 function verText() { return 'Version ' + APP_VERSION + ' vom ' + APP_STAND; }
 function verFooter() {
@@ -1061,34 +1061,92 @@ function gebLage(g) {
     return r;
   });
 }
+function alleZelle(s, txt, titel) {
+  var bg = '#eceff3', fg = '#9aa3ad', bd = '1px solid transparent';
+  if (s.k === 'ok') { bg = '#16a34a'; fg = '#fff'; }
+  else if (s.k === 'fehlt' || s.k === 'unvoll') { bg = '#dc2626'; fg = '#fff'; }
+  else if (s.k === 'arbeit') { bg = '#f59e0b'; fg = '#fff'; }
+  else if (s.k === 'faellig') { bg = '#fff7ed'; fg = '#c2410c'; bd = '2px solid #f59e0b'; }
+  else if (s.k === 'vorher') { bg = 'transparent'; fg = '#c4cad1'; bd = '1px dashed #d4d9df'; }
+  return '<span title="' + esc(titel) + '" style="flex:1;min-width:0;height:24px;line-height:' + (bd.charAt(0) === '2' ? 20 : 22) + 'px;text-align:center;border-radius:5px;font-size:11px;font-weight:700;background:' + bg + ';color:' + fg + ';border:' + bd + '">' + txt + '</span>';
+}
+function alleStreifen(g) {
+  return mitGeb(g.id, function () {
+    var y = +todayStr().substr(0, 4), vs = aktVorlagen(g), h = '', ord = { monatlich: 0, halbjaehrlich: 1, vierteljaehrlich: 2, jaehrlich: 3 };
+    var pv = []; for (var i = 0; i < vs.length; i++) if (isPerArt(vs[i].art)) pv.push(vs[i]);
+    pv.sort(function (a, b) { return ord[a.art] - ord[b.art]; });
+    for (var k = 0; k < pv.length; k++) {
+      var v = pv[k], ps = perList(v.art, y), lbl = v.art === 'monatlich' ? 'Monat' : v.art === 'vierteljaehrlich' ? 'Quartal' : v.art === 'halbjaehrlich' ? 'Halbj.' : 'Jahr';
+      h += '<div style="display:flex;align-items:center;gap:6px;margin-top:6px"><span style="width:52px;flex-shrink:0;font-size:11px;color:var(--mut);font-weight:700">' + lbl + '</span><div style="display:flex;gap:3px;flex:1;min-width:0">';
+      if (v.art === 'jaehrlich') {
+        var s = perStatus(v.id, ps[0]), a = s.sd ? s.sd.a : (s.k === 'ok' ? 1 : 0), n = s.sd ? s.sd.n : 1, pc = s.k === 'ok' ? 100 : Math.round(100 * a / Math.max(1, n));
+        var col = s.k === 'ok' ? '#16a34a' : (s.k === 'fehlt' || s.k === 'unvoll') ? '#dc2626' : '#f59e0b';
+        h += '<div style="flex:1;height:24px;border-radius:5px;background:#eceff3;position:relative;overflow:hidden"><div style="position:absolute;left:0;top:0;bottom:0;width:' + pc + '%;background:' + col + '"></div>' +
+          '<div style="position:relative;text-align:center;line-height:24px;font-size:11px;font-weight:700;color:' + (pc > 55 ? '#fff' : '#334155') + '">' + (s.k === 'ok' ? '&#10003; erledigt' : s.sd ? s.sd.a + ' / ' + s.sd.n + ' Fragen' : 'noch nicht begonnen') + '</div></div>';
+      } else {
+        for (var j = 0; j < ps.length; j++) {
+          var st = perStatus(v.id, ps[j]);
+          var t = v.art === 'monatlich' ? MON_K[j].charAt(0) : (v.art === 'vierteljaehrlich' ? 'Q' : 'H') + (j + 1);
+          h += alleZelle(st, st.k === 'ok' ? '&#10003;' : t, perLabel(ps[j]) + ': ' + st.txt);
+        }
+      }
+      h += '</div></div>';
+    }
+    return h;
+  });
+}
+function alleFilter(f) { STATE.alleFilter = f; render(); }
+function alleDetails(id, ev) { if (ev) ev.stopPropagation(); STATE.alleOffen = STATE.alleOffen || {}; STATE.alleOffen[id] = !STATE.alleOffen[id]; render(); }
 function viewAlle() {
-  var gs = DB.gebaeude.slice(), lagen = {}, sum = { ue: 0, mo: 0, fehlt: 0, rot: 0 };
-  for (var i = 0; i < gs.length; i++) { var L = gebLage(gs[i]); lagen[gs[i].id] = L; sum.ue += L.anlUe.length; sum.mo += L.mo.length; sum.fehlt += L.fehlt.length; if (L.stufe === 2) sum.rot++; if (L.stufe === 1) sum.or = (sum.or || 0) + 1; }
+  var gs = DB.gebaeude.slice(), lagen = {}, sum = { ue: 0, mo: 0, moUe: 0, n: [0, 0, 0] };
+  for (var i = 0; i < gs.length; i++) { var L = gebLage(gs[i]); lagen[gs[i].id] = L; sum.ue += L.anlUe.length; sum.mo += L.mo.length; sum.moUe += L.moUe.length; sum.n[L.stufe]++; }
   gs.sort(function (a, b) { var d = lagen[b.id].stufe - lagen[a.id].stufe; return d || a.name.localeCompare(b.name); });
+  var f = STATE.alleFilter === undefined ? -1 : STATE.alleFilter;
+  function kachel(stufe, zahl, txt, farbe) {
+    var an = f === stufe;
+    return '<div onclick="alleFilter(' + (an ? -1 : stufe) + ')" style="flex:1;cursor:pointer;border-radius:12px;padding:10px 6px;text-align:center;background:' + (an ? farbe : 'var(--card,#fff)') + ';border:2px solid ' + farbe + ';color:' + (an ? '#fff' : farbe) + '">' +
+      '<div style="font-size:26px;font-weight:800;line-height:1">' + zahl + '</div><div style="font-size:12px;font-weight:700;margin-top:4px">' + txt + '</div></div>';
+  }
   var h = updBanner() + '<h2>Alle Gebäude</h2>' +
-    '<div class="stats">' + stat(gs.length, 'Gebäude', 'alle', false) + stat(sum.rot + ' / ' + (sum.or || 0), 'überfällig / offen', 'alle', sum.rot > 0) + stat(sum.ue, 'Prüffristen überfällig', 'alle', sum.ue > 0) + stat(sum.mo, 'Offene Mängel', 'alle', sum.mo > 0) + '</div>';
+    '<div style="display:flex;gap:8px;margin-bottom:10px">' + kachel(2, sum.n[2], 'überfällig', '#dc2626') + kachel(1, sum.n[1], 'offen', '#d97706') + kachel(0, sum.n[0], 'erledigt', '#16a34a') + '</div>' +
+    '<div class="small" style="text-align:center;margin-bottom:12px">' + gs.length + ' Gebäude &middot; <b style="color:' + (sum.mo ? 'var(--red2)' : 'inherit') + '">' + sum.mo + ' offene Mängel</b>' + (sum.moUe ? ' (' + sum.moUe + ' Frist vorbei)' : '') + ' &middot; ' + sum.ue + ' Prüffristen überfällig' + (f >= 0 ? ' &middot; <span class="lnk" onclick="alleFilter(-1)">alle zeigen</span>' : '') + '</div>' +
+    '<div class="small" style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:12px">' +
+    '<span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#16a34a;vertical-align:-2px"></span> erledigt</span>' +
+    '<span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#f59e0b;vertical-align:-2px"></span> in Arbeit</span>' +
+    '<span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;border:2px solid #f59e0b;vertical-align:-2px"></span> jetzt fällig</span>' +
+    '<span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#dc2626;vertical-align:-2px"></span> fehlt</span>' +
+    '<span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#eceff3;vertical-align:-2px"></span> später</span></div>';
+  var gezeigt = 0;
   for (var k = 0; k < gs.length; k++) {
     var g = gs[k], L2 = lagen[g.id], zs = [];
-    var farbe = L2.stufe === 2 ? 'var(--red2)' : L2.stufe === 1 ? 'var(--warn)' : 'var(--ok)';
+    if (f >= 0 && L2.stufe !== f) continue;
+    gezeigt++;
+    var farbe = L2.stufe === 2 ? '#dc2626' : L2.stufe === 1 ? '#d97706' : '#16a34a';
     function z(cls, t) { zs.push('<div style="font-size:14px;line-height:1.4;margin-top:4px;color:' + (cls === 'r' ? 'var(--red2)' : cls === 'o' ? 'var(--warn)' : 'var(--tx)') + ';' + (cls === 'r' ? 'font-weight:700' : '') + '">' + t + '</div>'); }
     if (L2.anlUe.length) { var n1 = []; for (var a = 0; a < L2.anlUe.length && a < 3; a++) n1.push(esc(anlName(L2.anlUe[a]))); z('r', L2.anlUe.length + (L2.anlUe.length === 1 ? ' Prüffrist überfällig' : ' Prüffristen überfällig') + ': ' + n1.join(', ') + (L2.anlUe.length > 3 ? ' ...' : '')); }
-    if (L2.fehlt.length) { var n2 = []; for (var b = 0; b < L2.fehlt.length && b < 4; b++) n2.push(perSide(L2.fehlt[b].p) + (L2.fehlt[b].s.k === 'unvoll' ? ' (unvollständig)' : '')); z('r', L2.fehlt.length + (L2.fehlt.length === 1 ? ' Begehung fehlt' : ' Begehungen fehlen') + ': ' + n2.join(', ') + (L2.fehlt.length > 4 ? ' ...' : '')); }
-    if (L2.mo.length) z(L2.moUe.length ? 'r' : 'o', L2.mo.length + (L2.mo.length === 1 ? ' offener Mangel' : ' offene Mängel') + (L2.moUe.length ? ', davon ' + L2.moUe.length + ' mit überschrittener Frist' : ''));
+    if (L2.fehlt.length) { var n2 = []; for (var b = 0; b < L2.fehlt.length; b++) n2.push(perSide(L2.fehlt[b].p) + (L2.fehlt[b].s.k === 'unvoll' ? ' (unvollständig)' : '')); z('r', L2.fehlt.length + (L2.fehlt.length === 1 ? ' Begehung fehlt' : ' Begehungen fehlen') + ': ' + n2.join(', ')); }
     if (L2.anlF.length) z('o', L2.anlF.length + (L2.anlF.length === 1 ? ' Prüffrist' : ' Prüffristen') + ' fällig in 30 Tagen');
-    function pTxt(A) { return (A.p.length === 4 ? 'Jahr ' + A.p : perSide(A.p)) + (A.s.k === 'arbeit' ? ' ' + A.s.sd.a + '/' + A.s.sd.n : ' offen'); }
-    if (L2.akt.length) { var n3 = []; for (var c = 0; c < L2.akt.length; c++) n3.push(pTxt(L2.akt[c]) + ' (bis ' + fmtD(perRange(L2.akt[c].p).bis).substr(0, 6) + ')'); z('o', 'Bald fällig: ' + n3.join(', ')); }
-    if (L2.lauf.length) { var n4 = []; for (var c2 = 0; c2 < L2.lauf.length; c2++) n4.push(pTxt(L2.lauf[c2]) + ' (bis ' + fmtD(perRange(L2.lauf[c2].p).bis).substr(0, 6) + ')'); z('o', 'Noch zu erledigen: ' + n4.join(', ')); }
     for (var ue2 = 0; ue2 < L2.ueb.length; ue2++) z(L2.ueb[ue2].s.k === 'ue' ? 'r' : 'o', L2.ueb[ue2].T.l + ': ' + L2.ueb[ue2].s.txt);
     if (L2.uebNie.length) { var nn = []; for (var un = 0; un < L2.uebNie.length; un++) nn.push(L2.uebNie[un].l.split(' /')[0]); zs.push('<div class="small" style="margin-top:4px">Noch nicht erfasst: ' + nn.join(', ') + '</div>'); }
     if (L2.fs.length) z('o', L2.fs.length + ' Freigabeschein' + (L2.fs.length === 1 ? '' : 'e') + ' offen (' + L2.fs[0].s.t + ')');
     var CH = mitGeb(g.id, chronik);
     if (CH.length) { var cz = []; for (var cq = 0; cq < CH.length && cq < 3; cq++) cz.push(fmtD(CH[cq].d).substr(0, 6) + ' ' + CH[cq].art + (CH[cq].art === 'Begehung' || CH[cq].art === 'Übung' ? ' (' + CH[cq].t.replace(/ - .*/, '') + ')' : '')); zs.push('<div class="small" style="margin-top:6px;color:var(--ok)">Zuletzt erledigt: ' + esc(cz.join(' · ')) + '</div>'); }
-    if (!L2.stufe) zs.unshift('<div style="font-size:14px;margin-top:4px;color:var(--ok);font-weight:700">&#10003; Alles erledigt</div>');
-    else if (L2.stufe === 1) zs.unshift('<div style="font-size:14px;margin-top:4px;color:var(--warn);font-weight:700">Offen, aber noch nicht überfällig</div>');
-    h += '<div class="card" onclick="gebOeffnen(\'' + g.id + '\')" style="cursor:pointer;border-left:5px solid ' + farbe + '">' +
-      '<div style="display:flex;align-items:center;justify-content:space-between"><div style="font-size:18px;font-weight:700">' + esc(g.name) + '</div><span class="small lnk">Öffnen</span></div>' +
-      (g.adresse ? '<div class="small">' + esc(g.adresse) + '</div>' : '') + zs.join('') + '</div>';
+    /* kurze Zusammenfassung oben rechts */
+    var kurz = L2.stufe === 2 ? (L2.fehlt.length + L2.anlUe.length + L2.moUe.length) + ' überfällig' : L2.stufe === 1 ? 'offen' : '&#10003; erledigt';
+    /* Chips */
+    var chips = '';
+    function chip(t, c) { chips += '<span style="display:inline-block;margin:6px 6px 0 0;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:700;background:' + (c === 'r' ? '#fee2e2' : c === 'o' ? '#fef3c7' : '#dcfce7') + ';color:' + (c === 'r' ? '#b91c1c' : c === 'o' ? '#b45309' : '#15803d') + '">' + t + '</span>'; }
+    chip(L2.mo.length ? L2.mo.length + ' Mängel' + (L2.moUe.length ? ', ' + L2.moUe.length + ' Frist vorbei' : '') : 'keine Mängel', L2.moUe.length ? 'r' : L2.mo.length ? 'o' : 'g');
+    chip(L2.anlUe.length ? L2.anlUe.length + ' Prüffrist überfällig' : L2.anlF.length ? L2.anlF.length + ' Prüffrist bald' : 'Prüffristen ok', L2.anlUe.length ? 'r' : L2.anlF.length ? 'o' : 'g');
+    var offenD = STATE.alleOffen && STATE.alleOffen[g.id];
+    h += '<div class="card" onclick="gebOeffnen(\'' + g.id + '\')" style="cursor:pointer;border-left:6px solid ' + farbe + ';padding-bottom:10px">' +
+      '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px"><div style="min-width:0"><div style="font-size:17px;font-weight:700;line-height:1.25">' + esc(g.name) + '</div>' + (g.adresse ? '<div class="small">' + esc(g.adresse) + '</div>' : '') + '</div>' +
+      '<span style="flex-shrink:0;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:800;color:#fff;background:' + farbe + '">' + kurz + '</span></div>' +
+      alleStreifen(g) + '<div>' + chips + '</div>' +
+      (zs.length ? '<div style="margin-top:8px"><span class="small lnk" onclick="alleDetails(\'' + g.id + '\', event)">' + (offenD ? 'Details ausblenden &#9650;' : 'Details &#9660;') + '</span></div>' + (offenD ? zs.join('') : '') : '') +
+      '</div>';
   }
+  if (!gezeigt) h += '<div class="small" style="text-align:center;padding:20px 0">Keine Gebäude in dieser Auswahl.</div>';
   h += '<button class="btn full" onclick="editGebaeude()">+ Gebäude anlegen</button>';
   return h + verFooter();
 }
