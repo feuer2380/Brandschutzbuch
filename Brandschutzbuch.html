@@ -115,8 +115,8 @@ textarea{min-height:80px;resize:vertical}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 /* Brandschutzbuch - lokale Web-App (Janiba Brandschutztechnik GmbH) */
-var APP_VERSION = '2.29';
-var APP_STAND = '28.10.2026 14:00';
+var APP_VERSION = '2.32';
+var APP_STAND = '29.10.2026 19:00';
 var UPD = null;
 function verText() { return 'Version ' + APP_VERSION + ' vom ' + APP_STAND; }
 function verFooter() {
@@ -195,7 +195,7 @@ var KATS = [
 ];
 var PRIOS = [{ k: 'hoch', l: 'Hoch', c: '#dc2626' }, { k: 'mittel', l: 'Mittel', c: '#f59e0b' }, { k: 'gering', l: 'Gering', c: '#16a34a' }];
 
-var VORLAGEN_VER = 7;
+var VORLAGEN_VER = 9;
 /* Zeilen mit # am Anfang sind Abschnitts-Überschriften (z. B. Pos. 1) */
 function jahresBegehung() {
   return { id: uid(), name: 'Jährliche Begehung', art: 'jaehrlich', punkte: [
@@ -597,8 +597,8 @@ function normTxt(s) { s = String(s || ''); try { s = s.normalize('NFC'); } catch
 /* tägliche Kontrolle wird nicht mehr verwendet (Fragen sind jetzt in der monatlichen Begehung) */
 function istTaeglich(v) { return v && (v.art === 'taeglich' || normTxt(v.name).indexOf('gliche kontrolle') >= 0); }
 function hatAllg(v) { for (var i = 0; i < v.punkte.length; i++) if (normTxt(v.punkte[i]) === normTxt(ALLG_KONTROLLE[0])) return true; return false; }
-function monatsBegehung() {
-  return { id: uid(), name: 'Monatliche Begehung', art: 'monatlich', punkte: ALLG_KONTROLLE.concat([
+/* frühere Fassung (zum Erkennen eigener Fragen bei der Umstellung) */
+var MONAT_ALT0 = [
     '# Pos. 86 – Sicherheitsabfallbehälter',
     'Ist der Löschkonus ordnungsgemäß und dicht aufgesetzt?',
     'Sind die Sicherheitsabfallbehälter frei von Verformungen und Beschädigungen?',
@@ -727,8 +727,162 @@ function monatsBegehung() {
     'Sind Befestigungen, Kanäle und Aufhängungen ordnungsgemäß und sicher montiert?',
     'Ist die Gesamtanlage dicht, frei von Leckagen u. sichtbaren Mängeln?',
     'Werden regelmäßige Funktionsprüfungen und Wartungen durchgeführt u. dokumentiert?'
+];
+function monatsBegehung() {
+  return { id: uid(), name: 'Monatliche Begehung', art: 'monatlich', punkte: ALLG_KONTROLLE.concat([
+    '# Pos. 86 – Sicherheitsabfallbehälter',
+    'Wird der Konus richtig aufgesetzt?',
+    'Ist der Behälter frei von Verformungen?',
+    'Ist jeder Platz, an dem geraucht wird, mit einem Sicherheitsabfallbehälter ausgestattet?',
+    '# Pos. 87 – Fluchtwege (Lagerungen)',
+    'Sind die Wege ständig frei von Lagerungen?',
+    'Sind die Wege frei von leicht umstürzbaren Lagerungen?',
+    'Sind die kritischen Wege notfalls gekennzeichnet?',
+    'Schlagen die Türen in Fluchtrichtung auf?',
+    '# Pos. 88 – Lagerungen',
+    'Werden Lagerungen nur an freigegebenen Plätzen vorgenommen?',
+    'Wird Sauberkeit und Ordnung im Unternehmen gelebt?',
+    'Werden brennbare Abfälle und selbstentzündliche Stoffe ordnungsgemäß entsorgt?',
+    'Werden Verpackungsmaterialien an einen sicheren Ort verbracht?',
+    '# Pos. 89 – Lagerräume für brennbare Flüssigkeiten',
+    'Ist der Lagerraum gekennzeichnet?',
+    'Wird die höchst zulässige Lagermenge eingehalten?',
+    'Ist die E-Installation ex-geschützt?',
+    'Sind alle Elektrogeräte im Lagerraum ex-geschützt?',
+    'Werden Abfüllvorgänge nur unter Einhaltung der Schutzmaßnahmen vorgenommen?',
+    'Sind Maßnahmen gegen eine elektrostatische Entladung vorgesehen?',
+    'Werden Sicherheitsbehälter bereitgestellt?',
+    '# Pos. 90 – Lagerung für brennbare Flüssigkeiten',
+    'Gibt es Regelungen, die den Tagesbedarf für Abteilungen festlegen?',
+    'Wurde geprüft, ob brennbare Flüssigkeiten durch ein anderes Medium ersetzt werden können?',
+    '# Pos. 91 – Lagerräume für Druckgaspackungen',
+    'Ist der Lagerraum gekennzeichnet?',
+    'Wird die höchst zulässige Lagermenge eingehalten?',
+    'Ist die E-Installation ex-geschützt?',
+    'Ist im Raum eine Druckentlastung vorhanden?',
+    'Werden Abfüllvorgänge nur unter Einhaltung der Schutzmaßnahmen vorgenommen?',
+    'Sind Maßnahmen gegen eine elektrostatische Entladung vorgesehen?',
+    '# Pos. 92 – Lagerraum für pyrotechnische Gegenstände',
+    'Werden die Auflagen der Gewerbebehörde erfüllt?',
+    'Ist der Lagerraum gekennzeichnet?',
+    'Wird die höchstzulässige Lagermenge eingehalten?',
+    'Ist die E-Installation ex-geschützt?',
+    'Ist im Raum eine Druckentlastung vorhanden?',
+    '# Pos. 93 – Abfalllagerung',
+    'Werden Abfälle getrennt gesammelt?',
+    'Werden brennbare Abfälle regelmäßig entsorgt?',
+    'Sind Sammelstellen sauber und ordentlich?',
+    '# Pos. 94 – Lagerraum für Flüssiggas',
+    'Ist die Lüftung des Raumes in einen gesicherten Bereich möglich?',
+    'Ist der Lagerraum gekennzeichnet?',
+    'Wird die höchstzulässige Lagermenge eingehalten?',
+    'Werden die Auflagen der Gewerbebehörde erfüllt?',
+    '# Pos. 95 – Fluchtwegbeleuchtung Zentralbatterieanlage',
+    'Wird das Prüfbuch ausgedruckt?',
+    'Sind die Leuchten funktionsfähig?',
+    'Ist die Anlage störungsfrei?',
+    'Wird eine Funktionskontrolle durchgeführt?',
+    '# Pos. 96 – Fluchtwegbeleuchtung (Einzelbatterieleuchten)',
+    'Wird ein Kontrollbuch geführt?',
+    'Es wird ein Kontrollbuch (TÜV) für brandschutztechnische Anlagen geführt und die Eigenkontrollen dokumentiert?',
+    'Sind die Leuchten funktionsfähig?',
+    'Sind die Kennzeichnungen vorhanden?',
+    'Wird eine Funktionskontrolle durchgeführt?',
+    '# Pos. 97 – Brandmeldeanlage',
+    'Wird ein Kontrollbuch geführt?',
+    'Es wird ein Kontrollbuch (TÜV) für brandschutztechnische Anlagen geführt und die Eigenkontrollen dokumentiert?',
+    'Wurde die Brandmeldeanlage einer Erstabnahme unterzogen?',
+    'Wurde die gesamte Anlage in Abständen von höchstens zwei Jahren einer Inspektion unterzogen?',
+    'Ist die Gängigkeit der Absperrschieber und Türverschlüsse gegeben?',
+    'Wurden wiederkehrende Überprüfungen nach TRVB 123 vorgenommen?',
+    'Ist die Anlage störungsfrei?',
+    '# Pos. 98 – Objektfunkanlage / Elektroakustische Notwarnsysteme',
+    'Wird ein Kontrollbuch geführt?',
+    'Es wird ein Kontrollbuch (TÜV) für brandschutztechnische Anlagen geführt und die Eigenkontrollen dokumentiert?',
+    'Wurde die Anlage einer Erstabnahme unterzogen?',
+    'Wurde die gesamte Anlage in Abständen von höchstens zwei Jahren einer Inspektion unterzogen?',
+    'Wurden wiederkehrende Überprüfungen nach TRVB 159 vorgenommen?',
+    'Ist die Anlage störungsfrei?',
+    '# Pos. 99 – Brandrauchentlüftungsanlage (RWA, DBA, RASA)',
+    'Wird ein Kontrollbuch geführt?',
+    'Es wird ein Kontrollbuch (TÜV) für brandschutztechnische Anlagen geführt und die Eigenkontrollen dokumentiert?',
+    'Wurde die Brandrauchlüftungsanlage einer Erstabnahme unterzogen?',
+    'Wurde die gesamte Anlage in Abständen von höchstens zwei Jahren einer Inspektion unterzogen?',
+    'Wurden wiederkehrende Überprüfungen nach TRVB vorgenommen?',
+    'Sind die Druckknopfmelder richtig gekennzeichnet?',
+    '# Pos. 100 – Brandrauchentlüftung Stiegenhaus',
+    'Wird ein Kontrollbuch geführt?',
+    'Es wird ein Kontrollbuch (TÜV) für brandschutztechnische Anlagen geführt und die Eigenkontrollen dokumentiert?',
+    'Liegt für die Stiegenhausentrauchung eine Herstellerbescheinigung vor?',
+    'Wird der Funktionstest durchgeführt?',
+    'Wurden wiederkehrende Überprüfungen nach TRVB vorgenommen?',
+    'Sind die Druckknopfmelder richtig gekennzeichnet?',
+    '# Pos. 101 – CO-Warnanlage',
+    'Wird ein Kontrollbuch geführt?',
+    'Wurde die CO-Warnanlage einer Erstabnahme unterzogen?',
+    'Wurde die gesamte Anlage in Abständen von höchstens zwei Jahren einer Inspektion unterzogen?',
+    'Wurden wiederkehrende Überprüfungen vorgenommen?',
+    'Ist die CO-Warnanlage richtig gekennzeichnet?',
+    '# Pos. 102 – Batterielagerraum / Batterieladestation',
+    'Sind die Abstände zu brennbaren Materialien ausreichend?',
+    'Ist dieser Bereich gekennzeichnet?',
+    '# Pos. 103 – Ex-Bereiche',
+    'Ist dieser Bereich entsprechend gekennzeichnet?',
+    'Sind die Brandabschnitte ordnungsgemäß ausgeführt?',
+    'Sind alle E-Geräte in diesen Bereichen ex-geschützt?',
+    'Werden die Lagervorschriften eingehalten?',
+    '# Pos. 104 – Fassadenbegrünung',
+    'Ist zwischen dem oberen Abschluss der Fassadenbegrünung und einer brennbaren Dachkonstruktion ein vertikaler Schutzabstand von mindestens 1,20 m eingehalten?',
+    'Sind die Pflanzen in einem vitalen Zustand?',
+    'Reicht die Fassadenbegrünung höchstens über die ersten oberirdischen Geschoße?',
+    'Ist zwischen den Geschoßen eine Brandabschottung aus einem durchgehenden Profil aus Stahlblech (Mindestdicke 1,0 mm) oder brandschutztechnisch gleichwertigem ausgeführt, das mindestens 30 cm auskragt, am Wandbildner montiert und nicht überwachsen ist?',
+    'Ist bei einer vertikal durchgehenden Fassadenbegrünung ohne dazwischen liegende Fensteröffnungen ein horizontaler Abstand zwischen Pflanzen und Fensteröffnungen von mindestens 20 cm eingehalten?',
+    'Haben fassadengebundene metallische Tragsysteme (metallische Unterkonstruktion, Edelstahlbefestigung) eine geschoßweise Brandabschottung aus einem mindestens 10 cm ab Außenkante des Troges auskragenden, durchgehenden Profil aus Stahlblech (Mindestdicke 2,0 mm) oder brandschutztechnisch gleichwertigem, und ist der horizontale Abstand Fenster zu Begrünung mindestens 20 cm?',
+    '# Pos. 105 – Außenanlagen',
+    'Ist die Funktion der Oberflächenentwässerung (z. B. Rigole, Drainageanlagen) gegeben?',
+    'Sind befestigte Oberflächen, wie Geh- und Radwege, Rampen, Stützmauern, Einfriedungen und Absturzsicherungen, frei von Rissen, Setzungen, Frostschäden, Verformungen oder Unebenheiten?',
+    'Sind Abdeckungen (z. B. Lichtschächte) begehbar bzw. befahrbar?',
+    'Sind die Außenbeleuchtungen ordnungsgemäß befestigt und funktionstüchtig?',
+    'Sind die Fahnenstangen ordnungsgemäß befestigt und funktionstüchtig?',
+    'Ist durch Baumbestand oder Bepflanzungen die Verkehrssicherheit gegeben?',
+    '# Pos. 106 – Kinderspielplätze',
+    'Sind die Spielgeräte in gutem Zustand?',
+    'Sind die Spielgeräte, z. B. der Fallschutz, und die Standsicherheit überprüft?',
+    '# Pos. 107 – Aufzugsanlagen',
+    'Wird die wöchentliche Überprüfung der Kabinentüren und Kabinenbeleuchtung durchgeführt?',
+    'Ist das Fehlerüberwachungssystem und das Notrufsystem in Ordnung?',
+    'Wird die Wartung und Sicherheitsüberprüfung durchgeführt?',
+    '# Pos. 108 – Zentrale Abluftanlage, Lüftungsanlagen und Klimaanlagen',
+    'Wird der Filterwechsel und die Einregulierung nach Herstellerrichtlinien durchgeführt?',
+    'Ist der Wirkungsgrad gegeben?',
+    'Ist die Befestigung der Lüftungsanlage in Ordnung?',
+    'Ist die Anlage dicht (keine Undichtheit festgestellt)?',
+    'Wird eine regelmäßige Funktionsprüfung durchgeführt?'
   ]) };
 }
+/* Fragen, bei denen "Ja" der Mangel ist (z. B. "Weist der Behälter Verformungen auf?") */
+/* frühere Buch-Formulierungen, bei denen Ja = Mangel war -> positiv umformuliert (Ja = in Ordnung) */
+var FRAGE_NEU = {
+  'Weist der Behälter Verformungen auf?': 'Ist der Behälter frei von Verformungen?',
+  'Werden die Wege durch leicht umstürzbare Lagerungen versperrt?': 'Sind die Wege frei von leicht umstürzbaren Lagerungen?',
+  'Wie werden brennbare Abfälle und selbstentzündliche Stoffe entsorgt?': 'Werden brennbare Abfälle und selbstentzündliche Stoffe ordnungsgemäß entsorgt?',
+  'Befinden sich im Lagerraum Elektrogeräte, die nicht ex-geschützt sind?': 'Sind alle Elektrogeräte im Lagerraum ex-geschützt?',
+  'Werden Abfüllvorgänge vorgenommen?': 'Werden Abfüllvorgänge nur unter Einhaltung der Schutzmaßnahmen vorgenommen?',
+  'Können brennbare Flüssigkeiten durch ein anderes Medium ersetzt werden?': 'Wurde geprüft, ob brennbare Flüssigkeiten durch ein anderes Medium ersetzt werden können?',
+  'Befinden sich in diesen Bereichen nicht ex-geschützte E-Geräte?': 'Sind alle E-Geräte in diesen Bereichen ex-geschützt?',
+  'Zwischen dem oberen Abschluss der Fassadenbegrünung und einer brennbaren Dachkonstruktion ist ein vertikaler Schutzabstand von mindestens 1,20 m einzuhalten.': 'Ist zwischen dem oberen Abschluss der Fassadenbegrünung und einer brennbaren Dachkonstruktion ein vertikaler Schutzabstand von mindestens 1,20 m eingehalten?',
+  'Kontrolle auf vitalen Zustand der Pflanzen.': 'Sind die Pflanzen in einem vitalen Zustand?',
+  'Fassadenbegrünung höchstens über die ersten oberirdischen Geschoße.': 'Reicht die Fassadenbegrünung höchstens über die ersten oberirdischen Geschoße?',
+  'Zwischen den Geschoßen Ausführung einer Brandabschottung aus einem durchgehenden Profil aus Stahlblech (Mindestdicke 1,0 mm) oder brandschutztechnisch gleichwertigem, das mindestens 30 cm auskragt. Die Montage der Brandabschottung hat am Wandbildner zu erfolgen. Ein Überwachsen der Abschottung ist unzulässig.': 'Ist zwischen den Geschoßen eine Brandabschottung aus einem durchgehenden Profil aus Stahlblech (Mindestdicke 1,0 mm) oder brandschutztechnisch gleichwertigem ausgeführt, das mindestens 30 cm auskragt, am Wandbildner montiert und nicht überwachsen ist?',
+  'Bei einer vertikal durchgehenden Fassadenbegrünung ohne dazwischen liegende Fensteröffnungen ein horizontaler Abstand zwischen Pflanzen und Fensteröffnungen von mindestens 20 cm.': 'Ist bei einer vertikal durchgehenden Fassadenbegrünung ohne dazwischen liegende Fensteröffnungen ein horizontaler Abstand zwischen Pflanzen und Fensteröffnungen von mindestens 20 cm eingehalten?',
+  'Fassadengebundene metallische Tragsysteme auf metallischer Unterkonstruktion mit Edelstahlbefestigung an der Fassade mit einer geschoßweisen Brandabschottung aus einem mindestens 10 cm ab Außenkante des Troges auskragenden, durchgehenden Profil aus Stahlblech (Mindestdicke 2,0 mm) oder brandschutztechnisch gleichwertigem. Abstand Fenster zu Begrünung horizontal mindestens 20 cm.': 'Haben fassadengebundene metallische Tragsysteme (metallische Unterkonstruktion, Edelstahlbefestigung) eine geschoßweise Brandabschottung aus einem mindestens 10 cm ab Außenkante des Troges auskragenden, durchgehenden Profil aus Stahlblech (Mindestdicke 2,0 mm) oder brandschutztechnisch gleichwertigem, und ist der horizontale Abstand Fenster zu Begrünung mindestens 20 cm?',
+  'Sind bei befestigten Oberflächen, wie Geh- und Radwegen, Rampen, Stützmauern, Einfriedungen und Absturzsicherungen, Risse, Setzungen, Frostschäden, Verformungen oder Unebenheiten vorhanden?': 'Sind befestigte Oberflächen, wie Geh- und Radwege, Rampen, Stützmauern, Einfriedungen und Absturzsicherungen, frei von Rissen, Setzungen, Frostschäden, Verformungen oder Unebenheiten?',
+  'Wurde eine Undichtheit der Anlage festgestellt?': 'Ist die Anlage dicht (keine Undichtheit festgestellt)?'
+};
+var NEG_FRAGEN_ALT = ['Weist der Behälter Verformungen auf?', 'Werden die Wege durch leicht umstürzbare Lagerungen versperrt?', 'Befinden sich im Lagerraum Elektrogeräte, die nicht ex-geschützt sind?', 'Befinden sich in diesen Bereichen nicht ex-geschützte E-Geräte?', 'Sind bei befestigten Oberflächen, wie Geh- und Radwegen, Rampen, Stützmauern, Einfriedungen und Absturzsicherungen, Risse, Setzungen, Frostschäden, Verformungen oder Unebenheiten vorhanden?', 'Wurde eine Undichtheit der Anlage festgestellt?'];
+var NEG_FRAGEN = [];
+function istNeg(t) { var n = normTxt(t); for (var i = 0; i < NEG_FRAGEN.length; i++) if (normTxt(NEG_FRAGEN[i]) === n) return true; return false; }
+function begNeg(i) { var v = BEG && findById(DB.vorlagen, BEG.vid); return !!(v && istNeg(v.punkte[i])); }
 function isHdr(p) { return String(p).charAt(0) === '#'; }
 function hdrText(p) { return String(p).replace(/^#+\s*/, ''); }
 function nFragen(v) { var n = 0; for (var i = 0; i < v.punkte.length; i++) if (!isHdr(v.punkte[i])) n++; return n; }
@@ -903,17 +1057,16 @@ function gebLage(g) {
     for (var ut = 0; ut < UEB_TYPEN.length; ut++) { var us = uebStatus(UEB_TYPEN[ut].k); if (us.k === 'ue' || us.k === 'bald') r.ueb.push({ T: UEB_TYPEN[ut], s: us }); else if (us.k === 'nie') r.uebNie.push(UEB_TYPEN[ut]); }
     var uebRot = false; for (var ur = 0; ur < r.ueb.length; ur++) if (r.ueb[ur].s.k === 'ue') uebRot = true;
     if (r.anlUe.length || r.fehlt.length || r.moUe.length || uebRot) r.stufe = 2;
-    else if (r.ueb.length) r.stufe = Math.max(r.stufe, 1);
-    else if (r.anlF.length || r.mo.length || r.akt.length || r.fs.length) r.stufe = 1;
+    else if (r.ueb.length || r.anlF.length || r.mo.length || r.akt.length || r.lauf.length || r.fs.length) r.stufe = 1;
     return r;
   });
 }
 function viewAlle() {
   var gs = DB.gebaeude.slice(), lagen = {}, sum = { ue: 0, mo: 0, fehlt: 0, rot: 0 };
-  for (var i = 0; i < gs.length; i++) { var L = gebLage(gs[i]); lagen[gs[i].id] = L; sum.ue += L.anlUe.length; sum.mo += L.mo.length; sum.fehlt += L.fehlt.length; if (L.stufe === 2) sum.rot++; }
+  for (var i = 0; i < gs.length; i++) { var L = gebLage(gs[i]); lagen[gs[i].id] = L; sum.ue += L.anlUe.length; sum.mo += L.mo.length; sum.fehlt += L.fehlt.length; if (L.stufe === 2) sum.rot++; if (L.stufe === 1) sum.or = (sum.or || 0) + 1; }
   gs.sort(function (a, b) { var d = lagen[b.id].stufe - lagen[a.id].stufe; return d || a.name.localeCompare(b.name); });
   var h = updBanner() + '<h2>Alle Gebäude</h2>' +
-    '<div class="stats">' + stat(gs.length, 'Gebäude', 'alle', false) + stat(sum.rot, 'mit Handlungsbedarf', 'alle', sum.rot > 0) + stat(sum.ue, 'Prüffristen überfällig', 'alle', sum.ue > 0) + stat(sum.mo, 'Offene Mängel', 'alle', sum.mo > 0) + '</div>';
+    '<div class="stats">' + stat(gs.length, 'Gebäude', 'alle', false) + stat(sum.rot + ' / ' + (sum.or || 0), 'überfällig / offen', 'alle', sum.rot > 0) + stat(sum.ue, 'Prüffristen überfällig', 'alle', sum.ue > 0) + stat(sum.mo, 'Offene Mängel', 'alle', sum.mo > 0) + '</div>';
   for (var k = 0; k < gs.length; k++) {
     var g = gs[k], L2 = lagen[g.id], zs = [];
     var farbe = L2.stufe === 2 ? 'var(--red2)' : L2.stufe === 1 ? 'var(--warn)' : 'var(--ok)';
@@ -924,13 +1077,14 @@ function viewAlle() {
     if (L2.anlF.length) z('o', L2.anlF.length + (L2.anlF.length === 1 ? ' Prüffrist' : ' Prüffristen') + ' fällig in 30 Tagen');
     function pTxt(A) { return (A.p.length === 4 ? 'Jahr ' + A.p : perSide(A.p)) + (A.s.k === 'arbeit' ? ' ' + A.s.sd.a + '/' + A.s.sd.n : ' offen'); }
     if (L2.akt.length) { var n3 = []; for (var c = 0; c < L2.akt.length; c++) n3.push(pTxt(L2.akt[c]) + ' (bis ' + fmtD(perRange(L2.akt[c].p).bis).substr(0, 6) + ')'); z('o', 'Bald fällig: ' + n3.join(', ')); }
-    if (L2.lauf.length) { var n4 = []; for (var c2 = 0; c2 < L2.lauf.length; c2++) n4.push(pTxt(L2.lauf[c2])); zs.push('<div class="small" style="margin-top:4px">Laufend: ' + n4.join(', ') + '</div>'); }
+    if (L2.lauf.length) { var n4 = []; for (var c2 = 0; c2 < L2.lauf.length; c2++) n4.push(pTxt(L2.lauf[c2]) + ' (bis ' + fmtD(perRange(L2.lauf[c2].p).bis).substr(0, 6) + ')'); z('o', 'Noch zu erledigen: ' + n4.join(', ')); }
     for (var ue2 = 0; ue2 < L2.ueb.length; ue2++) z(L2.ueb[ue2].s.k === 'ue' ? 'r' : 'o', L2.ueb[ue2].T.l + ': ' + L2.ueb[ue2].s.txt);
     if (L2.uebNie.length) { var nn = []; for (var un = 0; un < L2.uebNie.length; un++) nn.push(L2.uebNie[un].l.split(' /')[0]); zs.push('<div class="small" style="margin-top:4px">Noch nicht erfasst: ' + nn.join(', ') + '</div>'); }
     if (L2.fs.length) z('o', L2.fs.length + ' Freigabeschein' + (L2.fs.length === 1 ? '' : 'e') + ' offen (' + L2.fs[0].s.t + ')');
     var CH = mitGeb(g.id, chronik);
     if (CH.length) { var cz = []; for (var cq = 0; cq < CH.length && cq < 3; cq++) cz.push(fmtD(CH[cq].d).substr(0, 6) + ' ' + CH[cq].art + (CH[cq].art === 'Begehung' || CH[cq].art === 'Übung' ? ' (' + CH[cq].t.replace(/ - .*/, '') + ')' : '')); zs.push('<div class="small" style="margin-top:6px;color:var(--ok)">Zuletzt erledigt: ' + esc(cz.join(' · ')) + '</div>'); }
-    if (!L2.stufe) zs.unshift('<div style="font-size:14px;margin-top:4px;color:var(--ok);font-weight:700">&#10003; Nichts überfällig</div>');
+    if (!L2.stufe) zs.unshift('<div style="font-size:14px;margin-top:4px;color:var(--ok);font-weight:700">&#10003; Alles erledigt</div>');
+    else if (L2.stufe === 1) zs.unshift('<div style="font-size:14px;margin-top:4px;color:var(--warn);font-weight:700">Offen, aber noch nicht überfällig</div>');
     h += '<div class="card" onclick="gebOeffnen(\'' + g.id + '\')" style="cursor:pointer;border-left:5px solid ' + farbe + '">' +
       '<div style="display:flex;align-items:center;justify-content:space-between"><div style="font-size:18px;font-weight:700">' + esc(g.name) + '</div><span class="small lnk">Öffnen</span></div>' +
       (g.adresse ? '<div class="small">' + esc(g.adresse) + '</div>' : '') + zs.join('') + '</div>';
@@ -1637,7 +1791,7 @@ function startBegehung(vid, per, bid) {
     if (isHdr(v.punkte[i])) { sec1 = hdrText(v.punkte[i]); h += '<div class="grp bsec" data-i="' + i + '" style="margin-top:22px;display:flex;align-items:center;justify-content:space-between"><span style="flex:1;margin-right:8px">' + esc(sec1) + '</span><button class="btn sm" style="text-transform:none;letter-spacing:0;font-size:12px" onclick="begSec(' + i + ',\'na\')">Entfällt</button></div>'; continue; }
     nr++;
     var a1 = alt[sec1 + '|' + v.punkte[i]];
-    h += '<div class="pt" id="pt' + i + '"><div class="q">' + nr + '. ' + esc(v.punkte[i]) + (a1 && a1.status && a1.datum ? ' <span class="small">(' + fmtD(a1.datum) + ')</span>' : '') + '</div><div class="seg" id="seg' + i + '">' +
+    h += '<div class="pt" id="pt' + i + '"><div class="q">' + nr + '. ' + esc(v.punkte[i]) + (istNeg(v.punkte[i]) ? ' <b style="color:var(--red2);font-size:13px">(hier ist Ja = Mangel)</b>' : '') + (a1 && a1.status && a1.datum ? ' <span class="small">(' + fmtD(a1.datum) + ')</span>' : '') + '</div><div class="seg" id="seg' + i + '">' +
       '<button onclick="begTap(' + i + ',\'ok\')">Ja</button><button onclick="begTap(' + i + ',\'mangel\')">Nein</button><button onclick="begTap(' + i + ',\'na\')">Entfällt</button></div>' +
       '<div id="bx' + i + '" style="display:none;margin-top:8px"><input id="bb' + i + '" value="' + esc(a1 ? a1.bemerkung : '') + '" placeholder="Bemerkung (z. B. Deckel fehlt) ...">' +
       '<label style="display:flex;align-items:center;gap:8px;margin:8px 0 0;font-size:14px;font-weight:600;color:var(--red2);text-transform:none;letter-spacing:0"><input type="checkbox" id="mk' + i + '" onchange="BEG.mk[' + i + ']=this.checked" style="width:22px;height:22px;margin:0;flex:none"> Als Mangel in die Mängelliste übernehmen</label></div></div>';
@@ -1676,13 +1830,14 @@ function begNurOffen() {
 }
 function begSet(i, s, keep) {
   if (!BEG || BEG.st[i] === 'hdr') return;
-  if (!keep && BEG.st[i] !== s) BEG.mk[i] = s === 'mangel';
+  var neg = begNeg(i);
+  if (!keep && BEG.st[i] !== s) BEG.mk[i] = neg ? s === 'ok' : s === 'mangel';
   BEG.st[i] = s;
   if ($('mk' + i)) $('mk' + i).checked = !!BEG.mk[i];
   var b = $('seg' + i).getElementsByTagName('button');
   b[0].className = s === 'ok' ? 'on-ok' : ''; b[1].className = s === 'mangel' ? 'on-err' : ''; b[2].className = s === 'na' ? 'on-na' : '';
-  $('bx' + i).style.display = (s === 'mangel' || (s && BEG.mk[i])) ? 'block' : 'none'; /* Feld nur bei Nein */
-  $('bb' + i).placeholder = s === 'mangel' ? 'Mangel beschreiben (Ort, Art) ...' : 'Bemerkung (z. B. vorhanden, aber Deckel fehlt) ...';
+  $('bx' + i).style.display = (s === (neg ? 'ok' : 'mangel') || (s && BEG.mk[i])) ? 'block' : 'none'; /* Feld nur bei Nein */
+  $('bb' + i).placeholder = s === (neg ? 'ok' : 'mangel') ? 'Mangel beschreiben (Ort, Art) ...' : 'Bemerkung (z. B. vorhanden, aber Deckel fehlt) ...';
 }
 function begTap(i, s) {
   if (!BEG) return;
@@ -1694,7 +1849,7 @@ function begSec(i, s) {
   for (k = i + 1; k < BEG.st.length && BEG.st[k] !== 'hdr'; k++) if (BEG.st[k] !== s) alle = false;
   for (k = i + 1; k < BEG.st.length && BEG.st[k] !== 'hdr'; k++) begSet(k, alle ? '' : s);
 }
-function begAllOk() { if (!BEG) return; for (var i = 0; i < BEG.st.length; i++) if (BEG.st[i] === '') begSet(i, 'ok'); }
+function begAllOk() { if (!BEG) return; for (var i = 0; i < BEG.st.length; i++) if (BEG.st[i] === '') begSet(i, begNeg(i) ? 'mangel' : 'ok'); }
 function saveBegehung(zwischen) {
   if (!BEG) return;
   var v = findById(DB.vorlagen, BEG.vid), offen = 0, first = -1, beantw = 0;
@@ -3496,7 +3651,19 @@ function init() {
         var ex = null;
         for (var vv = 0; vv < DB.vorlagen.length; vv++) if (DB.vorlagen[vv].name === std[sv].name) ex = DB.vorlagen[vv];
         if (!ex) DB.vorlagen.push(std[sv]); else if (!ex.geaendert) ex.punkte = std[sv].punkte;
+        else if (ex.art === 'monatlich' && (DB.settings.vorlagenVer || 1) < 8) {
+          /* Monatliche Begehung auf den Wortlaut des Buches (Pos. 86-108) bringen, eigene Fragen bleiben am Ende erhalten */
+          var bek = {}, eig = [], al = MONAT_ALT0.concat(Object.keys(FRAGE_NEU), std[sv].punkte);
+          for (var b1 = 0; b1 < al.length; b1++) bek[normTxt(al[b1])] = 1;
+          for (var b2 = 0; b2 < ex.punkte.length; b2++) if (!isHdr(ex.punkte[b2]) && !bek[normTxt(ex.punkte[b2])]) eig.push(ex.punkte[b2]);
+          ex.punkte = std[sv].punkte.concat(eig.length ? ['# Eigene Fragen'].concat(eig) : []);
+        }
         else if (ex.art === 'monatlich' && !hatAllg(ex)) ex.punkte = ALLG_KONTROLLE.concat(ex.punkte);
+      }
+      if ((DB.settings.vorlagenVer || 1) < 9) {
+        /* Fragen positiv formulieren: Ja = in Ordnung, Nein = Mangel */
+        var fn = {}; for (var fk in FRAGE_NEU) fn[normTxt(fk)] = FRAGE_NEU[fk];
+        for (var fv = 0; fv < DB.vorlagen.length; fv++) for (var fp = 0; fp < DB.vorlagen[fv].punkte.length; fp++) { var nt = fn[normTxt(DB.vorlagen[fv].punkte[fp])]; if (nt) DB.vorlagen[fv].punkte[fp] = nt; }
       }
       DB.settings.vorlagenVer = VORLAGEN_VER; save('vorlagen'); save('settings');
     }
