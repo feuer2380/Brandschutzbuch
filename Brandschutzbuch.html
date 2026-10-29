@@ -115,8 +115,8 @@ textarea{min-height:80px;resize:vertical}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 /* Brandschutzbuch - lokale Web-App (Janiba Brandschutztechnik GmbH) */
-var APP_VERSION = '2.33';
-var APP_STAND = '29.10.2026 20:00';
+var APP_VERSION = '2.34';
+var APP_STAND = '29.10.2026 20:15';
 var UPD = null;
 function verText() { return 'Version ' + APP_VERSION + ' vom ' + APP_STAND; }
 function verFooter() {
@@ -1004,7 +1004,7 @@ function renderTabs() {
   var h = '', mo = STATE.gid ? offeneMaengel().length : 0;
   for (var i = 0; i < TABS.length; i++) {
     var t = TABS[i];
-    h += '<button class="' + (STATE.tab === t[0] ? 'on' : '') + '" onclick="goTab(\'' + t[0] + '\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + ICONS[t[0]] + '</svg>' + t[1];
+    h += '<button class="' + (STATE.tab === t[0] || (t[0] === 'home' && STATE.tab === 'alle') ? 'on' : '') + '" onclick="goTab(\'' + (t[0] === 'home' ? 'start' : t[0]) + '\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + ICONS[t[0]] + '</svg>' + t[1];
     if (t[0] === 'mae' && mo > 0) h += '<span class="badge">' + mo + '</span>';
     h += '</button>';
   }
@@ -1026,7 +1026,7 @@ function gebSelChange(s) {
   STATE.gid = s.value; try { localStorage.setItem('bsb_gid', s.value); } catch (e) {}
   render();
 }
-function goTab(t) { STATE.tab = t; render(); window.scrollTo(0, 0); }
+function goTab(t) { if (t === 'start') t = DB.gebaeude.length > 1 ? 'alle' : 'home'; STATE.tab = t; render(); window.scrollTo(0, 0); }
 /* ---------- Checklisten je Gebäude (z. B. nur vierteljährlich) ---------- */
 function aktVorlagen(g) {
   g = g || curGeb(); var aus = (g && g.ohneVorlagen) || [], r = [];
@@ -3752,7 +3752,13 @@ function init() {
     setTimeout(function () { checkUpdate(false); }, 1500);
     setTimeout(function () { if ($('modalWrap').className === 'hidden') backupErinnerung(); }, 2500);
     /* App war im Hintergrund (Homescreen): beim Zurückkommen auf neue Version prüfen */
-    try { document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') checkUpdate(false); }); } catch (e) {}
+    var wegSeit = 0;
+    try { document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'hidden') { wegSeit = Date.now(); return; }
+      /* nach längerer Pause (10 Min.) wieder mit der Gesamtübersicht starten, außer ein Fenster ist offen */
+      if (wegSeit && Date.now() - wegSeit > 600000 && DB.gebaeude.length > 1 && $('modalWrap').className === 'hidden' && STATE.tab !== 'alle') { STATE.tab = 'alle'; render(); window.scrollTo(0, 0); }
+      checkUpdate(false);
+    }); } catch (e) {}
   });
   try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
