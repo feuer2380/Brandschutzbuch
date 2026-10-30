@@ -115,12 +115,12 @@ textarea{min-height:80px;resize:vertical}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 /* Brandschutzbuch - lokale Web-App (Janiba Brandschutztechnik GmbH) */
-var APP_VERSION = '2.34';
-var APP_STAND = '29.10.2026 20:15';
+var APP_VERSION = '2.35';
+var APP_STAND = '30.10.2026 16:10';
 var UPD = null;
 function verText() { return 'Version ' + APP_VERSION + ' vom ' + APP_STAND; }
 function verFooter() {
-  return '<div style="text-align:center;margin:22px 0 8px;font-size:12px;color:var(--mut)" onclick="checkUpdate(true)">App-' + esc(verText()) + ' &middot; <span class="lnk">auf Update prüfen</span></div>';
+  return '<div style="text-align:center;margin:22px 0 8px;font-size:12px;color:var(--mut)" onclick="checkUpdate(true)">App-' + esc(verText()) + ' &middot; <span class="lnk">auf Update prüfen</span></div>' + (typeof cloudFuss === 'function' ? cloudFuss() : '');
 }
 function updBanner() {
   if (!UPD) return '';
@@ -947,6 +947,7 @@ function dbOpen(cb) {
   req.onerror = function () { idb = null; loadLS(); fin(); };
 }
 function save(coll, done) {
+  try { cloudNachSave(coll); } catch (eC) {}
   if (idb) {
     try {
       var tx = idb.transaction('kv', 'readwrite');
@@ -3423,7 +3424,8 @@ function openSettings() {
   for (var j = 0; j < DB.vorlagen.length; j++) h += '<div class="row" onclick="editVorlage(\'' + DB.vorlagen[j].id + '\')"><div class="m"><div class="t">' + esc(DB.vorlagen[j].name) + '</div><div class="s">' + artLabel(DB.vorlagen[j].art) + ' - ' + nFragen(DB.vorlagen[j]) + ' Fragen</div></div><span class="small">Bearbeiten</span></div>';
   h += '<div class="btns"><button class="btn sm" onclick="uebIntervallEdit()">Intervalle Übungen &amp; Schulungen</button></div>';
   h += '<div class="btns"><button class="btn sm" onclick="editVorlage()">+ Neue Checkliste</button><button class="btn sm" onclick="buchVorlagen()">Auf Buch-Standard zurücksetzen</button></div>';
-  h += '<div class="grp">Datensicherung</div><p class="small" style="line-height:1.5">Alle Daten sind nur auf diesem Gerät gespeichert. Sichern Sie regelmäßig - z. B. in iCloud Drive oder per Mail. Letzte Sicherung: ' + (s.letztesBackup ? fmtD(s.letztesBackup) : 'noch keine') + '</p>' +
+  h += cloudEinstellungen();
+  h += '<div class="grp">Datensicherung</div><p class="small" style="line-height:1.5">' + (cloudAn() ? 'Die Daten werden auf diesem Gerät gespeichert und mit Ihren anderen Geräten abgeglichen. Eine zusätzliche Sicherung schadet trotzdem nicht. ' : 'Alle Daten sind nur auf diesem Gerät gespeichert. ') + 'Sichern Sie regelmäßig - z. B. in iCloud Drive oder per Mail. Letzte Sicherung: ' + (s.letztesBackup ? fmtD(s.letztesBackup) : 'noch keine') + '</p>' +
     '<button class="btn pri full" onclick="exportBackup()">Daten sichern (Datei / Mail)</button>' +
     '<label>Sicherung per Mail senden an (z. B. Ihr Betreuer)</label><div style="display:flex;gap:8px"><input id="s_bm" type="email" value="' + esc(s.backupMail || '') + '" placeholder="name@firma.at" style="flex:1"><button class="btn sm" onclick="saveBackupMail()">OK</button></div>' +
     '<label>Sicherung dazuladen (zusammenführen)</label><div class="small" style="margin-bottom:6px;line-height:1.45">Vorhandene Daten bleiben erhalten, Neues aus der Sicherung kommt dazu - z. B. Daten vom PC aufs Handy.</div><input type="file" accept=".json,application/json" onchange="mergeBackup(this)">' +
@@ -3534,24 +3536,26 @@ function mergeBackup(input) {
   };
   rd.readAsText(f);
 }
+function mergeBesser(c, a, b) {
+var STR = { offen: 0, arbeit: 1, behoben: 2 }; /* true, wenn b (aus Sicherung) den vorhandenen Eintrag a ersetzen soll */
+  if (c === 'begehungen') {
+    var sa = begStand(a).a, sb = begStand(b).a;
+    if (sb !== sa) return sb > sa;
+    return (b.datum || '') + (b.zeit || '') > (a.datum || '') + (a.zeit || '');
+  }
+  if (c === 'maengel') {
+    var x = STR[a.status] || 0, y = STR[b.status] || 0;
+    if (x !== y) return y > x;
+    return mFotos(b).length > mFotos(a).length || String(b.massnahme || '').length > String(a.massnahme || '').length;
+  }
+  if (c === 'anlagen') return (b.letztePruefung || '') > (a.letztePruefung || '');
+  return false;
+}
 function mergeData(src) {
   var r = { neu: 0, akt: 0, gleich: 0, det: [] };
   var NAMEN = { gebaeude: 'Gebäude', anlagen: 'Prüffristen', pruefungen: 'Prüfungen', begehungen: 'Begehungen', maengel: 'Mängel', vorlagen: 'Checklisten', berichte: 'Berichte', freigaben: 'Freigabescheine', uebungen: 'Übungen/Schulungen' };
   var STR = { offen: 0, arbeit: 1, behoben: 2 };
-  function besser(c, a, b) { /* true, wenn b (aus Sicherung) den vorhandenen Eintrag a ersetzen soll */
-    if (c === 'begehungen') {
-      var sa = begStand(a).a, sb = begStand(b).a;
-      if (sb !== sa) return sb > sa;
-      return (b.datum || '') + (b.zeit || '') > (a.datum || '') + (a.zeit || '');
-    }
-    if (c === 'maengel') {
-      var x = STR[a.status] || 0, y = STR[b.status] || 0;
-      if (x !== y) return y > x;
-      return mFotos(b).length > mFotos(a).length || String(b.massnahme || '').length > String(a.massnahme || '').length;
-    }
-    if (c === 'anlagen') return (b.letztePruefung || '') > (a.letztePruefung || '');
-    return false;
-  }
+  var besser = mergeBesser;
   for (var c in NAMEN) {
     var L = src[c]; if (!L || L.length === undefined) continue;
     var n0 = 0, a0 = 0;
@@ -3686,6 +3690,321 @@ function importBackup(input) {
   rd.readAsText(f);
 }
 
+/* ---------- Gemeinsam nutzen: Live-Abgleich über Firebase (nur für eigene Geräte, Firmen-Konto) ----------
+   Lokal bleibt alles wie bisher gespeichert (funktioniert auch ohne Internet).
+   Jeder Eintrag wird zusätzlich als eigenes Dokument in der Cloud abgelegt; Änderungen anderer Geräte kommen live herein.
+   Abgleich je Eintrag mit "Basis" (letzter gemeinsamer Stand): nur wer etwas geändert hat, überschreibt. */
+var FB_CONFIG = {
+  apiKey: 'AIzaSyBLcQlXeHcwN-4XXL6Wx7dcpN_bZQhK3_o',
+  authDomain: 'brandschutz-janiba.firebaseapp.com',
+  projectId: 'brandschutz-janiba',
+  storageBucket: 'brandschutz-janiba.firebasestorage.app',
+  messagingSenderId: '466445019724',
+  appId: '1:466445019724:web:7ed71b28e85b39cf5d62e9'
+};
+var FB_LIBS = ['https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js', 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js', 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js'];
+var CLOUD_COLL = 'bsb_daten';
+var CLOUD_STUECK = 300000; /* Zeichen je Cloud-Dokument (Fotos werden auf mehrere Dokumente verteilt) */
+var SETT_LOKAL = { appVersion: 1, backupGefragt: 1, letztesBackup: 1, vorlagenVer: 1, letzterPruefer: 1, letzteZust: 1 }; /* Name des Prüfers bleibt je Gerät/Mitarbeiter */
+var SYNC = { bereit: false, still: false, laedt: false, fs: null, user: null, unsub: null, teile: {}, wolke: {}, unterwegs: {}, timer: {}, status: 'aus', info: '', renderOffen: false, zuletzt: 0 };
+
+function cloudAn() { try { return localStorage.getItem('bsb_cloud') === '1'; } catch (e) { return false; } }
+function cloudSichtbar() { return cloudAn() || /cloud/i.test(location.search + location.hash) || normName(DB.settings && DB.settings.lizenzName).indexOf('JANIBA') >= 0; }
+function syncMeta() { if (!DB._sync || typeof DB._sync !== 'object' || DB._sync.length !== undefined) DB._sync = { base: {} }; if (!DB._sync.base) DB._sync.base = {}; return DB._sync; }
+var syncMetaT = null;
+function syncMetaSpeichern() { clearTimeout(syncMetaT); syncMetaT = setTimeout(function () { save('_sync'); }, 700); }
+function setBase(k, h) { var b = syncMeta().base; if (h === undefined || h === '') delete b[k]; else b[k] = h; syncMetaSpeichern(); }
+function sKey(c, id) { return c + '|' + id; }
+function sHash(s) { return s === undefined ? '' : fnv(s) + ':' + s.length; }
+function docId(c, id, i) { return c + '__' + String(id).replace(/[^A-Za-z0-9_\-]/g, '-') + '__' + i; }
+function settSync() { var o = {}, s = DB.settings || {}, ks = Object.keys(s).sort(); for (var i = 0; i < ks.length; i++) if (!SETT_LOKAL[ks[i]] && s[ks[i]] !== undefined) o[ks[i]] = s[ks[i]]; return o; }
+function lokalJson(c, id) {
+  if (c === 'settings') return JSON.stringify(settSync());
+  var r = findById(DB[c] || [], id); return r ? JSON.stringify(r) : undefined;
+}
+function geraetName() { var n = navigator.userAgent || ''; return /iPhone/.test(n) ? 'iPhone' : /iPad/.test(n) ? 'iPad' : /Android/.test(n) ? 'Android' : /Windows/.test(n) ? 'Windows-PC' : /Mac/.test(n) ? 'Mac' : 'Gerät'; }
+
+/* Status */
+function cloudStatusText() {
+  var s = SYNC.status;
+  if (s === 'ok') return '<span style="color:var(--ok);font-weight:700">&#9729; Verbunden</span> - alle Geräte sehen dieselben Daten' + (SYNC.user ? '<br>Angemeldet als ' + esc(SYNC.user) : '') + (Object.keys(SYNC.unterwegs).length ? '<br>Wird übertragen ...' : '');
+  if (s === 'verbinde') return '&#9729; Verbinde ...';
+  if (s === 'login') return '<span style="color:var(--red2);font-weight:700">&#9729; Nicht angemeldet</span> - bitte mit dem Firmen-Konto anmelden.';
+  if (s === 'offline') return '<span style="color:#b45309;font-weight:700">&#9729; Offline</span> - Eintragungen werden gespeichert und übertragen, sobald wieder Internet da ist.' + (SYNC.info ? '<br>' + esc(SYNC.info) : '');
+  if (s === 'fehler') return '<span style="color:var(--red2);font-weight:700">&#9729; Fehler beim Abgleich</span><br>' + esc(SYNC.info || '');
+  return 'Aus';
+}
+function statusSetzen(s, info) {
+  SYNC.status = s; SYNC.info = info || '';
+  var e = $('cloudStat'); if (e) e.innerHTML = cloudStatusText();
+  var f = $('cloudFuss'); if (f) f.innerHTML = cloudFussText();
+}
+function cloudFussText() {
+  var s = SYNC.status;
+  return s === 'ok' ? '&#9729; Live-Abgleich aktiv' : s === 'offline' ? '&#9729; offline' : s === 'login' ? '&#9729; nicht angemeldet' : s === 'fehler' ? '&#9729; Abgleich-Fehler' : '&#9729; verbinde ...';
+}
+function cloudFuss() { return cloudAn() ? '<div style="text-align:center;font-size:12px;color:var(--mut);margin-bottom:6px" onclick="openSettings()"><span id="cloudFuss">' + cloudFussText() + '</span></div>' : ''; }
+function cloudFehler(er) {
+  var c = er && er.code ? er.code : '';
+  if (c === 'permission-denied') statusSetzen('fehler', 'Keine Berechtigung in der Datenbank. In Firebase (Projekt brandschutz-janiba > Firestore > Regeln) muss die Sammlung "bsb_daten" für angemeldete Benutzer freigegeben sein.');
+  else if (c === 'unavailable') statusSetzen('offline');
+  else if (c === 'unauthenticated') statusSetzen('login');
+  else statusSetzen('fehler', (er && er.message) ? er.message : String(er || 'Unbekannt'));
+}
+
+/* Firebase laden (nur auf Geräten, auf denen der Abgleich eingeschaltet ist) */
+function ladeSkripte(urls, ok, fehler) {
+  var i = 0;
+  (function next() {
+    if (i >= urls.length) { ok(); return; }
+    var s = document.createElement('script'); s.src = urls[i++]; s.onload = next; s.onerror = fehler; document.head.appendChild(s);
+  })();
+}
+function cloudStart() {
+  if (!cloudAn() || SYNC.laedt || SYNC.fs) return;
+  statusSetzen('verbinde');
+  if (window.firebase && firebase.firestore && firebase.auth) { cloudInit(); return; }
+  SYNC.laedt = true;
+  ladeSkripte(FB_LIBS, function () { SYNC.laedt = false; cloudInit(); }, function () {
+    SYNC.laedt = false; statusSetzen('offline', 'Abgleich startet automatisch, sobald Internet da ist.');
+  });
+}
+function cloudInit() {
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(FB_CONFIG);
+    SYNC.fs = firebase.firestore();
+  } catch (e) { cloudFehler(e); return; }
+  firebase.auth().onAuthStateChanged(function (u) {
+    if (u) { SYNC.user = u.email || ''; if (!SYNC.unsub) cloudHoeren(); }
+    else { SYNC.user = null; if (SYNC.unsub) { try { SYNC.unsub(); } catch (e) {} SYNC.unsub = null; } SYNC.bereit = false; statusSetzen('login'); if ($('modalWrap').className === 'hidden') cloudLogin(); }
+  });
+}
+function cloudLogin() {
+  var h = '<p class="small" style="line-height:1.5">Einmalig auf diesem Gerät mit dem <b>Firmen-Konto</b> anmelden (dieselbe E-Mail und dasselbe Passwort wie bei der Brandschutzverwaltung). Danach bleibt das Gerät angemeldet.</p>' +
+    '<label>Firmen-E-Mail</label><input id="cl_em" type="email" autocomplete="username" autocapitalize="off" autocorrect="off">' +
+    '<label>Passwort</label><input id="cl_pw" type="password" autocomplete="current-password">' +
+    '<div id="cl_err" style="color:var(--red2);font-size:14px;min-height:20px;margin-top:8px"></div>';
+  modal('Live-Abgleich: Anmelden', h, [{ label: 'Später', fn: closeModal }, { label: 'Anmelden', cls: 'pri', fn: cloudLoginLos }]);
+}
+function cloudLoginLos() {
+  var em = val('cl_em'), pw = $('cl_pw') ? $('cl_pw').value : '', fe = $('cl_err');
+  if (!em || !pw) { fe.textContent = 'Bitte E-Mail und Passwort eingeben.'; return; }
+  if (!window.firebase || !firebase.auth) { fe.textContent = 'Keine Internetverbindung.'; return; }
+  fe.textContent = 'Bitte warten ...';
+  firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(function () { return firebase.auth().signInWithEmailAndPassword(em, pw); })
+    .then(function () { closeModal(); toast('Angemeldet - Daten werden abgeglichen'); })['catch'](function (er) {
+      var c = er && er.code ? er.code : '';
+      fe.textContent = (c === 'auth/invalid-credential' || c === 'auth/wrong-password' || c === 'auth/user-not-found' || c === 'auth/invalid-login-credentials') ? 'E-Mail oder Passwort falsch.' :
+        c === 'auth/network-request-failed' ? 'Keine Internetverbindung.' : c === 'auth/too-many-requests' ? 'Zu viele Versuche - bitte ein paar Minuten warten.' : 'Anmeldung fehlgeschlagen: ' + (er && er.message ? er.message : c);
+    });
+}
+function cloudHoeren() {
+  statusSetzen('verbinde');
+  SYNC.unsub = SYNC.fs.collection(CLOUD_COLL).onSnapshot({ includeMetadataChanges: true }, cloudSnap, function (er) { SYNC.unsub = null; SYNC.bereit = false; cloudFehler(er); });
+}
+
+/* Cloud-Dokumente zu Einträgen zusammensetzen */
+function wolkeBauen(k) {
+  var t = SYNC.teile[k] || {}, ids = Object.keys(t), best = null, i;
+  if (!ids.length) { delete SYNC.teile[k]; SYNC.wolke[k] = { j: undefined, h: '' }; return; }
+  for (i = 0; i < ids.length; i++) if (!best || (t[ids[i]].t || 0) > (best.t || 0)) best = t[ids[i]];
+  var st = [];
+  for (i = 0; i < ids.length; i++) if (t[ids[i]].v === best.v) st[t[ids[i]].i] = t[ids[i]].s;
+  for (i = 0; i < (best.n || 1); i++) if (typeof st[i] !== 'string') { SYNC.wolke[k] = { unvollst: true, h: '?' }; return; }
+  var j = st.join('');
+  SYNC.wolke[k] = { j: j, h: sHash(j) };
+}
+function cloudSnap(snap) {
+  var betroffen = {};
+  snap.docChanges().forEach(function (ch) {
+    var d = ch.doc.data(); if (!d || !d.c || d.id === undefined) return;
+    var k = sKey(d.c, d.id);
+    if (!SYNC.teile[k]) SYNC.teile[k] = {};
+    if (ch.type === 'removed') delete SYNC.teile[k][ch.doc.id]; else SYNC.teile[k][ch.doc.id] = d;
+    betroffen[k] = 1;
+  });
+  for (var k in betroffen) wolkeBauen(k);
+  if (snap.metadata.fromCache) { if (SYNC.bereit) statusSetzen('offline'); return; }
+  if (!SYNC.bereit) { abgleichAlles(true); return; }
+  var g = {};
+  for (var k2 in betroffen) abgleichKey(k2, g);
+  nachAenderung(g);
+  if (SYNC.status !== 'ok' && !Object.keys(SYNC.unterwegs).length) statusSetzen('ok');
+}
+
+/* Abgleich eines Eintrags: Basis = letzter gemeinsamer Stand */
+function abgleichKey(k, g) {
+  var w = SYNC.wolke[k] || { j: undefined, h: '' };
+  if (w.unvollst || SYNC.unterwegs[k] !== undefined) return;
+  var p = k.indexOf('|'), c = k.substr(0, p), id = k.substr(p + 1);
+  if (COLLS.indexOf(c) < 0) return;
+  var B = syncMeta().base[k], jl = lokalJson(c, id), hl = sHash(jl);
+  if (hl === w.h) { setBase(k, w.h); return; }
+  if (B !== undefined && hl === B) { uebernehmen(c, id, w.j, g); setBase(k, w.h); return; } /* nur Cloud geändert */
+  if (B !== undefined && w.h === B) { hochladen(k, c, id, jl); return; } /* nur lokal geändert */
+  /* beide geändert oder erstes Verbinden */
+  if (jl === undefined) { uebernehmen(c, id, w.j, g); setBase(k, w.h); return; }
+  if (w.j === undefined) { hochladen(k, c, id, jl); return; }
+  var lo, wo; try { lo = JSON.parse(jl); wo = JSON.parse(w.j); } catch (e) { return; }
+  if (c === 'settings') {
+    for (var x in wo) if ((lo[x] === undefined || lo[x] === '') && wo[x] !== undefined && wo[x] !== '') DB.settings[x] = wo[x];
+    g.settings = 1; hochladen(k, c, id, lokalJson(c, id)); return;
+  }
+  if (c === 'berichte') {
+    var a = findById(DB.berichte, id), ein = (a.eintraege || []).slice(0);
+    for (var e = 0; e < (wo.eintraege || []).length; e++) if (ein.indexOf(wo.eintraege[e]) < 0) ein.push(wo.eintraege[e]);
+    a.eintraege = ein; if (!a.foto && wo.foto) a.foto = wo.foto;
+    g.berichte = 1; hochladen(k, c, id, JSON.stringify(a)); return;
+  }
+  if (mergeBesser(c, lo, wo)) { uebernehmen(c, id, w.j, g); setBase(k, w.h); } else hochladen(k, c, id, jl);
+}
+function uebernehmen(c, id, j, g) {
+  g[c] = 1;
+  if (c === 'settings') {
+    var o = j === undefined ? {} : JSON.parse(j), x;
+    for (x in DB.settings) if (!SETT_LOKAL[x]) delete DB.settings[x];
+    for (x in o) DB.settings[x] = o[x];
+    return;
+  }
+  var L = DB[c], idx = -1;
+  for (var i = 0; i < L.length; i++) if (L[i] && L[i].id === id) { idx = i; break; }
+  if (j === undefined) { if (idx >= 0) L.splice(idx, 1); return; }
+  var r = JSON.parse(j);
+  if (idx < 0) { L.push(r); return; }
+  /* gleiches Objekt behalten (falls es gerade in einem Fenster bearbeitet wird) */
+  var a = L[idx], y;
+  for (y in a) if (!r.hasOwnProperty(y)) delete a[y];
+  for (y in r) a[y] = r[y];
+}
+function hochladen(k, c, id, j) {
+  if (!SYNC.fs || !SYNC.user) return;
+  var h = sHash(j);
+  if (SYNC.unterwegs[k] === h) return;
+  SYNC.unterwegs[k] = h;
+  var b = SYNC.fs.batch(), col = SYNC.fs.collection(CLOUD_COLL), alt = SYNC.teile[k] || {}, neu = {}, d;
+  if (j !== undefined) {
+    var n = Math.max(1, Math.ceil(j.length / CLOUD_STUECK)), v = uid(), t = Date.now();
+    for (var i = 0; i < n; i++) { d = docId(c, id, i); neu[d] = 1; b.set(col.doc(d), { c: c, id: id, i: i, n: n, v: v, t: t, s: j.substr(i * CLOUD_STUECK, CLOUD_STUECK), von: geraetName() }); }
+  }
+  for (d in alt) if (!neu[d]) b['delete'](col.doc(d));
+  if (j === undefined && !Object.keys(alt).length) { delete SYNC.unterwegs[k]; setBase(k, undefined); return; }
+  b.commit().then(function () {
+    if (SYNC.unterwegs[k] === h) delete SYNC.unterwegs[k];
+    setBase(k, h);
+    SYNC.zuletzt = Date.now();
+    if (!Object.keys(SYNC.unterwegs).length) statusSetzen('ok');
+  }, function (er) { if (SYNC.unterwegs[k] === h) delete SYNC.unterwegs[k]; cloudFehler(er); });
+}
+/* nach dem lokalen Speichern: geänderte Einträge hochladen */
+function cloudNachSave(c) {
+  if (!SYNC.bereit || SYNC.still || COLLS.indexOf(c) < 0) return;
+  clearTimeout(SYNC.timer[c]);
+  SYNC.timer[c] = setTimeout(function () { collHoch(c); }, 400);
+}
+function collHoch(c) {
+  if (!SYNC.bereit) return;
+  var base = syncMeta().base, da = {}, k, j, h;
+  if (c === 'settings') { k = sKey('settings', '_'); j = lokalJson('settings', '_'); if (sHash(j) !== base[k] && sHash(j) !== (SYNC.wolke[k] || {}).h) hochladen(k, c, '_', j); return; }
+  var L = DB[c] || [];
+  for (var i = 0; i < L.length; i++) {
+    var r = L[i]; if (!r || !r.id) continue;
+    k = sKey(c, r.id); da[k] = 1; j = JSON.stringify(r); h = sHash(j);
+    if (h === (SYNC.wolke[k] || {}).h) { if (h !== base[k]) setBase(k, h); continue; }
+    if (h !== base[k]) hochladen(k, c, r.id, j); /* nur wirklich lokal geänderte Einträge */
+  }
+  for (var bk in base) if (bk.indexOf(c + '|') === 0 && !da[bk]) hochladen(bk, c, bk.substr(c.length + 1), undefined);
+}
+function nachAenderung(g) {
+  var n = 0;
+  SYNC.still = true;
+  for (var c in g) { save(c); n++; }
+  SYNC.still = false;
+  if (n) renderSicher();
+}
+function renderSicher() {
+  var ae = document.activeElement, tag = ae ? ae.tagName : '';
+  if ($('modalWrap').className !== 'hidden' || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') { SYNC.renderOffen = true; return; }
+  SYNC.renderOffen = false;
+  var y = window.pageYOffset || 0; render(); window.scrollTo(0, y);
+}
+setInterval(function () { if (SYNC.renderOffen) renderSicher(); }, 2000);
+
+/* Vollständiger Abgleich (beim Verbinden und auf Knopfdruck) */
+function abgleichAlles(erstes) {
+  var g = {}, keys = {}, k, i, c;
+  if (erstes && !Object.keys(SYNC.wolke).length) DB._sync = { base: {} }; /* Cloud leer: alles hochladen, lokal nichts löschen */
+  vorlagenAngleichen(g);
+  for (k in SYNC.wolke) keys[k] = 1;
+  for (k in syncMeta().base) keys[k] = 1;
+  for (i = 0; i < COLLS.length; i++) {
+    c = COLLS[i];
+    if (c === 'settings') { keys[sKey('settings', '_')] = 1; continue; }
+    for (var r = 0; r < (DB[c] || []).length; r++) if (DB[c][r] && DB[c][r].id) keys[sKey(c, DB[c][r].id)] = 1;
+  }
+  for (k in keys) abgleichKey(k, g);
+  SYNC.bereit = true;
+  nachAenderung(g);
+  syncMetaSpeichern();
+  statusSetzen('ok');
+  if (erstes) {
+    var gid = STATE.gid;
+    if (!gid || !findById(DB.gebaeude, gid)) { STATE.gid = DB.gebaeude.length ? DB.gebaeude[0].id : null; if (DB.gebaeude.length > 1 && STATE.tab === 'home') STATE.tab = 'alle'; renderSicher(); }
+  }
+}
+/* gleiche Checklisten (gleicher Name) nicht doppelt anlegen: lokale Standard-Checklisten durch die aus der Cloud ersetzen */
+function vorlagenAngleichen(g) {
+  var base = syncMeta().base, wn = {}, k, nWolke = 0;
+  for (k in SYNC.wolke) if (k.indexOf('vorlagen|') === 0 && SYNC.wolke[k].j) { try { var wv = JSON.parse(SYNC.wolke[k].j); wn[normTxt(wv.name)] = wv.id; nWolke++; } catch (e) {} }
+  if (!nWolke) return;
+  var frisch = !Object.keys(base).length && !DB.gebaeude.length;
+  for (var i = DB.vorlagen.length - 1; i >= 0; i--) {
+    var v = DB.vorlagen[i]; k = sKey('vorlagen', v.id);
+    if (base[k] !== undefined || SYNC.wolke[k]) continue;
+    var ziel = wn[normTxt(v.name)];
+    if (!ziel && !frisch) continue;
+    if (ziel) {
+      for (var b = 0; b < DB.begehungen.length; b++) if (DB.begehungen[b].vorlageId === v.id) { DB.begehungen[b].vorlageId = ziel; g.begehungen = 1; }
+      for (var gb = 0; gb < DB.gebaeude.length; gb++) { var ov = DB.gebaeude[gb].ohneVorlagen || []; for (var o = 0; o < ov.length; o++) if (ov[o] === v.id) { ov[o] = ziel; g.gebaeude = 1; } }
+    }
+    DB.vorlagen.splice(i, 1); g.vorlagen = 1;
+  }
+}
+
+/* Einstellungen */
+function cloudEinstellungen() {
+  if (!cloudSichtbar()) return '';
+  var h = '<div class="grp">Gemeinsam nutzen (Live-Abgleich)</div>';
+  if (!cloudAn()) return h + '<p class="small" style="line-height:1.5">Mehrere Geräte (z. B. Ihr Handy und der PC im Büro) arbeiten mit <b>denselben Daten</b>. Was auf einem Gerät eingetragen wird, erscheint sofort auf den anderen. Anmeldung mit dem Firmen-Konto (wie bei der Brandschutzverwaltung).</p>' +
+    '<button class="btn pri full" onclick="cloudEinschalten()">Live-Abgleich einschalten</button>';
+  h += '<p class="small" id="cloudStat" style="line-height:1.5">' + cloudStatusText() + '</p>';
+  if (SYNC.status === 'login') h += '<button class="btn pri full" onclick="cloudLogin()">Anmelden</button>';
+  h += '<button class="btn full" onclick="cloudJetzt()">Jetzt abgleichen</button>' +
+    '<button class="btn full" style="margin-top:8px" onclick="cloudAusschalten()">Auf diesem Gerät ausschalten</button>';
+  return h;
+}
+function cloudEinschalten() {
+  try { localStorage.setItem('bsb_cloud', '1'); } catch (e) {}
+  closeModal(); toast('Live-Abgleich wird eingeschaltet ...');
+  if (SYNC.fs) { if (!firebase.auth().currentUser) cloudLogin(); else if (!SYNC.unsub) cloudHoeren(); }
+  else cloudStart();
+  setTimeout(function () { if (SYNC.status === 'login' && $('modalWrap').className === 'hidden') cloudLogin(); }, 2500);
+}
+function cloudJetzt() {
+  if (!SYNC.fs) { cloudStart(); toast('Verbinde ...'); return; }
+  if (!SYNC.user) { cloudLogin(); return; }
+  if (!SYNC.unsub) { cloudHoeren(); toast('Verbinde ...'); return; }
+  if (!SYNC.bereit) { toast('Verbindung wird noch aufgebaut ...'); return; }
+  abgleichAlles(false); toast('Abgleich läuft');
+  setTimeout(function () { var e = $('cloudStat'); if (e) e.innerHTML = cloudStatusText(); }, 1500);
+}
+function cloudAusschalten() {
+  ask('Live-Abgleich auf diesem Gerät ausschalten? Die Daten bleiben auf dem Gerät, werden aber nicht mehr mit den anderen Geräten abgeglichen.', function () {
+    try { localStorage.setItem('bsb_cloud', '0'); } catch (e) {}
+    try { if (SYNC.unsub) SYNC.unsub(); firebase.auth().signOut().then(function () { location.reload(); }, function () { location.reload(); }); } catch (e) { location.reload(); }
+  }, 'Ausschalten');
+}
+window.addEventListener('online', function () { if (cloudAn() && !SYNC.fs) cloudStart(); });
+
 /* ---------- Start ---------- */
 function init() {
   try { $('hdrLogo').src = IMG_HDR; } catch (e) {}
@@ -3749,6 +4068,7 @@ function init() {
     }
     if (DB.gebaeude.length > 1) STATE.tab = 'alle';
     render();
+    if (cloudAn()) setTimeout(cloudStart, 300);
     setTimeout(function () { checkUpdate(false); }, 1500);
     setTimeout(function () { if ($('modalWrap').className === 'hidden') backupErinnerung(); }, 2500);
     /* App war im Hintergrund (Homescreen): beim Zurückkommen auf neue Version prüfen */
