@@ -116,7 +116,7 @@ textarea{min-height:80px;resize:vertical}
 <script>
 /* Brandschutzbuch - lokale Web-App (Janiba Brandschutztechnik GmbH) */
 var APP_VERSION = '2.35';
-var APP_STAND = '30.10.2026 16:10';
+var APP_STAND = '01.11.2026 17:30';
 var UPD = null;
 function verText() { return 'Version ' + APP_VERSION + ' vom ' + APP_STAND; }
 function verFooter() {
@@ -3709,7 +3709,11 @@ var SETT_LOKAL = { appVersion: 1, backupGefragt: 1, letztesBackup: 1, vorlagenVe
 var SYNC = { bereit: false, still: false, laedt: false, fs: null, user: null, unsub: null, teile: {}, wolke: {}, unterwegs: {}, timer: {}, status: 'aus', info: '', renderOffen: false, zuletzt: 0 };
 
 function cloudAn() { try { return localStorage.getItem('bsb_cloud') === '1'; } catch (e) { return false; } }
-function cloudSichtbar() { return cloudAn() || /cloud/i.test(location.search + location.hash) || normName(DB.settings && DB.settings.lizenzName).indexOf('JANIBA') >= 0; }
+function cloudSichtbar() {
+  var m = false; try { m = localStorage.getItem('bsb_cloudsicht') === '1'; } catch (e) {}
+  if (/cloud/i.test(location.search + location.hash)) { m = true; try { localStorage.setItem('bsb_cloudsicht', '1'); } catch (e2) {} }
+  return m || cloudAn() || normName(DB.settings && DB.settings.lizenzName).indexOf('JANIBA') >= 0;
+}
 function syncMeta() { if (!DB._sync || typeof DB._sync !== 'object' || DB._sync.length !== undefined) DB._sync = { base: {} }; if (!DB._sync.base) DB._sync.base = {}; return DB._sync; }
 var syncMetaT = null;
 function syncMetaSpeichern() { clearTimeout(syncMetaT); syncMetaT = setTimeout(function () { save('_sync'); }, 700); }
@@ -4068,7 +4072,9 @@ function init() {
     }
     if (DB.gebaeude.length > 1) STATE.tab = 'alle';
     render();
+    try { cloudSichtbar(); } catch (eS) {}
     if (cloudAn()) setTimeout(cloudStart, 300);
+    else if (/cloud/i.test(location.search + location.hash)) setTimeout(function () { ask('Live-Abgleich einschalten? Dieses Gerät arbeitet dann mit denselben Daten wie die anderen Geräte der Firma. Anmeldung mit dem Firmen-Konto (wie Brandschutzverwaltung).', cloudEinschalten, 'Einschalten'); }, 900);
     setTimeout(function () { checkUpdate(false); }, 1500);
     setTimeout(function () { if ($('modalWrap').className === 'hidden') backupErinnerung(); }, 2500);
     /* App war im Hintergrund (Homescreen): beim Zurückkommen auf neue Version prüfen */
