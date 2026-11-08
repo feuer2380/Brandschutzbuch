@@ -33,8 +33,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script>
 // Versionsnummer dieser Datei (bei jeder neuen Version aendern)
-var APP_VERSION = '2026-11-08 10:20';
-var APP_VERSION_TEXT = '08.11. 10:20';
+var APP_VERSION = '2026-11-08 13:45';
+var APP_VERSION_TEXT = '08.11. 13:45';
 // Offline-Speicher einschalten (sw.js): App startet auch ohne Netz, mit Netz kommt immer die neueste Version
 try {
   if('serviceWorker' in navigator && location.protocol.indexOf('http') === 0){
@@ -3829,6 +3829,164 @@ function istSdAltschaum(g){
   return true;
 }
 
+
+// ---------- Statistik: Ausblick (Arbeit, Umsatz, Material) ----------
+function abBalken(label, n, max, farbe, unter){
+  var pr = max ? Math.round(n / max * 100) : 0;
+  return '<div style="display:flex; align-items:center; gap:10px; padding:5px 0;"><div style="flex:0 0 34%; min-width:0; font-size:13.5px; color:#2a2622;">' + label + (unter ? '<div style="font-size:11px; color:#8a7d70;">' + unter + '</div>' : '') + '</div><div style="flex:1; height:13px; background:#efe6da; border-radius:7px; overflow:hidden;"><div style="width:' + pr + '%; height:100%; background:' + (farbe || '#c23f12') + '; border-radius:7px;"></div></div><div class="ergebnis-zahl" style="width:auto; min-width:30px;">' + n + '</div></div>';
+}
+function abAktiveGeraete(){
+  var kOk = {};
+  state.kunden.forEach(function(k){ if(!k.geloescht) kOk[k.id] = true; });
+  return state.geraete.filter(function(g){ return !g.ausgeschieden && kOk[g.kundeId]; });
+}
+function abFehlt(v){
+  if(v === undefined || v === null) return true;
+  var t = String(v).trim().toLowerCase();
+  return t === '' || t === '-' || t === '?' || t.indexOf('nachtragen') === 0;
+}
+function abDatenFehlen(g){
+  var kat = (g.kategorie || 'Feuerlöscher').trim();
+  if(istFuellKategorie(kat) || kat === 'Brandschutzbegehung') return [];
+  var f = [];
+  if(abFehlt(g.seriennummer)) f.push('Seriennummer');
+  if(abFehlt(g.baujahr)) f.push('Baujahr');
+  if(abFehlt(g.standort)) f.push('Standort');
+  return f;
+}
+function ausblickHtml(){
+  var html = '';
+  var jetzt = new Date();
+  var jahr = jetzt.getFullYear();
+  var akt = abAktiveGeraete();
+  var monatNamen = ['Jän', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+
+  // 1) Pruefungen pro Monat
+  var prueflich = akt.filter(function(g){ return !istFuellKategorie((g.kategorie || 'Feuerlöscher').trim()) && g.naechstePruefung; });
+  var monate = [], ueber = { n: 0, k: {} };
+  for(var i = 0; i < 12; i++){ var d = new Date(jahr, jetzt.getMonth() + i, 1); monate.push({ j: d.getFullYear(), m: d.getMonth(), n: 0, k: {} }); }
+  var heute0 = new Date(jahr, jetzt.getMonth(), jetzt.getDate());
+  prueflich.forEach(function(g){
+    var d = new Date(g.naechstePruefung);
+    if(isNaN(d)) return;
+    if(d < heute0){ ueber.n++; ueber.k[g.kundeId] = 1; return; }
+    for(var x = 0; x < monate.length; x++){ if(monate[x].j === d.getFullYear() && monate[x].m === d.getMonth()){ monate[x].n++; monate[x].k[g.kundeId] = 1; break; } }
+  });
+  var maxM = ueber.n; monate.forEach(function(m){ if(m.n > maxM) maxM = m.n; });
+  html += '<div class="section-title" style="margin-top:4px;">Prüfungen pro Monat</div><div class="card">';
+  if(ueber.n) html += abBalken('<b style="color:#b3261e;">Überfällig</b>', ueber.n, maxM, '#b3261e', Object.keys(ueber.k).length + ' Kunden');
+  monate.forEach(function(m){ html += abBalken(monatNamen[m.m] + ' ' + String(m.j).slice(2), m.n, maxM, '#c23f12', m.n ? Object.keys(m.k).length + ' Kunden' : ''); });
+  html += '<div class="meta" style="margin-top:6px; color:#8a7d70;">Geräte mit nächster Prüfung im jeweiligen Monat (ohne Füllungen/CO2-Flaschen).</div></div>';
+
+  // 2) Innenrevisionen pro Jahr + 3) Ausscheiden pro Jahr
+  var jahre = []; for(var y = jahr; y <= jahr + 5; y++) jahre.push(y);
+  var ir = {}, aus = {}, irUeber = 0, ausUeber = 0;
+  jahre.forEach(function(y){ ir[y] = { 6: 0, 12: 0, 18: 0 }; aus[y] = 0; });
+  akt.forEach(function(g){
+    if((g.kategorie || 'Feuerlöscher').trim() !== 'Feuerlöscher') return;
+    var bjahr = parseInt(g.baujahr, 10);
+    if(!bjahr || isNaN(bjahr)) return;
+    if(istInnenrevisionspflichtig(g)){
+      var st = baujahrStatus(bjahr, g.letzteInnenrevision, g);
+      if(st && st.faelligJahr){
+        var abst = st.faelligJahr - bjahr, stufe = abst <= 8 ? 6 : (abst <= 14 ? 12 : 18);
+        if(st.faelligJahr < jahr) irUeber++;
+        else if(ir[st.faelligJahr]) ir[st.faelligJahr][stufe]++;
+      }
+    }
+    var ausJ = bjahr + 20;
+    if(ausJ < jahr) ausUeber++;
+    else if(aus[ausJ] !== undefined) aus[ausJ]++;
+  });
+  var maxIr = irUeber; jahre.forEach(function(y){ var t = ir[y][6] + ir[y][12] + ir[y][18]; if(t > maxIr) maxIr = t; });
+  html += '<div class="section-title" style="margin-top:14px;">Innenrevisionen pro Jahr</div><div class="card">';
+  if(irUeber) html += abBalken('<b style="color:#b3261e;">Überfällig</b>', irUeber, maxIr, '#b3261e');
+  jahre.forEach(function(y){
+    var t = ir[y][6] + ir[y][12] + ir[y][18];
+    var teile = [];
+    if(ir[y][6]) teile.push(ir[y][6] + '&times; 6 J.');
+    if(ir[y][12]) teile.push(ir[y][12] + '&times; 12 J.');
+    if(ir[y][18]) teile.push(ir[y][18] + '&times; 18 J.');
+    html += abBalken(String(y), t, maxIr, '#d39a00', teile.join(' &middot; '));
+  });
+  html += '<div class="meta" style="margin-top:6px; color:#8a7d70;">Planbare Arbeit: 6-, 12- und 18-Jahres-Revisionen der Feuerlöscher.</div></div>';
+
+  var maxA = ausUeber; jahre.forEach(function(y){ if(aus[y] > maxA) maxA = aus[y]; });
+  html += '<div class="section-title" style="margin-top:14px;">Auszuscheiden (20 Jahre) = Neukauf</div><div class="card">';
+  if(ausUeber) html += abBalken('<b style="color:#b3261e;">Schon zu alt</b>', ausUeber, maxA, '#b3261e', 'noch im Einsatz');
+  jahre.forEach(function(y){ html += abBalken(String(y), aus[y], maxA, '#2e7d4f'); });
+  html += '<div class="meta" style="margin-top:6px; color:#8a7d70;">Löscher, die im jeweiligen Jahr 20 Jahre alt werden und danach ersetzt werden müssen.</div></div>';
+
+  // 4) Fluor-Umstellung
+  var fl = fluorGesamtDaten();
+  html += '<div class="section-title" style="margin-top:14px;">Fluorfrei-Umstellung bis 31.12.' + BIO_FRIST_JAHR + '</div>';
+  html += '<div class="card abFluor" style="cursor:pointer; display:flex; gap:8px; text-align:center;">';
+  html += '<div style="flex:1;"><div style="font-size:28px; font-weight:800; color:#2a2622;">' + fl.gesamt + '</div><div class="meta" style="color:#6b6258;">fluorhaltig</div></div>';
+  html += '<div style="flex:1;"><div style="font-size:28px; font-weight:800; color:#b3261e;">' + fl.jetzt + '</div><div class="meta" style="color:#6b6258;">jetzt umstellen</div></div>';
+  html += '<div style="flex:1;"><div style="font-size:28px; font-weight:800; color:#2a2622;">' + fl.kunden.length + '</div><div class="meta" style="color:#6b6258;">Kunden</div></div>';
+  html += '</div>';
+
+  // 5) Altersstruktur
+  var alter = [['0-5 Jahre', 0, 5], ['6-10 Jahre', 6, 10], ['11-15 Jahre', 11, 15], ['16-20 Jahre', 16, 20], ['über 20 Jahre', 21, 999]];
+  var altN = alter.map(function(){ return 0; }), ohneBj = 0;
+  akt.forEach(function(g){
+    if((g.kategorie || 'Feuerlöscher').trim() !== 'Feuerlöscher') return;
+    var b = parseInt(g.baujahr, 10);
+    if(!b || isNaN(b)){ ohneBj++; return; }
+    var a = jahr - b;
+    for(var z = 0; z < alter.length; z++){ if(a >= alter[z][1] && a <= alter[z][2]){ altN[z]++; break; } }
+  });
+  var maxAl = ohneBj; altN.forEach(function(n){ if(n > maxAl) maxAl = n; });
+  html += '<div class="section-title" style="margin-top:14px;">Alter der Feuerlöscher</div><div class="card">';
+  alter.forEach(function(a, z){ html += abBalken(a[0], altN[z], maxAl, z === 4 ? '#b3261e' : (z === 3 ? '#d39a00' : '#2e7d4f')); });
+  if(ohneBj) html += abBalken('ohne Baujahr', ohneBj, maxAl, '#9a8f84');
+  html += '</div>';
+
+  // 6) Datenqualitaet
+  var fehlend = akt.filter(function(g){ return abDatenFehlen(g).length; });
+  var nSn = 0, nBj = 0, nSt = 0;
+  fehlend.forEach(function(g){ var f = abDatenFehlen(g); if(f.indexOf('Seriennummer') > -1) nSn++; if(f.indexOf('Baujahr') > -1) nBj++; if(f.indexOf('Standort') > -1) nSt++; });
+  html += '<div class="section-title" style="margin-top:14px;">Fehlende Angaben</div>';
+  html += '<div class="card abFehlt" style="cursor:pointer;">';
+  if(!fehlend.length){
+    html += '<div style="color:#2e7d4f; font-weight:700;">Alle Geräte vollständig erfasst.</div>';
+  } else {
+    var maxF = Math.max(nSn, nBj, nSt);
+    html += abBalken('Seriennummer', nSn, maxF, '#c23f12');
+    html += abBalken('Baujahr', nBj, maxF, '#c23f12');
+    html += abBalken('Standort', nSt, maxF, '#c23f12');
+    html += '<div class="meta" style="margin-top:6px; color:#8a7d70;">' + fehlend.length + ' Geräte unvollständig &ndash; antippen für die Liste nach Kunden.</div>';
+  }
+  html += '</div>';
+  return html;
+}
+function modalFehlendeAngaben(){
+  var akt = abAktiveGeraete().filter(function(g){ return abDatenFehlen(g).length; });
+  var proK = {};
+  akt.forEach(function(g){ (proK[g.kundeId] = proK[g.kundeId] || []).push(g); });
+  var kids = Object.keys(proK).sort(function(a, b){ return proK[b].length - proK[a].length; });
+  var html = '<div class="modal-head"><h3>Fehlende Angaben</h3><button class="close" id="mClose">&times;</button></div>';
+  html += '<div class="meta" style="margin-bottom:10px;">' + akt.length + ' Geräte bei ' + kids.length + ' Kunden. Gibt es am Gerät keine Angabe, bitte &bdquo;keine&ldquo; eintragen.</div>';
+  kids.forEach(function(kid){
+    var k = state.kunden.filter(function(x){ return x.id === kid; })[0] || {};
+    html += '<div class="card fehltKunde" data-kid="' + escapeHtml(kid) + '" style="cursor:pointer; margin-bottom:8px;"><div class="row"><b>' + escapeHtml(k.name || '') + '</b><span class="badge warn">' + proK[kid].length + '</span></div>';
+    proK[kid].slice(0, 8).forEach(function(g){
+      html += '<div style="font-size:13px; padding:3px 0; border-top:1px solid #eee; margin-top:3px;">Nr. ' + escapeHtml(String(geraeteNummerWert(g))) + ' &middot; ' + escapeHtml(g.typ || g.kategorie || '') + ' &ndash; <b style="color:#c23f12;">' + abDatenFehlen(g).join(', ') + '</b></div>';
+    });
+    if(proK[kid].length > 8) html += '<div class="meta">&hellip; und ' + (proK[kid].length - 8) + ' weitere</div>';
+    html += '</div>';
+  });
+  openModal(html);
+  document.getElementById('mClose').onclick = closeModal;
+  document.querySelectorAll('.fehltKunde').forEach(function(c){ c.onclick = function(){ closeModal(); state.activeKundeId = c.getAttribute('data-kid'); state.tab = 'kundeDetail'; render(); window.scrollTo(0, 0); }; });
+}
+document.addEventListener('click', function(ev){
+  var t = ev.target && ev.target.closest ? ev.target : null;
+  if(!t) return;
+  if(t.closest('.abFluor')){ modalFluorGesamt('alle'); return; }
+  if(t.closest('.abFehlt')){ modalFehlendeAngaben(); return; }
+});
+
 // Statistik Neukauf: Kunde antippen -> Kunde oeffnen
 document.addEventListener('click', function(ev){
   var c = ev.target && ev.target.closest ? ev.target.closest('.nkKunde') : null;
@@ -6066,6 +6224,7 @@ function renderStatistik(){
 
   var subTabs = [
     {key:'pruefungen', label:'Prüfungen'},
+    {key:'ausblick', label:'Ausblick'},
     {key:'bestand', label:'Gerätebestand'},
     {key:'neukauf', label:'Neukauf'},
     {key:'portal', label:'Kundenportal'},
@@ -6318,7 +6477,7 @@ function renderStatistik(){
 
   if(subTab === 'bestand'){
     var geraeteAktivBestand = state.geraete.filter(function(g){ return !g.ausgeschieden; });
-    html += '<div class="meta" style="margin-bottom:10px;">Zeigt den aktuellen Gesamtbestand (unabhängig vom Zeitfilter oben) &mdash; der Zeitfilter wirkt sich nur auf "Prüfungen" und "Füllungen" aus.</div>';
+
     var vor30TagenBestand = new Date(); vor30TagenBestand.setDate(vor30TagenBestand.getDate() - 30);
     var bestandVor30Tagen = state.geraete.filter(function(g){
       if(g.ausgeschieden && g.ausgeschiedenAm && new Date(g.ausgeschiedenAm) <= vor30TagenBestand) return false;
@@ -6327,7 +6486,7 @@ function renderStatistik(){
     }).length;
     var trendBestand = geraeteAktivBestand.length - bestandVor30Tagen;
     html += '<div class="statrow">';
-    html += '<div class="stat"><div class="n">' + geraeteAktivBestand.length + '</div><div class="l">Geräte gesamt</div>' + (trendBestand !== 0 ? '<div class="meta" style="margin-top:2px; color:' + (trendBestand > 0 ? 'var(--ok)' : 'var(--warn)') + ';">' + (trendBestand > 0 ? '+' : '') + trendBestand + ' seit letztem Monat</div>' : '') + '</div>';
+    html += '<div class="stat"><div class="n">' + geraeteAktivBestand.length + '</div><div class="l">Geräte gesamt</div>' + (trendBestand !== 0 ? '<div class="meta" style="margin-top:2px; color:' + (trendBestand > 0 ? 'var(--ok)' : 'var(--warn)') + ';">' + (trendBestand > 0 ? '+' : '') + trendBestand + ' in 30 Tagen neu erfasst</div>' : '') + '</div>';
     html += '<div class="stat"><div class="n">' + state.kunden.filter(function(k){ return !k.geloescht; }).length + '</div><div class="l">Kunden</div></div>';
     html += '</div>';
 
@@ -6388,6 +6547,10 @@ function renderStatistik(){
 
   if(subTab === 'kunden' && istVollsicht()){
     html += statistikKundenHtml();
+  }
+
+  if(subTab === 'ausblick'){
+    html += ausblickHtml();
   }
 
   if(subTab === 'neukauf'){
