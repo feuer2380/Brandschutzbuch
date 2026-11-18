@@ -115,8 +115,8 @@ textarea{min-height:80px;resize:vertical}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 /* Brandschutzbuch - lokale Web-App (Janiba Brandschutztechnik GmbH) */
-var APP_VERSION = '2.35';
-var APP_STAND = '01.11.2026 17:30';
+var APP_VERSION = '2.36';
+var APP_STAND = '18.11.2026 16:30';
 var UPD = null;
 function verText() { return 'Version ' + APP_VERSION + ' vom ' + APP_STAND; }
 function verFooter() {
@@ -3141,10 +3141,22 @@ function gesamtPdf(ids, opts) {
     }
     return false;
   }
+  var LEER = 1.6; /* Abstand für eine Leerzeile (Absatz) statt einer ganzen Zeile */
   function rowTxt(lbl, lines) {
     if (!lines.length) lines = [''];
-    for (var r = 0; r < lines.length; r++) { need(RH); if (r === 0) doc.text(lbl, ML, y); if (lines[r]) doc.text(lines[r], VX, y); y += RH; }
+    for (var r = 0; r < lines.length; r++) {
+      if (r > 0 && !lines[r]) { y += LEER; continue; }
+      need(RH); if (r === 0) doc.text(lbl, ML, y); if (lines[r]) doc.text(lines[r], VX, y); y += RH;
+    }
   }
+  /* Text umbrechen, mehrere Leerzeilen zu einer zusammenfassen, Leerzeilen am Anfang/Ende weg */
+  function splitP(t, w) {
+    var l = doc.splitTextToSize(String(t || '').replace(/\r/g, '').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').replace(/^\s+|\s+$/g, ''), w), o = [];
+    for (var i = 0; i < l.length; i++) { if (!String(l[i]).replace(/\s+/g, '') && (!o.length || o[o.length - 1] === '')) continue; o.push(String(l[i]).replace(/\s+$/, '')); }
+    while (o.length && o[o.length - 1] === '') o.pop();
+    return o;
+  }
+  function hoehe(lines) { var hh = 0; for (var i = 0; i < lines.length; i++) hh += (i > 0 && !lines[i]) ? LEER : RH; return hh || RH; }
   function imgProps(d) { try { return doc.getImageProperties(d); } catch (e) { return null; } }
 
   /* Briefkopf */
@@ -3188,13 +3200,13 @@ function gesamtPdf(ids, opts) {
   }
 
   /* Fotos rechts untereinander (wie Vorlage), Rest auf Folgeseite */
-  var PEND = [], photoY = 0, photoPg = 0, PCX = 180.5, PHH = 33.6, PMAXW = 33.6;
+  var PEND = [], photoY = 0, photoPg = 0, PCX = 181.4, PHH = 29, PMAXW = 30;
   function drawPhotos() {
     while (PEND.length) {
       var ph = PEND[0];
       if (photoY + ph.h > BOTTOM) return;
       try { doc.addImage(ph.img, 'JPEG', PCX - ph.w / 2, photoY, ph.w, ph.h); } catch (e3) {}
-      photoY += ph.h + 2.1; photoPg = doc.getNumberOfPages(); PEND.shift();
+      photoY += ph.h + 1.6; photoPg = doc.getNumberOfPages(); PEND.shift();
     }
   }
   for (var k = 0; k < list.length; k++) {
@@ -3206,34 +3218,38 @@ function gesamtPdf(ids, opts) {
       if (w0 > PMAXW) { w0 = PMAXW; h0 = PMAXW * ipx.height / ipx.width; }
       ph.push({ img: fotos[f], w: w0, h: h0 });
     }
-    var VW = ph.length ? 91.5 : (MR - VX);
+    var VW = ph.length ? 103 : (MR - VX);
     fB(9); var tl = doc.splitTextToSize(mTitel(m), VW);
     fN(7.8);
-    var dl = m.beschreibung ? doc.splitTextToSize(m.beschreibung, VW) : [];
-    var ml = m.massnahme ? doc.splitTextToSize(m.massnahme, VW) : [];
-    var textH = RH * (tl.length + 2 + Math.max(1, dl.length) + Math.max(1, ml.length) + 5) + 2;
-    var photoH = 0; for (var pp = 0; pp < ph.length; pp++) photoH += ph[pp].h + 2.1;
-    var blockH = Math.max(textH, photoH) + 2;
-    if (blockH < BOTTOM - 20) need(blockH); else need(Math.min(textH, 60));
+    var dl = splitP(m.beschreibung, VW), ml = splitP(m.massnahme, VW);
+    var sl = (m.standort || mangelOrt(m)) ? doc.splitTextToSize(m.standort || mangelOrt(m), VW) : [];
+    var zl = m.zustaendig ? doc.splitTextToSize(m.zustaendig, VW) : [];
+    var nZ = 2 + (mInv(m) ? 1 : 0) + (m.frist ? 1 : 0) + (m.arbeitszeit ? 1 : 0); /* Status, Erstellungsdatum + optionale Zeilen */
+    var textH = RH * (tl.length + Math.max(1, sl.length) + zl.length + nZ) + hoehe(dl) + hoehe(ml) + 1;
+    var photoH = 0; for (var pp = 0; pp < ph.length; pp++) photoH += ph[pp].h + 1.6;
+    var blockH = Math.max(textH, photoH) + 1;
+    /* ganzen Eintrag nur dann auf eine neue Seite schieben, wenn er kurz ist - lange Einträge laufen auf der nächsten Seite weiter */
+    if (blockH <= 70) need(blockH); else need(Math.max(RH * (tl.length + 4), ph.length ? ph[0].h + 2 : 0));
     var top = y - 4.0;
     PEND = ph; photoY = top + 0.5; photoPg = 0; drawPhotos();
 
     fB(9); doc.text(isM ? 'Mangel:' : 'Information:', ML, y);
     for (var t = 0; t < tl.length; t++) { doc.text(tl[t], VX, y); y += RH; }
     fN(7.8);
-    rowTxt('Inventar Nr:', mInv(m) ? [String(mInv(m))] : []);
-    rowTxt('Standort:', doc.splitTextToSize(m.standort || mangelOrt(m) || '', VW));
+    /* leere Zeilen (Inventar, Frist, Zuständigkeit, Arbeitszeit) weglassen - spart Platz */
+    if (mInv(m)) rowTxt('Inventar Nr:', [String(mInv(m))]);
+    rowTxt('Standort:', sl);
     rowTxt('Beschreibung:', dl);
     rowTxt('Maßnahme:', ml);
     rowTxt('Status:', [mStatusText(m.status)]);
-    rowTxt('Frist:', m.frist ? [fmtD(m.frist)] : []);
-    rowTxt('Zuständigkeit:', m.zustaendig ? doc.splitTextToSize(m.zustaendig, VW) : []);
+    if (m.frist) rowTxt('Frist:', [fmtD(m.frist)]);
+    if (zl.length) rowTxt('Zuständigkeit:', zl);
     rowTxt('Erstellungsdatum:', m.datum ? [fmtD(m.datum)] : []);
-    rowTxt('Arbeitszeit:', m.arbeitszeit ? [m.arbeitszeit] : []);
+    if (m.arbeitszeit) rowTxt('Arbeitszeit:', [m.arbeitszeit]);
     while (PEND.length) { doc.addPage(); y = 18; photoY = 14; drawPhotos(); }
     y = Math.max(y + 0.8, photoPg === doc.getNumberOfPages() ? photoY - 0.1 : 0);
     if (k < list.length - 1) hline(y);
-    y += 4.0;
+    y += 3.6;
   }
 
   var np = doc.getNumberOfPages(), demo = !isLicensed();
