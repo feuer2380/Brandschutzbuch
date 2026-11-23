@@ -115,8 +115,8 @@ textarea{min-height:80px;resize:vertical}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 /* Brandschutzbuch - lokale Web-App (Janiba Brandschutztechnik GmbH) */
-var APP_VERSION = '2.36';
-var APP_STAND = '18.11.2026 16:30';
+var APP_VERSION = '2.37';
+var APP_STAND = '23.11.2026 09:45';
 var UPD = null;
 function verText() { return 'Version ' + APP_VERSION + ' vom ' + APP_STAND; }
 function verFooter() {
@@ -882,9 +882,30 @@ var FRAGE_NEU = {
 var NEG_FRAGEN_ALT = ['Weist der Behälter Verformungen auf?', 'Werden die Wege durch leicht umstürzbare Lagerungen versperrt?', 'Befinden sich im Lagerraum Elektrogeräte, die nicht ex-geschützt sind?', 'Befinden sich in diesen Bereichen nicht ex-geschützte E-Geräte?', 'Sind bei befestigten Oberflächen, wie Geh- und Radwegen, Rampen, Stützmauern, Einfriedungen und Absturzsicherungen, Risse, Setzungen, Frostschäden, Verformungen oder Unebenheiten vorhanden?', 'Wurde eine Undichtheit der Anlage festgestellt?'];
 var NEG_FRAGEN = [];
 function istNeg(t) { var n = normTxt(t); for (var i = 0; i < NEG_FRAGEN.length; i++) if (normTxt(NEG_FRAGEN[i]) === n) return true; return false; }
-function begNeg(i) { var v = BEG && findById(DB.vorlagen, BEG.vid); return !!(v && istNeg(v.punkte[i])); }
+function begNeg(i) { var v = BEG && begVorlage(findById(DB.vorlagen, BEG.vid)); return !!(v && istNeg(v.punkte[i])); }
 function isHdr(p) { return String(p).charAt(0) === '#'; }
 function hdrText(p) { return String(p).replace(/^#+\s*/, ''); }
+/* Vierteljährliche Begehung in Gebäuden OHNE monatliche Begehung: die monatlichen Fragen kommen mit dazu
+   (Abschnitte mit "Monatlich - ..." gekennzeichnet; Fragen, die es in der Quartals-Checkliste schon gibt, nicht doppelt) */
+function begVorlage(v, g) {
+  if (!v || v.art !== 'vierteljaehrlich') return v;
+  var vs = aktVorlagen(g), mon = null, i;
+  for (i = 0; i < vs.length; i++) if (vs[i].art === 'monatlich') return v;
+  for (i = 0; i < DB.vorlagen.length; i++) if (DB.vorlagen[i].art === 'monatlich') { mon = DB.vorlagen[i]; break; }
+  if (!mon) return v;
+  var schon = {}, p = [], sek = null, sekF = [];
+  for (i = 0; i < v.punkte.length; i++) if (!isHdr(v.punkte[i])) schon[normTxt(v.punkte[i])] = 1;
+  function weg() { if (sekF.length) { p.push('# Monatlich - ' + (sek || 'Allgemein')); p = p.concat(sekF); } sekF = []; }
+  for (i = 0; i < mon.punkte.length; i++) {
+    var t = mon.punkte[i];
+    if (isHdr(t)) { weg(); sek = hdrText(t); continue; }
+    if (!schon[normTxt(t)]) sekF.push(t);
+  }
+  weg();
+  if (!p.length) return v;
+  if (v.punkte.length && !isHdr(v.punkte[0])) p.push('# Vierteljährlich');
+  return { id: v.id, name: v.name, art: v.art, mitMonat: true, punkte: p.concat(v.punkte) };
+}
 function nFragen(v) { var n = 0; for (var i = 0; i < v.punkte.length; i++) if (!isHdr(v.punkte[i])) n++; return n; }
 function defVorlagen() {
   return [
@@ -1789,7 +1810,7 @@ function begRow(b) {
   return '<div class="row" onclick="showBegehung(\'' + b.id + '\')"><div class="m"><div class="t">' + esc(b.vorlageName) + (p ? ' - ' + perLabel(p) : '') + '</div><div class="s">' + fmtD(b.datum) + ', ' + esc(b.pruefer) + (n ? ' - ' + n + (n === 1 ? ' Mangel' : ' Mängel') : '') + '</div></div>' + (b.offen ? pill('p-warn', 'in Arbeit ' + sd.a + '/' + sd.n) : (n ? pill('p-err', n + (n === 1 ? ' Mangel' : ' Mängel')) : pill('p-ok', 'i.O.'))) + '</div>';
 }
 function perTap(vid, p) {
-  var v = findById(DB.vorlagen, vid), s = perStatus(vid, p);
+  var v = begVorlage(findById(DB.vorlagen, vid)), s = perStatus(vid, p);
   if (s.b) { showBegehung(s.b.id); return; }
   var r = perRange(p);
   var h = '<p style="font-size:17px;font-weight:700;margin:12px 0 4px">' + esc(v.name) + '</p><p style="margin:0 0 10px">' + perLabel(p) + ' ' + pill(s.cls, s.k === 'fehlt' ? 'nicht durchgeführt' : s.k === 'faellig' ? 'jetzt fällig' : 'noch nicht fällig') + '</p>' +
@@ -1803,8 +1824,8 @@ function newBegehung() {
   var h = '<p class="small">Welche Begehung möchten Sie durchführen?</p>';
   var AV = aktVorlagen();
   for (var i = 0; i < AV.length; i++) {
-    var v = AV[i], s = begStatus(v);
-    h += '<div class="row" onclick="startBegehung(\'' + v.id + '\')"><div class="m"><div class="t">' + esc(v.name) + '</div><div class="s">' + artLabel(v.art) + ' - ' + nFragen(v) + ' Fragen</div></div>' + pill(s.cls, s.txt) + '</div>';
+    var v = begVorlage(AV[i]), s = begStatus(AV[i]);
+    h += '<div class="row" onclick="startBegehung(\'' + v.id + '\')"><div class="m"><div class="t">' + esc(v.name) + '</div><div class="s">' + artLabel(v.art) + ' - ' + nFragen(v) + ' Fragen' + (v.mitMonat ? ' inkl. monatlich' : '') + '</div></div>' + pill(s.cls, s.txt) + '</div>';
   }
   h += '<div class="small" style="margin-top:12px">Checklisten können unter Einstellungen angepasst werden.</div>';
   modal('Neue Begehung', h, [{ label: 'Abbrechen', fn: closeModal }]);
@@ -1816,7 +1837,7 @@ function begOffenFor(vid, p) {
 }
 function begStand(b) { var a = 0, n = b.punkte.length; for (var i = 0; i < n; i++) if (b.punkte[i].status) a++; return { a: a, n: n }; }
 function startBegehung(vid, per, bid) {
-  var v = findById(DB.vorlagen, vid); if (!v) return;
+  var v = begVorlage(findById(DB.vorlagen, vid)); if (!v) return;
   var cur = isPerArt(v.art) ? (per || perOf(v.art, todayStr())) : '';
   var ex = bid ? findById(DB.begehungen, bid) : (isPerArt(v.art) ? begOffenFor(vid, cur) : null);
   if (ex) cur = begPer(ex) || cur;
@@ -1837,7 +1858,7 @@ function startBegehung(vid, per, bid) {
     BEG.st.push(ap && ap.status ? ap.status : ''); BEG.mk[BEG.st.length - 1] = !!(ap && ap.status && ptMangel(ap));
   }
   var st0 = ex ? begStand(ex) : null;
-  var h = '<div class="small" style="margin-top:8px">' + esc(curGeb().name) + ' - ' + artLabel(v.art) + ' - ' + nFragen(v) + ' Fragen</div>' +
+  var h = '<div class="small" style="margin-top:8px">' + esc(curGeb().name) + ' - ' + artLabel(v.art) + ' - ' + nFragen(v) + ' Fragen' + (v.mitMonat ? ' (inkl. monatliche Fragen)' : '') + '</div>' +
     (ex ? '<div class="hint" style="margin-top:10px">Weiter ausfüllen: ' + st0.a + ' von ' + st0.n + ' Fragen sind bereits beantwortet. ' + (ex.offen ? 'Es werden nur noch die offenen Fragen angezeigt.' : '') + ' Offene Fragen können Sie jetzt oder später beantworten.</div>' : '') +
     '<div class="two"><div><label>Datum der Begehung</label><input id="b_d" type="date" value="' + todayStr() + '"></div><div><label>Uhrzeit</label><input id="b_z" type="time" value="' + nowTime() + '"></div></div>' +
     (ex && st0.a ? '<label class="chk"><input type="checkbox" id="b_dalle">Dieses Datum auch für die ' + st0.a + ' bereits beantworteten Fragen übernehmen</label>' : '') +
@@ -1911,7 +1932,7 @@ function begSec(i, s) {
 function begAllOk() { if (!BEG) return; for (var i = 0; i < BEG.st.length; i++) if (BEG.st[i] === '') begSet(i, begNeg(i) ? 'mangel' : 'ok'); }
 function saveBegehung(zwischen) {
   if (!BEG) return;
-  var v = findById(DB.vorlagen, BEG.vid), offen = 0, first = -1, beantw = 0;
+  var v = begVorlage(findById(DB.vorlagen, BEG.vid)), offen = 0, first = -1, beantw = 0;
   for (var i = 0; i < BEG.st.length; i++) { if (BEG.st[i] === '') { offen++; if (first < 0) first = i; } else if (BEG.st[i] !== 'hdr') beantw++; }
   var pr = val('b_pr'); if (!pr) { toast('Bitte angeben, wer die Begehung durchgeführt hat'); return; }
   if (offen && !zwischen) {
@@ -3033,7 +3054,7 @@ function makeReport(o) {
 }
 /* Leere Checkliste zum Ausdrucken - im Stil des gedruckten Brandschutzbuchs */
 function vorlagePdf(vid, per) {
-  var v = findById(DB.vorlagen, vid); if (!v) return;
+  var v = begVorlage(findById(DB.vorlagen, vid)); if (!v) return;
   var doc = newDoc(); if (!doc) return;
   var g = curGeb();
   var W = 210, H = 297, ML = 20, MR = 24, y = 18;
