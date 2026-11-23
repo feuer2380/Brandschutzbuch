@@ -115,8 +115,8 @@ textarea{min-height:80px;resize:vertical}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 /* Brandschutzbuch - lokale Web-App (Janiba Brandschutztechnik GmbH) */
-var APP_VERSION = '2.37';
-var APP_STAND = '23.11.2026 10:40';
+var APP_VERSION = '2.38';
+var APP_STAND = '23.11.2026 12:15';
 var UPD = null;
 function verText() { return 'Version ' + APP_VERSION + ' vom ' + APP_STAND; }
 function verFooter() {
@@ -1677,12 +1677,17 @@ function uebEdit(id, typ) {
     '<label>Ergebnis</label><div class="seg"><button id="u_eok" class="' + (UEB.ergebnis !== 'wiederholen' ? 'on-ok' : '') + '" onclick="uebErg(\'ok\')">in Ordnung</button><button id="u_ew" class="' + (UEB.ergebnis === 'wiederholen' ? 'on-err' : '') + '" onclick="uebErg(\'wiederholen\')">Wiederholung nötig</button></div>' +
     '<div class="small" style="line-height:1.4;margin-top:4px">Bei „Wiederholung nötig“ wird die nächste Übung in 3 Monaten fällig.</div>' +
     '<div class="grp">Teilnehmer</div><div id="u_tl"></div>' +
-    '<div class="btns"><button class="btn sm" onclick="uebTn()">+ Teilnehmer</button><button class="btn sm" onclick="uebTnListe()">Mehrere Namen einfügen</button></div>' +
+    '<div class="btns"><button class="btn sm" onclick="uebTn()">+ Teilnehmer</button><button class="btn sm" onclick="uebTnListe()">Namensliste einfügen</button>' +
+    '<label class="btn sm" style="margin:0;color:var(--tx);font-weight:600">Aus Datei (Excel/CSV)<input type="file" accept=".xlsx,.xls,.csv,.txt,text/csv,text/plain,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none" onchange="uebTnDatei(this)"></label>' +
+    '<button class="btn sm" onclick="uebTnFrueher()">Von früherer Übung</button></div>' +
+    '<div id="u_tnbox"></div>' +
+    '<div class="grp" style="margin-top:14px">Unterschriebene Teilnehmerliste (Papier)</div><div class="small" style="line-height:1.4">Liste auf Papier unterschreiben lassen und hier abfotografieren - die Fotos kommen als eigene Seiten ins PDF.</div><div id="u_lf"></div>' +
+    '<label class="btn sm" style="margin-top:6px;color:var(--tx);font-weight:600;display:inline-block">+ Liste fotografieren<input type="file" accept="image/*" multiple style="display:none" onchange="uebLfAdd(this)"></label>' +
     '<label>Unterschrift Übungsleiter</label><div id="usw_lei">' + (UEB.sigLeiter ? '<img src="' + UEB.sigLeiter + '" style="max-width:240px;width:100%;background:#fff;border-radius:8px;display:block"><button class="btn sm" style="margin-top:6px" onclick="uebSigNeu(\'lei\')">Neu unterschreiben</button>' : '<canvas id="usc_lei" class="sig" style="height:110px"></canvas>') + '</div>' +
     (u ? '<button class="btn full" style="margin-top:18px;color:var(--red2)" onclick="uebDel(\'' + u.id + '\')">Protokoll löschen</button>' : '');
   modal(T.l, h, [{ label: 'Speichern', fn: function () { uebSave(false); } }, { label: 'PDF / Mail', cls: 'pri', fn: function () { uebSave(true); } }], u ? null : 'Eingaben verwerfen?');
   if ($('usc_lei')) USIG.lei = initSig($('usc_lei'));
-  uebTlRender();
+  uebTlRender(); uebLfRender();
   if (rm) { $('u_alarm').onchange = $('u_ger').onchange = uebDauer; uebDauer(); }
   micAttach(['u_beo']);
 }
@@ -1713,11 +1718,115 @@ function uebTnWeg(i) { uebTlSammeln(); UEB.teilnehmer.splice(i, 1); var ns = {};
 function uebTnSig(i) { uebTlSammeln(); $('u_tsw' + i).innerHTML = '<canvas id="usc_t' + i + '" class="sig" style="height:90px;margin-top:6px"></canvas>'; USIG['t' + i] = initSig($('usc_t' + i)); }
 function uebTnListe() {
   uebTlSammeln();
-  var t = prompt('Namen einfügen (je Zeile oder mit Komma getrennt):', ''); if (!t) return;
-  var ns = t.split(/[\n,;]+/);
-  for (var i = 0; i < ns.length; i++) { var n = ns[i].replace(/^\s+|\s+$/g, ''); if (n) UEB.teilnehmer.push({ n: n }); }
-  uebTlRender();
+  $('u_tnbox').innerHTML = '<div style="background:var(--bg2,#f3f3f3);border-radius:10px;padding:10px;margin-top:8px"><div class="small" style="line-height:1.4;margin-bottom:6px">Namen untereinander einfügen (z. B. aus Excel, Word oder einer E-Mail kopieren). Eine Zeile = ein Teilnehmer.</div>' +
+    '<textarea id="u_tnliste" style="min-height:140px" placeholder="Maria Muster&#10;Hans Huber&#10;..."></textarea>' +
+    '<div class="btns"><button class="btn sm" onclick="$(\'u_tnbox\').innerHTML=\'\'">Abbrechen</button><button class="btn sm pri" onclick="uebTnListeOk()">Übernehmen</button></div></div>';
+  $('u_tnliste').focus();
 }
+/* Text in Namen zerlegen: je Zeile ein Name; Tabulatoren (Excel-Spalten) werden zu Leerzeichen, Nummerierungen entfernt.
+   Nur wenn alles in einer Zeile steht, wird auch bei Komma/Strichpunkt getrennt. */
+function uebNamenAusText(t) {
+  t = String(t || '').replace(/\r/g, '');
+  var z = t.split('\n'); if (z.length < 2) z = t.split(/[;,]+/);
+  var out = [];
+  for (var i = 0; i < z.length; i++) {
+    var zl = z[i];
+    if (zl.indexOf('\t') >= 0) zl = uebZelleName(zl.split('\t'));
+    var n = zl.replace(/^\s*\d+\s*[\.\)]\s*/, '').replace(/\s{2,}/g, ' ').replace(/^\s+|\s+$/g, '');
+    if (n && !/^(name|namen|vorname|nachname|teilnehmer|nr\.?)( |$)/i.test(n)) out.push(n);
+  }
+  return out;
+}
+function uebNamenDazu(ns) {
+  uebTlSammeln();
+  var da = {}, neu = 0, tl = UEB.teilnehmer;
+  for (var i = 0; i < tl.length; i++) if (tl[i].n) da[normTxt(tl[i].n)] = 1;
+  /* leere Zeilen am Ende vorher entfernen */
+  while (tl.length && !tl[tl.length - 1].n && !tl[tl.length - 1].sig) tl.pop();
+  for (var j = 0; j < ns.length; j++) if (!da[normTxt(ns[j])]) { tl.push({ n: ns[j] }); da[normTxt(ns[j])] = 1; neu++; }
+  uebTlRender();
+  toast(neu ? neu + ' Teilnehmer übernommen' : 'Keine neuen Namen gefunden');
+}
+function uebTnListeOk() { var ns = uebNamenAusText(val('u_tnliste')); $('u_tnbox').innerHTML = ''; uebNamenDazu(ns); }
+function uebTnFrueher() {
+  var l = (DB.uebungen || []).filter(function (x) { return x.gid === UEB.gid && x.id !== UEB.id && (x.teilnehmer || []).length; });
+  if (!l.length) { toast('Keine frühere Übung mit Teilnehmern in diesem Gebäude'); return; }
+  l.sort(function (a, b) { return a.datum < b.datum ? 1 : -1; });
+  var h = '<div style="background:var(--bg2,#f3f3f3);border-radius:10px;padding:10px;margin-top:8px"><div class="small" style="margin-bottom:6px">Namen übernehmen von (Unterschriften werden nicht übernommen):</div>';
+  for (var i = 0; i < l.length && i < 6; i++) h += '<button class="btn sm full" style="margin-bottom:6px;text-align:left" onclick="uebTnFrueherOk(\'' + l[i].id + '\')">' + fmtD(l[i].datum) + ' - ' + esc(uebTyp(l[i].typ).l) + ' (' + l[i].teilnehmer.length + ' Namen)</button>';
+  $('u_tnbox').innerHTML = h + '<button class="btn sm" onclick="$(\'u_tnbox\').innerHTML=\'\'">Abbrechen</button></div>';
+}
+function uebTnFrueherOk(id) { var u = findById(DB.uebungen, id); $('u_tnbox').innerHTML = ''; if (!u) return; uebNamenDazu(u.teilnehmer.map(function (t) { return t.n; }).filter(function (n) { return n; })); }
+/* Excel- / CSV-Datei einlesen */
+function uebTnDatei(input) {
+  var f = input.files && input.files[0]; input.value = ''; if (!f) return;
+  var nm = (f.name || '').toLowerCase();
+  if (/\.(xlsx|xls)$/.test(nm)) {
+    toast('Excel-Datei wird gelesen ...');
+    ladeXlsx(function (ok) {
+      if (!ok) { info('Excel-Datei', 'Zum Lesen von Excel-Dateien wird einmalig Internet benötigt. Alternativ in Excel die Namen markieren, kopieren und bei „Namensliste einfügen“ einfügen.'); return; }
+      var rd = new FileReader();
+      rd.onload = function () {
+        try {
+          var wb = XLSX.read(new Uint8Array(rd.result), { type: 'array' }), ws = wb.Sheets[wb.SheetNames[0]];
+          uebNamenDazu(uebNamenAusZeilen(XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '' })));
+        } catch (e) { info('Excel-Datei', 'Die Datei konnte nicht gelesen werden.'); }
+      };
+      rd.readAsArrayBuffer(f);
+    });
+    return;
+  }
+  var r2 = new FileReader();
+  r2.onload = function () {
+    var t = String(r2.result || ''), z = t.replace(/\r/g, '').split('\n'), rows = [];
+    var sep = t.indexOf(';') >= 0 ? ';' : (t.indexOf('\t') >= 0 ? '\t' : ',');
+    for (var i = 0; i < z.length; i++) rows.push(z[i].split(sep).map(function (c) { return c.replace(/^\s*"|"\s*$/g, ''); }));
+    uebNamenDazu(uebNamenAusZeilen(rows));
+  };
+  r2.readAsText(f);
+}
+/* Tabellenzeilen -> Namen. Erkennt Spalten "Name", "Vorname", "Nachname"/"Familienname"; sonst die ersten Textspalten jeder Zeile. */
+function uebNamenAusZeilen(rows) {
+  var kv = -1, kn = -1, kname = -1, start = 0, out = [], i, c;
+  for (i = 0; i < Math.min(rows.length, 5) && kv < 0 && kn < 0 && kname < 0; i++) {
+    for (c = 0; c < rows[i].length; c++) {
+      var h = String(rows[i][c] || '').toLowerCase().replace(/^\s+|\s+$/g, '');
+      if (h === 'vorname') kv = c; else if (h === 'nachname' || h === 'familienname' || h === 'zuname') kn = c; else if (h === 'name' || h === 'namen' || h === 'teilnehmer' || h === 'name, vorname' || h === 'vor- und nachname') kname = c;
+    }
+    if (kv >= 0 || kn >= 0 || kname >= 0) start = i + 1;
+  }
+  for (i = start; i < rows.length; i++) {
+    var r = rows[i] || [], n = '';
+    if (kv >= 0 || kn >= 0) n = [kv >= 0 ? r[kv] : '', kn >= 0 ? r[kn] : ''].join(' ');
+    else if (kname >= 0) n = r[kname];
+    else n = uebZelleName(r);
+    n = String(n || '').replace(/\s{2,}/g, ' ').replace(/^\s+|\s+$/g, '');
+    if (n) out.push(n);
+  }
+  return uebNamenAusText(out.join('\n'));
+}
+/* aus einer Tabellenzeile den Namen nehmen: erste Textspalte; enthält sie nur ein Wort (Vorname/Nachname getrennt), auch die zweite */
+function uebZelleName(r) {
+  var tx = [];
+  for (var c = 0; c < r.length && tx.length < 2; c++) { var v = String(r[c] || '').replace(/^\s+|\s+$/g, ''); if (v && !/^[\d\.\/:\-\s]+$/.test(v) && v.indexOf('@') < 0) tx.push(v); }
+  return tx.length && tx[0].indexOf(' ') >= 0 ? tx[0] : tx.join(' ');
+}
+function ladeXlsx(cb) {
+  if (window.XLSX) { cb(true); return; }
+  var sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  sc.onload = function () { cb(!!window.XLSX); }; sc.onerror = function () { cb(false); }; document.head.appendChild(sc);
+}
+/* Fotos der unterschriebenen Papierliste */
+function uebLfRender() {
+  var e = $('u_lf'); if (!e) return; var l = UEB.listeFotos || [], h = '';
+  for (var i = 0; i < l.length; i++) h += '<div style="display:inline-block;position:relative;margin:6px 6px 0 0"><img src="' + l[i] + '" style="height:90px;border-radius:6px;border:1px solid var(--bd)"><button class="btn sm" style="position:absolute;top:2px;right:2px;padding:2px 8px;color:var(--red2)" onclick="uebLfWeg(' + i + ')">✕</button></div>';
+  e.innerHTML = h;
+}
+function uebLfAdd(input) {
+  var fs = input.files ? [].slice.call(input.files) : []; input.value = ''; if (!UEB.listeFotos) UEB.listeFotos = [];
+  (function next() { var f = fs.shift(); if (!f) { uebLfRender(); return; } readFoto(f, function (d) { if (d) UEB.listeFotos.push(d); next(); }, 1600); })();
+}
+function uebLfWeg(i) { UEB.listeFotos.splice(i, 1); uebLfRender(); }
 function uebSave(pdf) {
   if (!UEB) return; uebTlSammeln();
   var u = UEB, T = uebTyp(u.typ);
@@ -1778,7 +1887,9 @@ function uebPdf(u, leer) {
   fB(10.5); doc.text('Teilnehmer', L, y); y += 3;
   var tl = u.teilnehmer || [], n = Math.max(leer ? 20 : tl.length, rm && !leer ? tl.length : (leer ? 20 : Math.max(tl.length, 1))), rh = 7.5;
   function tKopf() { doc.setFillColor(238, 238, 238); doc.rect(L, y, R - L, 7, 'F'); doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.2); doc.rect(L, y, R - L, 7); fB(8.5); doc.text('Nr.', L + 2, y + 4.8); doc.text('Name', L + 14, y + 4.8); doc.text('Unterschrift', L + 105, y + 4.8); doc.line(L + 11, y, L + 11, y + 7); doc.line(L + 102, y, L + 102, y + 7); y += 7; }
-  if (n) tKopf(); else { fN(9); doc.text(u.personen ? u.personen + ' Personen (siehe Ablauf)' : 'keine Teilnehmerliste geführt', L, y + 5); y += 8; }
+  var lf = leer ? [] : (u.listeFotos || []);
+  if (!tl.length && lf.length && !leer) n = 0;
+  if (n) tKopf(); else { fN(9); doc.text(lf.length ? 'siehe beigefügte unterschriebene Teilnehmerliste (' + lf.length + (lf.length === 1 ? ' Seite)' : ' Seiten)') : (u.personen ? u.personen + ' Personen (siehe Ablauf)' : 'keine Teilnehmerliste geführt'), L, y + 5); y += 8; }
   for (var t = 0; t < n; t++) {
     if (y + rh > H - 40) { doc.addPage(); kopf(); y = 40; tKopf(); }
     doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.2); doc.rect(L, y, R - L, rh); doc.line(L + 11, y, L + 11, y + rh); doc.line(L + 102, y, L + 102, y + rh);
@@ -1790,6 +1901,11 @@ function uebPdf(u, leer) {
   y += 16; doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.3); doc.line(L, y, L + 60, y); doc.line(R - 75, y, R, y);
   sig(u.sigLeiter, R - 72, y - 0.5, 50, 13);
   fN(7.5); doc.text('Ort, Datum', L, y + 3.8); doc.text('Unterschrift Übungsleiter' + (u.leiter ? ' (' + u.leiter + ')' : ''), R - 75, y + 3.8);
+  if (tl.length && lf.length) { fN(8); doc.text('Zusätzlich beigefügt: unterschriebene Teilnehmerliste (' + lf.length + (lf.length === 1 ? ' Seite)' : ' Seiten)'), L, y + 10); }
+  for (var lfi = 0; lfi < lf.length; lfi++) {
+    doc.addPage(); kopf(); fB(12); doc.text('Teilnehmerliste' + (lf.length > 1 ? ' (' + (lfi + 1) + '/' + lf.length + ')' : ''), L, 40);
+    try { var lp = doc.getImageProperties(lf[lfi]), mw = R - L, mh = H - 62, iw = mw, ih = mw * lp.height / lp.width; if (ih > mh) { ih = mh; iw = mh * lp.width / lp.height; } doc.addImage(lf[lfi], 'JPEG', L + (mw - iw) / 2, 45, iw, ih); } catch (eL) {}
+  }
   var np = doc.getNumberOfPages();
   for (var pg = 1; pg <= np; pg++) { doc.setPage(pg); fN(6.5); doc.setTextColor(90, 90, 90); doc.text(T.t + (g && !leer ? ' - ' + g.name : ''), L, H - 9); doc.text('Seite ' + pg + ' / ' + np, R, H - 9, { align: 'right' }); if (!isLicensed()) demoMark(doc); }
   var fname = leer ? T.l.split(' /')[0] + ' leer.pdf' : T.l.split(' /')[0] + ' ' + u.datum + ' ' + niceName(g.name) + '.pdf';
