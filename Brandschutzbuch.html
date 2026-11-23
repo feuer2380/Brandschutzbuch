@@ -116,7 +116,7 @@ textarea{min-height:80px;resize:vertical}
 <script>
 /* Brandschutzbuch - lokale Web-App (Janiba Brandschutztechnik GmbH) */
 var APP_VERSION = '2.37';
-var APP_STAND = '23.11.2026 09:45';
+var APP_STAND = '23.11.2026 10:40';
 var UPD = null;
 function verText() { return 'Version ' + APP_VERSION + ' vom ' + APP_STAND; }
 function verFooter() {
@@ -191,11 +191,12 @@ var KATS = [
   { k: 'Räumungsübung', i: 12 },
   { k: 'Brandschutz-Unterweisung', i: 12 },
   { k: 'Brandschutzordnung / Pläne aktualisieren', i: 12 },
-  { k: 'Spielgeräte / Spielplatz', i: 12 }
+  { k: 'Spielgeräte / Spielplatz', i: 12 },
+  { k: 'Rauchwarnmelder (Heimrauchmelder)', i: 12 }
 ];
 var PRIOS = [{ k: 'hoch', l: 'Hoch', c: '#dc2626' }, { k: 'mittel', l: 'Mittel', c: '#f59e0b' }, { k: 'gering', l: 'Gering', c: '#16a34a' }];
 
-var VORLAGEN_VER = 9;
+var VORLAGEN_VER = 10;
 /* Zeilen mit # am Anfang sind Abschnitts-Überschriften (z. B. Pos. 1) */
 function jahresBegehung() {
   return { id: uid(), name: 'Jährliche Begehung', art: 'jaehrlich', punkte: [
@@ -467,7 +468,14 @@ function jahresBegehung() {
     'Wurde die Dichtheit von Sammelanlagen (z. B. Silos, Jauchengruben) erfolgreich überprüft?',
     'Werden Einleitungsbescheide und vorgeschriebene Grenzwerte konsequent eingehalten?',
     'Wurde die gesetzliche Wartung von Mineralöl- und Fettabscheidern durch eine Fachfirma durchgeführt?',
-    'Erfolgt die regelmäßige Entleerung und fachgerechte Entsorgung von Auffangbecken/Rinnen?'
+    'Erfolgt die regelmäßige Entleerung und fachgerechte Entsorgung von Auffangbecken/Rinnen?',
+    '# Pos. 113 – Evakuierung hilfsbedürftiger Personen',
+    'Ist festgelegt, wer im Brandfall Kinder, Bewohner und Personen mit Einschränkungen begleitet bzw. rettet?',
+    'Gibt es eine aktuelle Liste der Personen, die bei der Evakuierung Hilfe brauchen (z. B. bettlägerig, Rollstuhl)?',
+    'Sind Evakuierungshilfen (z. B. Rettungstuch, Evakuierungsstuhl) vorhanden, bekannt und einsatzbereit?',
+    'Ist die Evakuierung auch bei Mindestbesetzung (Nacht, Wochenende) sichergestellt?',
+    'Ist geregelt, wie am Sammelplatz die Vollzähligkeit kontrolliert wird (z. B. Anwesenheitsliste)?',
+    'Sind Bereiche für die waagrechte Evakuierung (sicherer Nachbarbrandabschnitt) festgelegt und bekannt?'
   ] };
 }
 function quartalBegehung() {
@@ -580,7 +588,25 @@ function quartalBegehung() {
     '# Pos. 84 – Hubstapler, Schlepper, Kfz',
     'Werden in ex-gefährdeten Bereichen ausschließlich zugelassene ex-geschützte Fahrzeuge eingesetzt u. abgestellt?',
     '# Pos. 85 – Fernüberwachungsanlagen',
-    'Wurde die Funktionsprüfung u. Wartung von Fernüberwachungsanlagen (z. B. Hebeanlagen) durchgeführt?'
+    'Wurde die Funktionsprüfung u. Wartung von Fernüberwachungsanlagen (z. B. Hebeanlagen) durchgeführt?',
+    '# Pos. 109 – Rauchwarnmelder (Heimrauchmelder)',
+    'Sind in allen erforderlichen Räumen (Aufenthalts-, Schlaf- und Gruppenräume, Fluchtwege) Rauchwarnmelder vorhanden?',
+    'Gibt es ein Verzeichnis der Rauchwarnmelder mit Standort und Einbaudatum?',
+    'Sind die Melder unbeschädigt, sauber und nicht überklebt, überstrichen oder abgedeckt?',
+    'Sind die Melder richtig montiert (an der Decke, frei von Hindernissen wie Lampen oder Regalen)?',
+    'Wurde die Funktionskontrolle mit der Prüftaste durchgeführt und ist der Alarmton deutlich hörbar?',
+    'Sind alle Melder frei von Störungs- oder Batteriewarnungen (Piepen, Blinken)?',
+    'Lösen bei vernetzten Meldern beim Test alle verbundenen Melder gemeinsam aus?',
+    'Wurde die jährliche Wartung der Rauchwarnmelder durchgeführt und dokumentiert?',
+    'Ist das Austauschdatum der Melder (in der Regel 10 Jahre ab Einbau) noch nicht überschritten?',
+    '# Pos. 110 – Küchen und Teeküchen',
+    'Werden die Fettfilter der Dunstabzugshauben regelmäßig gereinigt bzw. getauscht?',
+    'Wird die Reinigung der Küchenabluftleitungen fristgerecht durch eine Fachfirma durchgeführt und dokumentiert?',
+    'Ist eine Löschdecke griffbereit in der Nähe des Herdes angebracht?',
+    'Ist ein Fettbrandlöscher (Brandklasse F) vorhanden, wenn mit Fett oder Öl gekocht wird (z. B. Fritteuse)?',
+    'Sind Herd, Fritteuse und Umgebung frei von Fettablagerungen und brennbaren Gegenständen?',
+    'Werden Kochgeräte nur unter Aufsicht betrieben und nach Gebrauch abgeschaltet?',
+    'Sind Not-Aus und Gasabsperrung der Küche gekennzeichnet und frei zugänglich?'
   ] };
 }
 /* frühere "Tägliche Kontrolle" - wird jetzt monatlich als erstes Kapitel der Monatlichen Begehung geprüft */
@@ -857,7 +883,22 @@ function monatsBegehung() {
     'Ist der Wirkungsgrad gegeben?',
     'Ist die Befestigung der Lüftungsanlage in Ordnung?',
     'Ist die Anlage dicht (keine Undichtheit festgestellt)?',
-    'Wird eine regelmäßige Funktionsprüfung durchgeführt?'
+    'Wird eine regelmäßige Funktionsprüfung durchgeführt?',
+    '# Pos. 111 – Akkus, E-Bikes und E-Scooter',
+    'Werden E-Bikes, E-Scooter und Akkus nicht in Fluchtwegen, Stiegenhäusern oder Gängen abgestellt oder geladen?',
+    'Erfolgt das Laden nur an dafür vorgesehenen Plätzen in nicht brennbarer Umgebung?',
+    'Werden nur Original- bzw. vom Hersteller freigegebene Ladegeräte verwendet?',
+    'Sind die Akkus frei von sichtbaren Schäden (aufgebläht, verformt, beschädigtes Gehäuse, Überhitzung)?',
+    'Wird auf unbeaufsichtigtes Laden über Nacht bzw. außerhalb der Betriebszeit verzichtet?',
+    'Werden Elektro-Rollstühle und Elektromobile so abgestellt und geladen, dass Fluchtwege frei bleiben?',
+    'Werden beschädigte oder ausgediente Akkus sicher gelagert und fachgerecht entsorgt?',
+    '# Pos. 112 – Dekorationen, Kerzen und Bastelarbeiten',
+    'Sind Fluchtwege und Stiegenhäuser frei von brennbarer Dekoration?',
+    'Sind Bastelarbeiten und Papierdekoration nicht an Brandschutztüren, an Decken oder nahe an Leuchten und Wärmequellen angebracht?',
+    'Werden Kerzen und Adventkränze nur unter Aufsicht und auf nicht brennbarer Unterlage verwendet?',
+    'Werden ausgetrocknete Christbäume und Adventkränze rechtzeitig entfernt?',
+    'Sind Lichterketten und Dekobeleuchtung unbeschädigt und für den Einsatzort geeignet?',
+    'Ist Dekorationsmaterial, wo vorgeschrieben, schwer entflammbar?'
   ]) };
 }
 /* Fragen, bei denen "Ja" der Mangel ist (z. B. "Weist der Behälter Verformungen auf?") */
@@ -4082,6 +4123,23 @@ function init() {
         /* Fragen positiv formulieren: Ja = in Ordnung, Nein = Mangel */
         var fn = {}; for (var fk in FRAGE_NEU) fn[normTxt(fk)] = FRAGE_NEU[fk];
         for (var fv = 0; fv < DB.vorlagen.length; fv++) for (var fp = 0; fp < DB.vorlagen[fv].punkte.length; fp++) { var nt = fn[normTxt(DB.vorlagen[fv].punkte[fp])]; if (nt) DB.vorlagen[fv].punkte[fp] = nt; }
+      }
+      if ((DB.settings.vorlagenVer || 1) < 10) {
+        /* wiederhergestellte Abschnitte (Rauchwarnmelder, Küchen, Akkus/E-Scooter, Dekoration, Evakuierung) auch in selbst geänderte Checklisten einfügen */
+        for (var nv = 0; nv < std.length; nv++) {
+          var ev = null; for (var nw = 0; nw < DB.vorlagen.length; nw++) if (DB.vorlagen[nw].name === std[nv].name) ev = DB.vorlagen[nw];
+          if (!ev || !ev.geaendert) continue;
+          var hd = {}; for (var nh = 0; nh < ev.punkte.length; nh++) if (isHdr(ev.punkte[nh])) hd[normTxt(hdrText(ev.punkte[nh]))] = 1;
+          var neuP = [], an = false;
+          for (var np = 0; np < std[nv].punkte.length; np++) {
+            var tp = std[nv].punkte[np];
+            if (isHdr(tp)) an = /^Pos\. (109|110|111|112|113) /.test(hdrText(tp)) && !hd[normTxt(hdrText(tp))];
+            if (an) neuP.push(tp);
+          }
+          if (!neuP.length) continue;
+          var ei = -1; for (var nx = 0; nx < ev.punkte.length; nx++) if (normTxt(ev.punkte[nx]) === normTxt('# Eigene Fragen')) ei = nx;
+          if (ei < 0) ev.punkte = ev.punkte.concat(neuP); else ev.punkte = ev.punkte.slice(0, ei).concat(neuP, ev.punkte.slice(ei));
+        }
       }
       DB.settings.vorlagenVer = VORLAGEN_VER; save('vorlagen'); save('settings');
     }
