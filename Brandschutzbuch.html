@@ -115,8 +115,8 @@ textarea{min-height:80px;resize:vertical}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 /* Brandschutzbuch - lokale Web-App (Janiba Brandschutztechnik GmbH) */
-var APP_VERSION = '2.38';
-var APP_STAND = '23.11.2026 12:15';
+var APP_VERSION = '2.39';
+var APP_STAND = '23.11.2026 14:50';
 var UPD = null;
 function verText() { return 'Version ' + APP_VERSION + ' vom ' + APP_STAND; }
 function verFooter() {
@@ -1682,7 +1682,8 @@ function uebEdit(id, typ) {
     '<button class="btn sm" onclick="uebTnFrueher()">Von früherer Übung</button></div>' +
     '<div id="u_tnbox"></div>' +
     '<div class="grp" style="margin-top:14px">Unterschriebene Teilnehmerliste (Papier)</div><div class="small" style="line-height:1.4">Liste auf Papier unterschreiben lassen und hier abfotografieren - die Fotos kommen als eigene Seiten ins PDF.</div><div id="u_lf"></div>' +
-    '<label class="btn sm" style="margin-top:6px;color:var(--tx);font-weight:600;display:inline-block">+ Liste fotografieren<input type="file" accept="image/*" multiple style="display:none" onchange="uebLfAdd(this)"></label>' +
+    '<div class="btns"><button class="btn sm" onclick="$(\'u_lfin\').click()">📷 Liste fotografieren / Foto wählen</button></div>' +
+    '<input id="u_lfin" type="file" accept="image/*" multiple style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0" onchange="uebLfAdd(this)">' +
     '<label>Unterschrift Übungsleiter</label><div id="usw_lei">' + (UEB.sigLeiter ? '<img src="' + UEB.sigLeiter + '" style="max-width:240px;width:100%;background:#fff;border-radius:8px;display:block"><button class="btn sm" style="margin-top:6px" onclick="uebSigNeu(\'lei\')">Neu unterschreiben</button>' : '<canvas id="usc_lei" class="sig" style="height:110px"></canvas>') + '</div>' +
     (u ? '<button class="btn full" style="margin-top:18px;color:var(--red2)" onclick="uebDel(\'' + u.id + '\')">Protokoll löschen</button>' : '');
   modal(T.l, h, [{ label: 'Speichern', fn: function () { uebSave(false); } }, { label: 'PDF / Mail', cls: 'pri', fn: function () { uebSave(true); } }], u ? null : 'Eingaben verwerfen?');
@@ -1719,6 +1720,9 @@ function uebTnSig(i) { uebTlSammeln(); $('u_tsw' + i).innerHTML = '<canvas id="u
 function uebTnListe() {
   uebTlSammeln();
   $('u_tnbox').innerHTML = '<div style="background:var(--bg2,#f3f3f3);border-radius:10px;padding:10px;margin-top:8px"><div class="small" style="line-height:1.4;margin-bottom:6px">Namen untereinander einfügen (z. B. aus Excel, Word oder einer E-Mail kopieren). Eine Zeile = ein Teilnehmer.</div>' +
+    '<button class="btn sm" style="margin-bottom:8px" onclick="$(\'u_ocrin\').click()">📷 Namen von Foto lesen</button>' +
+    '<input id="u_ocrin" type="file" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0" onchange="uebOcr(this)">' +
+    '<div id="u_ocrst" class="small" style="margin-bottom:6px"></div>' +
     '<textarea id="u_tnliste" style="min-height:140px" placeholder="Maria Muster&#10;Hans Huber&#10;..."></textarea>' +
     '<div class="btns"><button class="btn sm" onclick="$(\'u_tnbox\').innerHTML=\'\'">Abbrechen</button><button class="btn sm pri" onclick="uebTnListeOk()">Übernehmen</button></div></div>';
   $('u_tnliste').focus();
@@ -1810,6 +1814,38 @@ function uebZelleName(r) {
   var tx = [];
   for (var c = 0; c < r.length && tx.length < 2; c++) { var v = String(r[c] || '').replace(/^\s+|\s+$/g, ''); if (v && !/^[\d\.\/:\-\s]+$/.test(v) && v.indexOf('@') < 0) tx.push(v); }
   return tx.length && tx[0].indexOf(' ') >= 0 ? tx[0] : tx.join(' ');
+}
+/* Texterkennung: Namen von einem Foto einer (gedruckten oder deutlich geschriebenen) Liste lesen - braucht Internet */
+function uebOcr(input) {
+  var f = input.files && input.files[0]; input.value = ''; if (!f) return;
+  var st = $('u_ocrst');
+  function status(t) { if (st) st.innerHTML = t; }
+  status('Foto wird vorbereitet ...');
+  readFoto(f, function (d) {
+    if (!d) { status(''); return; }
+    status('Texterkennung wird geladen (beim ersten Mal ca. 10-20 Sekunden) ...');
+    ladeOcr(function (ok) {
+      if (!ok) { status('<span style="color:var(--red2)">Texterkennung nicht verfügbar - bitte Internetverbindung prüfen.</span>'); return; }
+      var w = null;
+      Tesseract.createWorker('deu', 1, { logger: function (m) { if (m && m.status === 'recognizing text') status('Namen werden gelesen ... ' + Math.round((m.progress || 0) * 100) + ' %'); } })
+        .then(function (wk) { w = wk; return w.recognize(d); })
+        .then(function (r) {
+          var t = (r && r.data && r.data.text) || '', z = t.split('\n'), out = [];
+          for (var i = 0; i < z.length; i++) {
+            var n = z[i].replace(/[|_\[\]{}<>~=*#"“”„]+/g, ' ').replace(/^\s*\d+\s*[\.\)]?\s*/, '').replace(/\s{2,}/g, ' ').replace(/^\s+|\s+$/g, '');
+            if (n.replace(/[^A-Za-zÄÖÜäöüß]/g, '').length >= 3) out.push(n);
+          }
+          var ta = $('u_tnliste'); if (ta) ta.value = (ta.value ? ta.value.replace(/\s+$/, '') + '\n' : '') + out.join('\n');
+          status(out.length ? '<b>' + out.length + ' Zeilen erkannt</b> - bitte kontrollieren, Falsches löschen, dann „Übernehmen“.' : 'Keine Namen erkannt - Foto gerade und gut beleuchtet aufnehmen.');
+          if (w) w.terminate();
+        })['catch'](function () { status('<span style="color:var(--red2)">Texterkennung fehlgeschlagen.</span>'); try { if (w) w.terminate(); } catch (e) {} });
+    });
+  }, 2000);
+}
+function ladeOcr(cb) {
+  if (window.Tesseract) { cb(true); return; }
+  var sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+  sc.onload = function () { cb(!!window.Tesseract); }; sc.onerror = function () { cb(false); }; document.head.appendChild(sc);
 }
 function ladeXlsx(cb) {
   if (window.XLSX) { cb(true); return; }
